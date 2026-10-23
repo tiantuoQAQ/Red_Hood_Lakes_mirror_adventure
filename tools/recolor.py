@@ -60,12 +60,18 @@ def source_hue(rgb, mx, mn):
     return h * 60.0
 
 
-def recolor(arr, hue, lo, hi, sat_boost=0.25, chroma_min=0.08, neutral_hues=None):
+def recolor(arr, hue, lo, hi, sat_boost=0.25, chroma_min=0.08, neutral_hues=None,
+            neutral_lightness=None):
     """Return a recoloured RGBA uint8 array with identical shape and alpha.
 
     neutral_hues: optional (low, high) source-hue window, in degrees, whose pixels
     are forced to neutral gray instead of the target hue. Use it to keep skin and
     hair out of the recolour: (15, 60) covers skin tones and blond hair.
+
+    neutral_lightness: optional (low, high) target lightness band for the pixels in
+    neutral_hues. Instead of keeping their own darkness, they are re-mapped into
+    this band while their internal shading is preserved. (0.86, 0.97) makes skin
+    read as pale highlight rather than flat mid-gray.
     """
     rgb = arr[..., :3].astype(np.float32) / 255.0
     alpha = arr[..., 3]
@@ -96,13 +102,26 @@ def recolor(arr, hue, lo, hi, sat_boost=0.25, chroma_min=0.08, neutral_hues=None
     neutral = chroma < chroma_min
 
     # optional: keep skin / hair neutral instead of tinting them
+    skin = np.zeros_like(neutral)
     if neutral_hues is not None:
         sh = source_hue(rgb, mx, mn)
-        in_window = (sh >= neutral_hues[0]) & (sh <= neutral_hues[1])
+        in_window = (sh >= neutral_hues[0]) & (sh <= neutral_hues[1]) & ~neutral
+        skin = in_window
         neutral = neutral | in_window
 
     gray = np.stack([lrel, lrel, lrel], axis=-1)
     out_rgb = np.where(neutral[..., None], gray, out_rgb)
+
+    # optional: lift the skin/hair band so it reads as pale highlight instead of
+    # flat mid-gray. Internal shading is preserved by normalising within the band.
+    if neutral_lightness is not None and skin.any():
+        vals = lrel[skin]
+        p2, p98 = np.percentile(vals, [2, 98])
+        span = max(1e-6, float(p98 - p2))
+        norm = np.clip((lrel - p2) / span, 0.0, 1.0)
+        lifted = neutral_lightness[0] + (neutral_lightness[1] - neutral_lightness[0]) * norm
+        lifted = np.stack([lifted, lifted, lifted], axis=-1)
+        out_rgb = np.where(skin[..., None], lifted, out_rgb)
 
     out = np.empty_like(arr)
     out[..., :3] = np.clip(out_rgb * 255.0, 0, 255).astype(np.uint8)
@@ -110,10 +129,11 @@ def recolor(arr, hue, lo, hi, sat_boost=0.25, chroma_min=0.08, neutral_hues=None
     return out
 
 
-def process_file(src, dst, hue, lo, hi, neutral_hues=None):
+def process_file(src, dst, hue, lo, hi, neutral_hues=None, neutral_lightness=None):
     im = Image.open(src)
     arr = np.array(im.convert('RGBA'))
-    out = recolor(arr, hue, lo, hi, neutral_hues=neutral_hues)
+    out = recolor(arr, hue, lo, hi, neutral_hues=neutral_hues,
+                  neutral_lightness=neutral_lightness)
     Image.fromarray(out, 'RGBA').save(dst)
     return dst
 
@@ -195,6 +215,8 @@ def main():
     ap.add_argument('--id', default='')
     ap.add_argument('--neutral-hues', default='',
                     help='source hue window kept neutral, e.g. "15,60" for skin and hair')
+    ap.add_argument('--neutral-lightness', default='',
+                    help='lift the neutral window into this lightness band, e.g. "0.86,0.97"')
     ap.add_argument('--selftest', action='store_true')
     args = ap.parse_args()
 
@@ -210,13 +232,17 @@ def main():
     if args.neutral_hues:
         a, b = args.neutral_hues.split(',')
         neutral = (float(a), float(b))
+    lift = None
+    if args.neutral_lightness:
+        a, b = args.neutral_lightness.split(',')
+        lift = (float(a), float(b))
     if os.path.isdir(args.src):
         os.makedirs(args.out, exist_ok=True)
         n = 0
         for name in sorted(os.listdir(args.src)):
             if name.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
                 dst = os.path.join(args.out, name)
-                process_file(os.path.join(args.src, name), dst, args.hue, lo, hi, neutral)
+                process_file(os.path.join(args.src, name), dst, args.hue, lo, hi, neutral, lift)
                 print('  改色 -> {}'.format(dst))
                 n += 1
         print('共处理 {} 张'.format(n))
@@ -224,7 +250,7 @@ def main():
         out_path = args.out
         if os.path.isdir(out_path):
             out_path = os.path.join(out_path, os.path.basename(args.src))
-        process_file(args.src, out_path, args.hue, lo, hi, neutral)
+        process_file(args.src, out_path, args.hue, lo, hi, neutral, lift)
         print('改色 -> {}'.format(out_path))
         print('下一步: python tools/check_palette.py "{}"'.format(out_path))
 
