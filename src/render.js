@@ -54,7 +54,7 @@ function drawBackground(ctx) {
   // 镜面轴
   ctx.save();
   ctx.setLineDash([8, 12]);
-  ctx.strokeStyle = hexToRgba(COLORS.ice, 0.16);
+  ctx.strokeStyle = hexToRgba(COLORS.env, 0.16);
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(MIRROR_X, ARENA.top);
@@ -65,7 +65,7 @@ function drawBackground(ctx) {
   // 地面
   ctx.fillStyle = COLORS.bg2;
   ctx.fillRect(-40, GROUND_Y, W + 80, H - GROUND_Y + 40);
-  ctx.fillStyle = hexToRgba(COLORS.ice, 0.30);
+  ctx.fillStyle = hexToRgba(COLORS.env, 0.30);
   ctx.fillRect(0, GROUND_Y, W, 2);
   ctx.fillStyle = 'rgba(255,255,255,0.05)';
   ctx.fillRect(0, GROUND_Y + 2, W, 1);
@@ -92,12 +92,12 @@ function drawBossHex(ctx, x, y, r, rot, alpha) {
   hexPath(ctx, x, y, r, rot);
   ctx.fillStyle = COLORS.bg3;
   ctx.fill();
-  ctx.strokeStyle = COLORS.ice;
+  ctx.strokeStyle = COLORS.env;
   ctx.lineWidth = 2;
   ctx.stroke();
 
   hexPath(ctx, x, y, r * 0.62, -rot * 1.6);
-  ctx.strokeStyle = hexToRgba(COLORS.ice, 0.35);
+  ctx.strokeStyle = hexToRgba(COLORS.env, 0.35);
   ctx.lineWidth = 1;
   ctx.stroke();
 
@@ -154,7 +154,7 @@ function drawShots(ctx) {
   const list = Game.shots;
   for (let i = 0; i < list.length; i++) {
     const s = list[i];
-    glowCircle(ctx, s.x, s.y, s.r, COLORS.self, 2.6, 0.95);
+    glowCircle(ctx, s.x, s.y, s.r, COLORS.player, 2.6, 0.95);
   }
 }
 
@@ -172,7 +172,7 @@ function drawPlayer(ctx) {
     ctx.globalAlpha = a;
     ctx.translate(t.x, t.y);
     ctx.rotate(Math.PI / 4);
-    ctx.fillStyle = COLORS.ice;
+    ctx.fillStyle = COLORS.player;
     const s = P.visualR * 1.1;
     ctx.fillRect(-s / 2, -s / 2, s, s);
     ctx.restore();
@@ -184,8 +184,8 @@ function drawPlayer(ctx) {
 
   if (p.ball) {
     // 球形态：外环 + 旋转弧
-    glowCircle(ctx, p.x, p.y, P.visualR * 1.05, COLORS.ice, 2.2, 0.5);
-    ctx.strokeStyle = hexToRgba(COLORS.ice, 0.85);
+    glowCircle(ctx, p.x, p.y, P.visualR * 1.05, COLORS.player, 2.2, 0.5);
+    ctx.strokeStyle = hexToRgba(COLORS.env, 0.85);
     ctx.lineWidth = 2;
     for (let k = 0; k < 3; k++) {
       const a0 = Game.frame * 0.12 + (k * TAU) / 3;
@@ -195,16 +195,16 @@ function drawPlayer(ctx) {
     }
     ctx.beginPath();
     ctx.arc(p.x, p.y, P.visualR * 0.55, 0, TAU);
-    ctx.fillStyle = hexToRgba(COLORS.ice, 0.30);
+    ctx.fillStyle = hexToRgba(COLORS.player, 0.30);
     ctx.fill();
   } else {
     // 常态：菱形冰晶
     ctx.translate(p.x, p.y);
     ctx.rotate(Math.PI / 4);
     const s = P.visualR * 1.5;
-    ctx.fillStyle = hexToRgba(COLORS.ice, 0.22);
+    ctx.fillStyle = hexToRgba(COLORS.player, 0.22);
     ctx.fillRect(-s / 2, -s / 2, s, s);
-    ctx.strokeStyle = COLORS.ice;
+    ctx.strokeStyle = COLORS.player;
     ctx.lineWidth = 2;
     ctx.strokeRect(-s / 2, -s / 2, s, s);
     ctx.rotate(-Math.PI / 4);
@@ -235,7 +235,7 @@ function drawPlayer(ctx) {
     ctx.arc(p.x, p.y, P.hitR, 0, TAU);
     ctx.stroke();
 
-    ctx.strokeStyle = hexToRgba(COLORS.self, 0.55);
+    ctx.strokeStyle = hexToRgba(COLORS.player, 0.55);
     ctx.beginPath();
     ctx.arc(p.x, p.y, P.grazeR, 0, TAU);
     ctx.stroke();
@@ -247,7 +247,7 @@ function drawPlayer(ctx) {
     const ga = Game.grazePulse / 10;
     ctx.beginPath();
     ctx.arc(p.x, p.y, P.grazeR + (1 - ga) * 20, 0, TAU);
-    ctx.strokeStyle = hexToRgba(COLORS.self, ga * 0.8);
+    ctx.strokeStyle = hexToRgba(COLORS.player, ga * 0.8);
     ctx.lineWidth = 2;
     ctx.stroke();
   }
@@ -255,7 +255,7 @@ function drawPlayer(ctx) {
   // 球形态体力条
   if (p.ball) {
     const w = 52;
-    bar(ctx, p.x - w / 2, p.y - P.visualR * 2.2, w, 4, p.stamina / 100, COLORS.ice);
+    bar(ctx, p.x - w / 2, p.y - P.visualR * 2.2, w, 4, p.stamina / 100, COLORS.player);
   }
 }
 
@@ -289,8 +289,8 @@ function drawScreenEffects(ctx) {
       W / 2, H / 2, Math.min(W, H) * 0.22,
       W / 2, H / 2, Math.max(W, H) * 0.74
     );
-    g.addColorStop(0, 'rgba(255,63,164,0)');
-    g.addColorStop(1, 'rgba(255,63,164,' + (a * 0.62).toFixed(3) + ')');
+    g.addColorStop(0, 'rgba(255,0,0,0)');
+    g.addColorStop(1, 'rgba(255,0,0,' + (a * 0.62).toFixed(3) + ')');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
   }
@@ -333,21 +333,21 @@ function drawHUD(ctx) {
 
   // 生命
   for (let i = 0; i < P.lives; i++) {
-    drawDiamond(ctx, 68 + i * 22, 38, 6, COLORS.ice, i < Game.lives);
+    drawDiamond(ctx, 68 + i * 22, 38, 6, COLORS.player, i < Game.lives);
   }
 
   // 勇气
-  bar(ctx, 60, 660, 240, 8, Game.courage / P.courageMax, COLORS.self);
+  bar(ctx, 60, 660, 240, 8, Game.courage / P.courageMax, COLORS.player);
   mono(ctx, '勇气 ' + Math.floor(Game.courage) + '%', 60, 654, 11, COLORS.dim);
   if (Game.courage >= P.courageMax) {
-    mono(ctx, 'L / X 释放冰封', 312, 668, 12, COLORS.self);
+    mono(ctx, 'L / X 释放冰封', 312, 668, 12, COLORS.env);
   }
 
   // 擦弹连击：数字 + 剩余窗口
   const pl = Game.player;
   if (pl && pl.grazeChain > 0) {
-    mono(ctx, '擦弹 x' + pl.grazeChain, 60, 638, 12, COLORS.self);
-    bar(ctx, 130, 628, 120, 5, pl.grazeTimer / P.grazeChainWindow, COLORS.self);
+    mono(ctx, '擦弹 x' + pl.grazeChain, 60, 638, 12, COLORS.player);
+    bar(ctx, 130, 628, 120, 5, pl.grazeTimer / P.grazeChainWindow, COLORS.player);
   }
 
   // 状态提示（右下）
@@ -381,7 +381,7 @@ function drawOverlay(ctx) {
     dim(ctx, 0.78);
 
     label(ctx, '镜', W / 2, 196, 88, COLORS.ink, 'center', 700);
-    label(ctx, 'M I R R O R   ·   弹幕闪避原型', W / 2, 236, 16, COLORS.ice, 'center', 500);
+    label(ctx, 'M I R R O R   ·   弹幕闪避原型', W / 2, 236, 16, COLORS.env, 'center', 500);
 
     const lines = [
       ['移动', 'A / D  或  ← / →'],
@@ -402,20 +402,20 @@ function drawOverlay(ctx) {
     const pulse = 0.55 + 0.45 * Math.sin(Game.frame * 0.08);
     ctx.save();
     ctx.globalAlpha = pulse;
-    label(ctx, '按 Enter 开始', W / 2, y + 40, 20, COLORS.self, 'center', 600);
+    label(ctx, '按 Enter 开始', W / 2, y + 40, 20, COLORS.player, 'center', 600);
     ctx.restore();
     return;
   }
 
   if (Game.mode === 'dead') {
     dim(ctx, 0.66);
-    label(ctx, '再来一次', W / 2, H / 2 - 10, 44, COLORS.hazard, 'center', 700);
+    label(ctx, '再来一次', W / 2, H / 2 - 10, 44, COLORS.player, 'center', 700);
     label(ctx, '按 R 重开', W / 2, H / 2 + 42, 17, COLORS.ink, 'center', 500);
   }
 
   if (Game.mode === 'win') {
     dim(ctx, 0.66);
-    label(ctx, '通关', W / 2, H / 2 - 10, 44, COLORS.ice, 'center', 700);
+    label(ctx, '通关', W / 2, H / 2 - 10, 44, COLORS.env, 'center', 700);
     label(ctx, '按 R 再来一次', W / 2, H / 2 + 42, 17, COLORS.ink, 'center', 500);
   }
 

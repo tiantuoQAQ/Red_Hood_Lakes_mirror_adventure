@@ -150,7 +150,7 @@ function updatePlayer(dt) {
       p.dashT = 0;
       p.vx *= 0.4;
       p.vy = -P.ballSpeed;
-      burst(p.x, p.y, COLORS.ice, 14);
+    burst(p.x, p.y, COLORS.player, 14);
       Sfx.ballOn();
     }
   } else {
@@ -163,7 +163,7 @@ function updatePlayer(dt) {
     p.dashCd = P.dashCd + P.dashFrames;
     p.invT = Math.max(p.invT, P.dashIFrames);
     p.vx = p.facing * P.dashSpeed;
-    burst(p.x, p.y, COLORS.ice, 8);
+    burst(p.x, p.y, COLORS.player, 8);
     Sfx.dash();
   }
 
@@ -174,7 +174,7 @@ function updatePlayer(dt) {
     p.onGround = false;
     p.coyote = 0;
     p.jumpBuf = 0;
-    burst(p.x, p.y + P.visualR, COLORS.ice, 6);
+    burst(p.x, p.y + P.visualR, COLORS.player, 6);
   }
 
   // ---- 移动 ----
@@ -269,8 +269,8 @@ function updatePlayer(dt) {
     Game.hitstop = 6;
     Game.banner = '冰 封';
     Game.bannerT = 60;
-    burst(Game.boss.x, Game.boss.y, COLORS.ice, 44);
-    addDmgText(Game.boss.x, Game.boss.y - 30, CFG.skill.damage, COLORS.ice, false);
+    burst(Game.boss.x, Game.boss.y, COLORS.env, 44);
+    addDmgText(Game.boss.x, Game.boss.y - 30, CFG.skill.damage, COLORS.env, false);
     Sfx.skill();
     checkBossDeath();
   }
@@ -285,7 +285,7 @@ function endBall(landed) {
   // 落地时如果还按着冲刺，不应该立刻又变回球——必须松开再按
   p.ballLock = true;
   p.dashHold = 0;
-  if (landed) burst(p.x, p.y + CFG.player.visualR, COLORS.ice, 12);
+  if (landed) burst(p.x, p.y + CFG.player.visualR, COLORS.player, 12);
   Sfx.ballOff();
 }
 
@@ -345,8 +345,8 @@ function updateShots(dt) {
       b.hp -= s.dmg;
       b.flash = 4;          // 闪的是 BOSS 本身，不是全屏
       Game.courage = Math.min(CFG.player.courageMax, Game.courage + CFG.player.couragePerHit);
-      burst(s.x, s.y, COLORS.self, 4);
-      addDmgText(s.x, s.y - 12, s.dmg, COLORS.self, false);
+    burst(s.x, s.y, COLORS.player, 4);
+    addDmgText(s.x, s.y - 12, s.dmg, COLORS.player, false);
       Game.shake = Math.max(Game.shake, 1.8);
       Sfx.bossHit();
       Game.shots.splice(i, 1);
@@ -393,8 +393,8 @@ function updateBullets(dt) {
         p.dashCd = Math.max(0, p.dashCd - P.grazeDashRefund);
         Game.grazePulse = 10;
 
-        burst(b.x, b.y, COLORS.self, 2);
-        addDmgText(b.x, b.y - 6, '+' + (gain % 1 === 0 ? gain : gain.toFixed(1)), COLORS.self, true);
+        burst(b.x, b.y, COLORS.player, 2);
+        addDmgText(b.x, b.y - 6,  + (gain % 1 === 0 ? gain : gain.toFixed(1)), COLORS.player, true);
         Sfx.graze(p.grazeChain);
       }
     }
