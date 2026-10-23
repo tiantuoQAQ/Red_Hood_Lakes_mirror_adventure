@@ -189,6 +189,7 @@ globalThis.__run = function (keydown, keyup, releaseAll, mousedown, mouseup) {
                          Math.abs(Game.player.x - px0) < 0.001 &&
                          Math.abs(Game.player.y - py0) < 0.001);
   out.hurtStillInvuln = Game.player.invT >= CFG.player.hurtIFrames - 1;
+  out.hurtNoHitstop = Game.hitstop === 0;   // 受击瞬间不允许冻结时间
   out.invulnAfterHit = Game.player.invT;
   out.invulnExpected = CFG.player.hurtIFrames;
 
@@ -390,6 +391,7 @@ const checks = [
   ['中弹扣一条命', out.livesLost === 1, ''],
   ['受击不击飞（速度与位置不变）', out.hurtNoKnockback === true, ''],
   ['受击仍给足无敌帧', out.hurtStillInvuln === true, ''],
+  ['受击不顿帧', out.hurtNoHitstop === true, ''],
   ['中弹后进入无敌', out.invulnAfterHit >= out.invulnExpected, out.invulnAfterHit + ' 帧 / 期望 ≥ ' + out.invulnExpected],
   ['弹幕会生成', out.bulletsBeforePhase > 0, '200 帧时场上 ' + out.bulletsBeforePhase + ' 颗'],
   ['血量过阈值切换阶段', out.phaseAfterDrop === 1, 'phase=' + out.phaseAfterDrop],

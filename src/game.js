@@ -502,10 +502,9 @@ function hitPlayer(b) {
   p.grazeChain = 0;      // 中弹清空擦弹连击：这是贴脸躲的代价
   p.grazeTimer = 0;
 
-  // 不击飞。受击位置完全由玩家自己控制——被系统推走会立刻毁掉躲避的节奏，
-  // 还可能把人推进下一波弹幕里。只给无敌帧和视觉/听觉反馈就够。
+  // 不击飞、也不顿帧：受击瞬间的时间与位移都必须保持连续，
+  // 否则玩家正在躲的那口气会被打断。只靠无敌帧 + 视听觉反馈表达「被打到了」。
   Game.shake = 9;
-  Game.hitstop = 4;
   Game.screenHurt = 18;
   burst(p.x, p.y, COLORS.hazard, 18);
   Sfx.hurt();
