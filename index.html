@@ -122,6 +122,22 @@
       <label>冲刺冷却帧 <output data-out="player.dashCd"></output></label>
       <input type="range" data-cfg="player.dashCd" min="0" max="60" step="1">
     </div>
+    <div class=row>
+      <label>冲刺起步加速帧 <output data-out="player.dashRampFrames"></output></label>
+      <input type=range data-cfg="player.dashRampFrames" min=0 max=10 step=1>
+    </div>
+    <div class=row>
+      <label>冲刺滑行帧 <output data-out="player.dashOutFrames"></output></label>
+      <input type=range data-cfg="player.dashOutFrames" min=0 max=20 step=1>
+    </div>
+    <div class=row>
+      <label>滑行速度保留率 <output data-out="player.dashOutKeep"></output></label>
+      <input type=range data-cfg="player.dashOutKeep" min=0.3 max=0.95 step=0.05>
+    </div>
+    <div class=row>
+      <label>输入缓冲帧 <output data-out="player.inputBuffer"></output></label>
+      <input type=range data-cfg="player.inputBuffer" min=0 max=20 step=1>
+    </div>
     <div class="row">
       <label>擦弹判定半径 <output data-out="player.grazeR"></output></label>
       <input type="range" data-cfg="player.grazeR" min="10" max="60" step="1">

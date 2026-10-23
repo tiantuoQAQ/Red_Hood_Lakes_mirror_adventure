@@ -41,6 +41,9 @@ function makePlayer() {
     facing: 1,
     dashT: 0,
     dashCd: 0,
+    dashRampT: 0,
+    dashOut: 0,
+    dashBuf: 0,
     invT: 0,
     ball: false,
     ballLaunch: 0,
@@ -184,14 +187,22 @@ function updatePlayer(dt) {
     endBall(false);
   }
 
-  // ---- 普通冲刺 ----
-  if (!p.ball && Input.pressed('dash') && p.dashCd <= 0) {
-    p.dashT = P.dashFrames;
-    p.dashCd = P.dashCd + P.dashFrames;
-    p.invT = Math.max(p.invT, P.dashIFrames);
-    p.vx = p.facing * P.dashSpeed;
-    burst(p.x, p.y, COLORS.player, 8);
-    Sfx.dash();
+  // ---- 普通冲刺（带输入缓冲）----
+  // 按下时先记进缓冲，条件成熟的那一帧自动触发。
+  // 这样「在冷却结束前一瞬间按」不会白按——这是连招不断的关键。
+  if (!p.ball && Input.pressed('dash')) p.dashBuf = P.inputBuffer;
+  if (p.dashBuf > 0) {
+    p.dashBuf--;
+    if (!p.ball && p.dashCd <= 0 && p.dashT === 0 && p.dashOut === 0) {
+      p.dashBuf = 0;
+      p.dashT = P.dashFrames;
+      p.dashRampT = P.dashRampFrames;
+      p.dashCd = P.dashCd + P.dashFrames;
+      p.invT = Math.max(p.invT, P.dashIFrames);
+      p.vx = p.facing * P.dashSpeed * 0.45;
+      burst(p.x, p.y, COLORS.player, 8);
+      Sfx.dash();
+    }
   }
 
   // ---- 跳跃（带输入缓冲 + 郊狼时间）----
@@ -225,10 +236,29 @@ function updatePlayer(dt) {
   } else {
     const dir = (right ? 1 : 0) - (left ? 1 : 0);
     if (p.dashT > 0) {
-      p.vx = p.facing * P.dashSpeed;
+      // 起步不是瞬间满速：用 3 帧从 45% 推到 100%，让「发力」看得见
+      if (p.dashRampT > 0) {
+        // 先用当前档位算速度，再推进档位；反过来的话触发帧就被推到满速了
+        const total = Math.max(1, P.dashRampFrames);
+        const k = 1 - p.dashRampT / total;
+        const eased = 1 - Math.pow(1 - k, 2);
+        p.vx = p.facing * P.dashSpeed * (0.45 + 0.55 * eased);
+        p.dashRampT--;
+      } else {
+        p.vx = p.facing * P.dashSpeed;
+      }
       p.dashT--;
+      if (p.dashT === 0) p.dashOut = P.dashOutFrames;
       if (Game.frame % 2 === 0) {
         p.trail.push({ x: p.x, y: p.y, life: 12, max: 12, facing: p.facing });
+      }
+    } else if (p.dashOut > 0) {
+      // 滑行：结束时不「撞墙」，让速度指数衰减到当前输入对应的目标速度
+      p.dashOut--;
+      const target = dir !== 0 ? dir * P.speed : 0;
+      p.vx += (target - p.vx) * (1 - P.dashOutKeep);
+      if (Game.frame % 2 === 0) {
+        p.trail.push({ x: p.x, y: p.y, life: 8, max: 8, facing: p.facing });
       }
     } else if (dir !== 0) {
       p.vx += dir * P.accel * dt;

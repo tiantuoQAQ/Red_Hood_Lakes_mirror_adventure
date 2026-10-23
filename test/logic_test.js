@@ -62,6 +62,32 @@ globalThis.__run = function (keydown, keyup, releaseAll, mousedown, mouseup) {
   out.dashActive = Game.player.dashT > 0;
   releaseAll();
 
+  // 冲刺起步有加速过程，不是瞬间满速
+  resetGame();
+  Game.boss.gap = 100000;
+  keydown('ShiftLeft');
+  step();
+  out.dashFirstFrameRatio = Math.abs(Game.player.vx) / CFG.player.dashSpeed;
+  out.dashRamps = out.dashFirstFrameRatio < 0.9;
+  keyup('ShiftLeft');
+  for (let i = 0; i < CFG.player.dashFrames + 2; i++) step();
+  out.dashGlides = Math.abs(Game.player.vx) > CFG.player.speed * 1.05;
+
+  // 输入缓冲：冷却没结束时提前按，冷却好的那一帧自动触发
+  resetGame();
+  Game.boss.gap = 100000;
+  Game.player.dashCd = 5;
+  keydown('ShiftLeft');
+  step();
+  keyup('ShiftLeft');
+  let bufferedFired = false;
+  for (let i = 0; i < 10; i++) {
+    step();
+    if (Game.player.dashT > 0) { bufferedFired = true; break; }
+  }
+  out.dashBuffered = bufferedFired;
+  releaseAll();
+
   // 球形态：空中「按住上 + 按冲刺」立刻进入（不需要长按）
   resetGame();
   Game.boss.gap = 100000;
@@ -374,6 +400,9 @@ const out = globalThis.__out;
 const checks = [
   ['冲刺给出无敌帧', out.dashIframes >= out.dashIframesExpected, out.dashIframes + ' 帧 / 期望 ≥ ' + out.dashIframesExpected],
   ['冲刺期间处于冲刺状态', out.dashActive === true, ''],
+  ['冲刺起步有加速过程', out.dashRamps === true, '首帧速度 ' + (out.dashFirstFrameRatio * 100).toFixed(0) + '%'],
+  ['冲刺结束有滑行', out.dashGlides === true, ''],
+  ['冲刺输入缓冲生效', out.dashBuffered === true, ''],
   ['空中按住上+冲刺立刻变球', out.ballEnteredByCombo && out.wasAirborne, ''],
   ['球形态起手强制上冲', out.ballRose === true, ''],
   ['松开冲刺立刻变回人', out.ballExitsOnRelease === true, ''],

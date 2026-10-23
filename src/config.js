@@ -41,6 +41,10 @@ const CFG = {
     dashFrames: 12,
     dashIFrames: 16,
     dashCd: 16,
+    dashRampFrames: 3,     // 起步加速帧数：0 = 瞬间满速（手感硬、但会有"啪"的突变）
+    dashOutFrames: 6,      // 冲刺结束后的滑行帧数
+    dashOutKeep: 0.72,     // 滑行阶段每帧保留的速度比例
+    inputBuffer: 8,        // 提前按键的缓存帧数
     ballSpeed: 450,
     ballLaunchFrames: 5, // 进入球形态后强制上冲的帧数
     ballExitOnLand: false, // 落地是否退出球形态（当前设计：不退出，松开冲刺才退出）
