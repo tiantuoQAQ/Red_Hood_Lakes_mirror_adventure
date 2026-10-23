@@ -138,14 +138,34 @@ function drawBoss(ctx) {
 
 // ------------------------------------------------------------- 弹幕
 
+// 五角星路径：弹幕用星形而不用圆点。形状语言更锐利，
+// 也能帮「绿色=危险」这条反直觉设定（圆润的形状容易被读成补给品）。
+function starPath(ctx, x, y, r, points, innerRatio, rot) {
+  const n = points * 2;
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    const rad = i % 2 === 0 ? r : r * innerRatio;
+    const a = -Math.PI / 2 + (i * Math.PI) / points + rot;
+    const px = x + Math.cos(a) * rad;
+    const py = y + Math.sin(a) * rad;
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+}
+
 function drawBullets(ctx) {
   const list = Game.bullets;
+  const spin = Game.frame * 0.05;
   for (let i = 0; i < list.length; i++) {
     const b = list[i];
-    glowCircle(ctx, b.x, b.y, b.r, COLORS.hazard, 2.2, 0.95);
+    glowCircle(ctx, b.x, b.y, b.r * 1.2, COLORS.hazard, 2.4, 0.14);
+    starPath(ctx, b.x, b.y, b.r * 1.5, 5, 0.46, spin);
+    ctx.fillStyle = COLORS.hazard;
+    ctx.fill();
     ctx.beginPath();
-    ctx.arc(b.x, b.y, b.r * 0.34, 0, TAU);
-    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.arc(b.x, b.y, b.r * 0.42, 0, TAU);
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
     ctx.fill();
   }
 }
