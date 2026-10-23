@@ -298,7 +298,10 @@ function drawPlayer(ctx) {
   ctx.save();
   if (blink) ctx.globalAlpha = 0.40;
 
-  if (p.ball) {
+  // 有贴图就用贴图，没有就退回程序化的菱形。
+  // 注意：这里不能自己 restore，外面还有一次配对的 restore。
+  const usingSprite = drawCharacterSprite(ctx, p);
+  if (!usingSprite && p.ball) {
     // 球形态：外环 + 旋转弧
     glowCircle(ctx, p.x, p.y, P.visualR * 1.05, COLORS.player, 2.2, 0.5);
     ctx.strokeStyle = hexToRgba(COLORS.env, 0.85);
@@ -313,7 +316,7 @@ function drawPlayer(ctx) {
     ctx.arc(p.x, p.y, P.visualR * 0.55, 0, TAU);
     ctx.fillStyle = hexToRgba(COLORS.player, 0.30);
     ctx.fill();
-  } else {
+  } else if (!usingSprite) {
     // 常态：菱形冰晶
     ctx.translate(p.x, p.y);
     ctx.rotate(Math.PI / 4);

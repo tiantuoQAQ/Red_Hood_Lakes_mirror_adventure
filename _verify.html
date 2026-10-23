@@ -11,6 +11,7 @@
 <script src="src/input.js"></script>
 <script src="src/gfx.js"></script>
 <script src="src/patterns.js"></script>
+<script src="src/sprites.js"></script>
 <script src="src/audio.js"></script>
 <script src="src/game.js"></script>
 <script src="src/render.js"></script>
@@ -18,6 +19,7 @@
   // 离线校验页：不加载 main.js，手动推进固定帧数后绘制一帧，用于截图检查渲染。
   var c = document.getElementById('game');
   var cx = c.getContext('2d', { alpha: false });
+  Sprites.load(CFG.sprite.id, CFG.sprite.dir);
   resetGame();
   Game.player.x = 420;
   var FRAMES = parseInt((location.search.match(/ff=(\d+)/) || [])[1] || '200', 10);
@@ -41,6 +43,14 @@
   update(STEP);
 
   render(cx);
+
+  // 贴图异步加载：加载完再重画一次，否则截图拿到的是退回的菱形
+  (function repaintWhenReady(tries) {
+    if (Sprites.ready(CFG.sprite.id)) { render(cx); return; }
+    if (tries <= 0) return;
+    setTimeout(function () { repaintWhenReady(tries - 1); }, 60);
+  })(40);
+
   window.__stats = {
     mode: Game.mode,
     lives: Game.lives,

@@ -86,6 +86,17 @@ const CFG = {
     spiralSpeed: 250,
     rainSpeed: 300
   },
+  // 角色贴图：单图 + 少量分件。三张图必须同尺寸同站位。
+  // hairDx/capeDx 是「对齐微调」，即梦出的分件对不齐时在这里拖到对齐。
+  sprite: {
+    id: 'rek',
+    dir: 'art/rek',
+    scale: 0.5,       // 按 2 倍出图，这里缩一半
+    hairDx: 0,
+    hairDy: 0,
+    capeDx: 0,
+    capeDy: 0
+  },
   beam: { width: 26, warmup: 45, active: 34, len: 1700 },
   bossDash: { speed: 1500, frames: 18 },
   skill: { damage: 36, invFrames: 130 }

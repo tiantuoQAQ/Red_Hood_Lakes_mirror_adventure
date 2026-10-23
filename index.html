@@ -138,6 +138,22 @@
       <label>输入缓冲帧 <output data-out="player.inputBuffer"></output></label>
       <input type=range data-cfg="player.inputBuffer" min=0 max=20 step=1>
     </div>
+    <div class=row>
+      <label>后发对齐 X <output data-out="sprite.hairDx"></output></label>
+      <input type=range data-cfg="sprite.hairDx" min=-60 max=60 step=1>
+    </div>
+    <div class=row>
+      <label>后发对齐 Y <output data-out="sprite.hairDy"></output></label>
+      <input type=range data-cfg="sprite.hairDy" min=-60 max=60 step=1>
+    </div>
+    <div class=row>
+      <label>斗篷对齐 X <output data-out="sprite.capeDx"></output></label>
+      <input type=range data-cfg="sprite.capeDx" min=-60 max=60 step=1>
+    </div>
+    <div class=row>
+      <label>斗篷对齐 Y <output data-out="sprite.capeDy"></output></label>
+      <input type=range data-cfg="sprite.capeDy" min=-60 max=60 step=1>
+    </div>
     <div class="row">
       <label>擦弹判定半径 <output data-out="player.grazeR"></output></label>
       <input type="range" data-cfg="player.grazeR" min="10" max="60" step="1">
@@ -189,6 +205,7 @@
   <script src="src/input.js"></script>
   <script src="src/gfx.js"></script>
   <script src="src/patterns.js"></script>
+  <script src="src/sprites.js"></script>
   <script src="src/audio.js"></script>
   <script src="src/game.js"></script>
   <script src="src/render.js"></script>

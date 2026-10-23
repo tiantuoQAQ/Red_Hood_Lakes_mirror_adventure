@@ -151,7 +151,10 @@ function frameLoop(now) {
     pendingKeyStamp = null;
   }
 
-  requestAnimationFrame(frameLoop);
+  // 载入角色贴图（缺图不影响运行，会退回程序化图形）
+Sprites.load(CFG.sprite.id, CFG.sprite.dir);
+
+requestAnimationFrame(frameLoop);
 }
 
 // 调试用：?auto=1 直接开局，?ff=N 预跑 N 帧（用于截图验证）
