@@ -44,8 +44,6 @@ function makePlayer() {
     invT: 0,
     ball: false,
     ballLaunch: 0,
-    ballLock: false,
-    dashHold: 0,
     grazeChain: 0,
     grazeTimer: 0,
     stamina: 100,
@@ -168,25 +166,22 @@ function updatePlayer(dt) {
   const up = Input.held('up');
   const down = Input.held('down');
 
-  // ---- 进入球形态：长按冲刺（点按只冲刺，按住才转球）----
-  // 按下瞬间无法预知是点按还是长按，所以冲刺必须立刻执行、长按再升级为球形态。
+  // ---- 球形态：空中「按住 ↑ + 按冲刺」进入 ----
+  // 必须离地：地面上按组合键只算普通冲刺，否则会变成站桩无敌。
   if (!p.ball) {
-    if (!Input.held('dash')) p.ballLock = false;   // 松开后重新解锁
-    if (Input.held('dash') && !p.ballLock) p.dashHold++;
-    else p.dashHold = 0;
-
-    if (p.dashHold >= P.ballHoldFrames && !p.ballLock && p.stamina > P.ballMinStamina) {
+    if (!p.onGround && up && Input.pressed('dash') && p.stamina > P.ballMinStamina) {
+      Input.consume('dash');           // 吃掉这次按下，不再额外触发一次普通冲刺
       p.ball = true;
-      p.dashHold = 0;
-      p.ballLaunch = P.ballLaunchFrames; // 起手强制上冲，避免贴地进入瞬间被地面取消
+      p.ballLaunch = P.ballLaunchFrames;
       p.dashT = 0;
       p.vx *= 0.4;
       p.vy = -P.ballSpeed;
-    burst(p.x, p.y, COLORS.player, 14);
+      burst(p.x, p.y, COLORS.player, 14);
       Sfx.ballOn();
     }
-  } else {
-    p.dashHold = 0;
+  } else if (!Input.held('dash')) {
+    // 松开冲刺立刻变回人——这才是玩家期待的控制感
+    endBall(false);
   }
 
   // ---- 普通冲刺 ----
@@ -261,7 +256,8 @@ function updatePlayer(dt) {
   if (p.y + r >= GROUND_Y) {
     p.y = GROUND_Y - r;
     if (p.ball) {
-      endBall(true);           // 落地即取消球形态（核心设计）
+      if (P.ballExitOnLand) endBall(true);
+      else p.vy = 0;           // 贴地悬浮，等玩家松开冲刺
     } else {
       p.vy = 0;
       p.onGround = true;
@@ -314,9 +310,7 @@ function endBall(landed) {
   p.ball = false;
   p.vx = 0;
   p.vy = 0;
-  // 落地时如果还按着冲刺，不应该立刻又变回球——必须松开再按
-  p.ballLock = true;
-  p.dashHold = 0;
+  p.ballLaunch = 0;
   if (landed) burst(p.x, p.y + CFG.player.visualR, COLORS.player, 12);
   Sfx.ballOff();
 }

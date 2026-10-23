@@ -42,8 +42,8 @@ const CFG = {
     dashIFrames: 16,
     dashCd: 16,
     ballSpeed: 450,
-    ballHoldFrames: 10,  // 空中长按冲刺多少帧后变成球
     ballLaunchFrames: 5, // 进入球形态后强制上冲的帧数
+    ballExitOnLand: false, // 落地是否退出球形态（当前设计：不退出，松开冲刺才退出）
     ballDrain: 32,       // 体力/秒
     ballRegen: 26,       // 落地回复/秒
     ballMinStamina: 20,  // 进入球形态所需最低体力
