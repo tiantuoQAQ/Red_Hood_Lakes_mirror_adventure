@@ -292,9 +292,74 @@ globalThis.__run = function (keydown, keyup, releaseAll, mousedown, mouseup) {
   resetGame();
   const xBefore = Game.player.x;
   mousedown(0);
-  for (let i = 0; i < 20; i++) update(STEP);
+  for (let i = 0; i < 20; i++) step();
   out.mouseNoMove = Math.abs(Game.player.x - xBefore) < 0.001;
   mouseup(0);
+
+
+  // 预警线：穿刺招式先给提示
+  resetGame();
+  Game.boss.gap = 100000;
+  PATTERNS.lances.fire(Game, Game.boss, 0);
+  out.warningsCreated = Game.warnings.length;
+
+  // 激光：蓄力阶段不伤血，生效后才判定
+  resetGame();
+  Game.boss.gap = 100000;
+  PATTERNS.laser.fire(Game, Game.boss, 0);
+  out.beamCreated = Game.beams.length;
+  const livesBeam = Game.lives;
+  const bm = Game.beams[0];
+  Game.player.x = bm.x + Math.cos(bm.a) * 200;
+  Game.player.y = bm.y + Math.sin(bm.a) * 200;
+  Game.player.invT = 0;
+  step();
+  out.beamSafeDuringWarmup = Game.lives === livesBeam;
+  for (let i = 0; i < CFG.beam.warmup + 4; i++) {
+    Game.player.x = bm.x + Math.cos(bm.a) * 200;
+    Game.player.y = bm.y + Math.sin(bm.a) * 200;
+    Game.player.vy = 0;
+    step();
+  }
+  out.beamHitsWhenActive = Game.lives < livesBeam;
+
+  // 追踪弹会转向
+  resetGame();
+  Game.boss.gap = 100000;
+  PATTERNS.homing.fire(Game, Game.boss, 0);
+  const homes = Game.bullets.filter(function (b) { return b.kind === 'homing'; });
+  out.homingCreated = homes.length;
+  const hb = homes[0];
+  const a0 = Math.atan2(hb.vy, hb.vx);
+  Game.player.x = hb.x + 420;
+  Game.player.y = hb.y - 260;
+  for (let i = 0; i < 20; i++) step();
+  const a1 = Math.atan2(hb.vy, hb.vx);
+  out.homingTurns = Math.abs(a1 - a0) > 0.08;
+
+  // BOSS 冲刺会位移
+  resetGame();
+  Game.boss.gap = 100000;
+  PATTERNS.bossDash.fire(Game, Game.boss, 0);
+  out.dashStarted = Game.boss.dashT > 0;
+  const bossX0 = Game.boss.x;
+  for (let i = 0; i < 6; i++) step();
+  out.bossMoves = Math.abs(Game.boss.x - bossX0) > 1;
+
+  // 濒死演出：先慢动作再进死亡界面
+  resetGame();
+  Game.boss.gap = 100000;
+  Game.lives = 1;
+  Game.bullets.push({
+    x: Game.player.x, y: Game.player.y, vx: 0, vy: 0,
+    r: CFG.bullets.r, kind: 'hazard', grazed: true, life: 30
+  });
+  step();
+  out.dyingStarted = Game.dying === true && Game.slowT > 0;
+  out.slowFrames = Game.slowT;
+  out.stayInPlayDuringSlowmo = Game.mode === 'play';
+  for (let i = 0; i < 45; i++) step();
+  out.deadAfterSlowmo = Game.mode === 'dead';
 
   return out;
 };
@@ -345,7 +410,15 @@ const checks = [
   ['弹幕峰值可控', out.peakUnder1000, '峰值 ' + out.peakBullets + ' 颗，900 帧后剩 ' + out.after900 + ' 颗'],
   ['鼠标左键可射击', out.mouseFireShots > 0, '出膛 ' + out.mouseFireShots + ' 发'],
   ['鼠标右键可冲刺', out.mouseDashActive && out.mouseDashIframes >= out.dashIframesExpected, out.mouseDashIframes + ' 帧无敌'],
-  ['鼠标不会让角色移动', out.mouseNoMove === true, '']
+  ['鼠标不会让角色移动', out.mouseNoMove === true, ''],
+  ['穿刺招式生成预警线', out.warningsCreated > 0, out.warningsCreated + ' 条'],
+  ['激光生成光束', out.beamCreated === 2, out.beamCreated + ' 条（镜像成对）'],
+  ['激光蓄力阶段不伤血', out.beamSafeDuringWarmup === true, ''],
+  ['激光生效后命中', out.beamHitsWhenActive === true, ''],
+  ['追踪弹生成且会转向', out.homingCreated > 0 && out.homingTurns === true, out.homingCreated + ' 颗'],
+  ['BOSS 冲刺启动并位移', out.dashStarted === true && out.bossMoves === true, ''],
+  ['濒死先慢动作后进死界', out.dyingStarted && out.stayInPlayDuringSlowmo && out.deadAfterSlowmo,
+   '慢动作 ' + out.slowFrames + ' 帧']
 ];
 
 let failed = 0;

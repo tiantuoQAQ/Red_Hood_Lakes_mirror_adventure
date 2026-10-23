@@ -85,5 +85,131 @@ const PATTERNS = {
       const x = Math.max(ARENA.left + 20, Math.min(ARENA.right - 20, p.x + bias));
       spawnBullet(G.bullets, x, ARENA.top - 12, Math.PI / 2, CFG.bullets.rainSpeed);
     }
+  },
+
+  // 预警穿刺：先画 30 帧预警线，再沿该线打出高速弹。
+  // 这是唯一「有明确前摇」的招式，用来教玩家读预警。
+  lances: {
+    dur: 270,
+    fire: function (G, boss, t) {
+      const cycle = 96;
+      const ph = t % cycle;
+
+      if (ph === 0) {
+        const p = G.player;
+        const base = aimAngle(boss.x, boss.y, p.x, p.y);
+        const offs = [-0.20, 0, 0.20];
+        boss.pending = [];
+        for (let i = 0; i < offs.length; i++) {
+          const a = base + offs[i];
+          const m = Math.PI - a;
+          G.warnings.push({ x: boss.x, y: boss.y, a: a, life: 30, max: 30, len: 1600 });
+          G.warnings.push({ x: mirrorX(boss.x), y: boss.y, a: m, life: 30, max: 30, len: 1600 });
+          boss.pending.push({ x: boss.x, y: boss.y, a: a });
+          boss.pending.push({ x: mirrorX(boss.x), y: boss.y, a: m });
+        }
+        Sfx.warn();
+      }
+
+      if (ph === 30 && boss.pending) {
+        for (let i = 0; i < boss.pending.length; i++) {
+          const s = boss.pending[i];
+          spawnBullet(G.bullets, s.x, s.y, s.a, 640, CFG.bullets.r * 0.85);
+        }
+        boss.pending = null;
+        Sfx.lance();
+      }
+    }
+  },
+
+  // 双旋臂：两条缓慢旋转的弹链，形成会压过来的「墙」
+  orbit: {
+    dur: 280,
+    fire: function (G, boss, t) {
+      const step = 4;
+      if (t % step !== 0) return;
+      const a = t * 0.055;
+      spawnBullet(G.bullets, boss.x, boss.y, a, 190, CFG.bullets.r);
+      spawnBullet(G.bullets, mirrorX(boss.x), boss.y, Math.PI - a, 190, CFG.bullets.r);
+    }
+  },
+
+  // 四角汇聚：从场地四角向中心偏斜射出，制造夹击感
+  crossfire: {
+    dur: 260,
+    fire: function (G, boss, t) {
+      const cycle = 84;
+      if (t % cycle !== 0) return;
+      const targetX = MIRROR_X + (Math.random() - 0.5) * 240;
+      const targetY = 320 + (Math.random() - 0.5) * 180;
+      const corners = [
+        [ARENA.left + 24, ARENA.top + 24],
+        [ARENA.right - 24, ARENA.top + 24],
+        [ARENA.left + 24, GROUND_Y - 24],
+        [ARENA.right - 24, GROUND_Y - 24]
+      ];
+      for (let i = 0; i < corners.length; i++) {
+        const c = corners[i];
+        const a = aimAngle(c[0], c[1], targetX, targetY) + (Math.random() - 0.5) * 0.22;
+        spawnBullet(G.bullets, c[0], c[1], a, 320, CFG.bullets.r);
+      }
+    }
+  },
+
+  // 激光：蓄力 45 帧（细线预警），然后实体光束 34 帧。成对镜像。
+  laser: {
+    dur: 300,
+    fire: function (G, boss, t) {
+      const cycle = 140;
+      const ph = t % cycle;
+      const B = CFG.beam;
+      if (ph === 0) {
+        const p = G.player;
+        const base = aimAngle(boss.x, boss.y, p.x, p.y);
+        G.beams.push({
+          x: boss.x, y: boss.y, a: base, hit: false,
+          warmup: B.warmup, max: B.warmup + B.active, life: B.warmup + B.active
+        });
+        G.beams.push({
+          x: mirrorX(boss.x), y: boss.y, a: Math.PI - base, hit: false,
+          warmup: B.warmup, max: B.warmup + B.active, life: B.warmup + B.active
+        });
+        Sfx.warn();
+      }
+      if (ph === B.warmup) {
+        Sfx.lance();
+        Game.shake = Math.max(Game.shake, 5);
+      }
+    }
+  },
+
+  // BOSS 冲刺：位移到玩家上方再打一圈，逼玩家换位置
+  bossDash: {
+    dur: 220,
+    fire: function (G, boss, t) {
+      const cycle = 110;
+      if (t % cycle !== 0) return;
+      if (boss.dashT > 0) return;
+      const p = G.player;
+      boss.dashTo = {
+        x: Math.max(ARENA.left + 140, Math.min(ARENA.right - 140, p.x)),
+        y: Math.max(ARENA.top + 120, Math.min(GROUND_Y - 220, p.y - 190))
+      };
+      boss.dashT = CFG.bossDash.frames;
+      Sfx.warn();
+    }
+  },
+
+  // 追踪弹：慢速但会转向，靠横移可以绕开
+  homing: {
+    dur: 280,
+    fire: function (G, boss, t) {
+      if (t % 44 !== 0) return;
+      const p = G.player;
+      const a1 = aimAngle(boss.x, boss.y, p.x, p.y);
+      const a2 = aimAngle(mirrorX(boss.x), boss.y, p.x, p.y);
+      spawnBullet(G.bullets, boss.x, boss.y, a1, CFG.bullets.homingSpeed, CFG.bullets.r * 1.1, 'homing');
+      spawnBullet(G.bullets, mirrorX(boss.x), boss.y, a2, CFG.bullets.homingSpeed, CFG.bullets.r * 1.1, 'homing');
+    }
   }
 };

@@ -11,17 +11,23 @@ function hexToRgba(hex, alpha) {
 }
 
 // 双层圆：外层低透明度散光 + 内层实心核心（用两层代替 shadowBlur，性能更稳）
-function glowCircle(ctx, x, y, r, color, glowScale, coreAlpha) {
+//
+// 散光默认用**白色**：彩色半透明光晕叠在另一个色相上会混出第三种颜色
+// （绿光压在红色玩家上就是橙色），直接违反「不多于 3 个色相」。
+// 白色是无色相的灰阶，叠加只改变明度，不影响色相。
+function glowCircle(ctx, x, y, r, color, glowScale, coreAlpha, glowColor) {
   const gs = glowScale === undefined ? 2.4 : glowScale;
   const ca = coreAlpha === undefined ? 1 : coreAlpha;
+  const gc = glowColor || '#ffffff';
+
   ctx.beginPath();
   ctx.arc(x, y, r * gs, 0, Math.PI * 2);
-  ctx.fillStyle = hexToRgba(color, 0.10);
+  ctx.fillStyle = hexToRgba(gc, 0.07);
   ctx.fill();
 
   ctx.beginPath();
   ctx.arc(x, y, r * 1.5, 0, Math.PI * 2);
-  ctx.fillStyle = hexToRgba(color, 0.16);
+  ctx.fillStyle = hexToRgba(gc, 0.12);
   ctx.fill();
 
   ctx.beginPath();

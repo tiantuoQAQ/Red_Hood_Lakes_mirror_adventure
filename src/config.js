@@ -74,6 +74,8 @@ const CFG = {
   },
   bullets: {
     speedScale: 1,
+    homingSpeed: 215,
+    homingTurn: 1.7,        // 追踪弹每秒最大转向（弧度）
     r: 7,
     ringN: 18,
     ringSpeed: 215,
@@ -81,12 +83,17 @@ const CFG = {
     spiralSpeed: 250,
     rainSpeed: 300
   },
+  beam: { width: 26, warmup: 45, active: 34, len: 1700 },
+  bossDash: { speed: 1500, frames: 18 },
   skill: { damage: 36, invFrames: 130 }
 };
 
 // 阶段剧本：每个阶段按顺序循环执行这些弹幕招式
+// P1 教学：只有能看懂的两招
+// P2 加压：加入预警穿刺（lances），开始考验反应
+// P3 满配：穿刺 + 旋臂 + 四角汇聚
 const PHASES = [
-  { at: 1.0, script: ['ring', 'mirrorFan' ] },
-  { at: 0.66, script: ['mirrorFan', 'spiral', 'ring'] },
-  { at: 0.33, script: ['spiral', 'rain', 'mirrorFan', 'ring'] }
+  { at: 1.0, script: ['ring', 'mirrorFan'] },
+  { at: 0.66, script: ['mirrorFan', 'lances', 'laser'] },
+  { at: 0.33, script: ['laser', 'homing', 'bossDash', 'orbit'] }
 ];

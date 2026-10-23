@@ -13,6 +13,8 @@ function render(ctx) {
 
   drawBackground(ctx);
   if (Game.player && Game.boss) {
+    drawWarnings(ctx);
+    drawBeams(ctx);
     drawBoss(ctx);
     drawBullets(ctx);
     drawShots(ctx);
@@ -21,6 +23,17 @@ function render(ctx) {
   drawParticles(ctx);
   drawDmgTexts(ctx);
   ctx.restore();
+
+  // 濒死演出：把画面去饱和（灰阶属于允许色板），再叠受伤渐晕
+  if (Game.dying || Game.slowT > 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'saturation';
+    ctx.fillStyle = '#808080';
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.fillRect(0, 0, W, H);
+  }
 
   drawScreenEffects(ctx);
   if (Game.player && Game.boss) drawHUD(ctx);
@@ -154,6 +167,74 @@ function starPath(ctx, x, y, r, points, innerRatio, rot) {
   ctx.closePath();
 }
 
+// ------------------------------------------------------------- 预警与光束
+
+function drawWarnings(ctx) {
+  const list = Game.warnings;
+  for (let i = 0; i < list.length; i++) {
+    const w = list[i];
+    const k = w.life / w.max;                 // 1 → 0
+    const pulse = 0.35 + 0.45 * Math.abs(Math.sin(Game.frame * 0.25));
+    const x2 = w.x + Math.cos(w.a) * w.len;
+    const y2 = w.y + Math.sin(w.a) * w.len;
+
+    ctx.save();
+    ctx.setLineDash([14, 10]);
+    ctx.lineWidth = 1 + (1 - k) * 2;
+    ctx.strokeStyle = hexToRgba(COLORS.hazard, pulse * 0.85);
+    ctx.beginPath();
+    ctx.moveTo(w.x, w.y);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function drawBeams(ctx) {
+  const list = Game.beams;
+  for (let i = 0; i < list.length; i++) {
+    const bm = list[i];
+    const elapsed = bm.max - bm.life;
+    const x2 = bm.x + Math.cos(bm.a) * CFG.beam.len;
+    const y2 = bm.y + Math.sin(bm.a) * CFG.beam.len;
+
+    if (elapsed < bm.warmup) {
+      // 蓄力：越来越亮的细线
+      const k = elapsed / bm.warmup;
+      ctx.strokeStyle = hexToRgba(COLORS.hazard, 0.25 + 0.6 * k);
+      ctx.lineWidth = 1 + 3 * k;
+      ctx.beginPath();
+      ctx.moveTo(bm.x, bm.y);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    } else {
+      // 实体光束：白色外壳 + 实体绿核 + 白色亮心（外壳用白，避免与红色混出橙色）
+      const left = (bm.max - elapsed) / (bm.max - bm.warmup);
+      const w = CFG.beam.width * (0.75 + 0.35 * left);
+      ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+      ctx.lineWidth = w * 2.1;
+      ctx.beginPath();
+      ctx.moveTo(bm.x, bm.y);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+
+      ctx.strokeStyle = COLORS.hazard;
+      ctx.lineWidth = w;
+      ctx.beginPath();
+      ctx.moveTo(bm.x, bm.y);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+      ctx.lineWidth = Math.max(2, w * 0.28);
+      ctx.beginPath();
+      ctx.moveTo(bm.x, bm.y);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+  }
+}
+
 function drawBullets(ctx) {
   const list = Game.bullets;
   const spin = Game.frame * 0.05;
@@ -163,6 +244,21 @@ function drawBullets(ctx) {
     starPath(ctx, b.x, b.y, b.r * 1.5, 5, 0.46, spin);
     ctx.fillStyle = COLORS.hazard;
     ctx.fill();
+    // 白色细描边：绿色弹幕压在红色玩家上时，抗锯齿会混出橙色。
+    // 用 1px 灰阶描边把它们隔开，这是「不同色相不得直接相邻」的执行办法。
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // 追踪弹多一圈旋转环，让玩家一眼分辨「这个会转弯」
+    if (b.kind === 'homing') {
+      ctx.strokeStyle = hexToRgba(COLORS.hazard, 0.9);
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r * 2.2, Game.frame * 0.18, Game.frame * 0.18 + 2.2);
+      ctx.stroke();
+    }
+
     ctx.beginPath();
     ctx.arc(b.x, b.y, b.r * 0.42, 0, TAU);
     ctx.fillStyle = 'rgba(255,255,255,0.95)';
@@ -231,8 +327,10 @@ function drawPlayer(ctx) {
     ctx.translate(-p.x, -p.y);
   }
 
+  // 受伤冲击环：用白（灰阶）而不是危险色。
+  // 绿色是「会杀我的」的专属语义，套在玩家身上会让"我"和"威胁"混掉。
   if (p.hurtFlash > 0) {
-    ctx.strokeStyle = hexToRgba(COLORS.hazard, p.hurtFlash / 12);
+    ctx.strokeStyle = 'rgba(255,255,255,' + (p.hurtFlash / 12).toFixed(3) + ')';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.arc(p.x, p.y, P.visualR * 2.1, 0, TAU);
@@ -305,12 +403,14 @@ function drawDmgTexts(ctx) {
 function drawScreenEffects(ctx) {
   if (Game.screenHurt > 0) {
     const a = Game.screenHurt / 18;
+    // 用黑色渐晕而不是红色：红色半透明叠在绿色弹幕上会混出橙色，
+    // 那是第四种色相。黑色只压暗明度，不改变任何色相。
     const g = ctx.createRadialGradient(
       W / 2, H / 2, Math.min(W, H) * 0.22,
       W / 2, H / 2, Math.max(W, H) * 0.74
     );
-    g.addColorStop(0, 'rgba(255,0,0,0)');
-    g.addColorStop(1, 'rgba(255,0,0,' + (a * 0.62).toFixed(3) + ')');
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(1, 'rgba(0,0,0,' + (a * 0.72).toFixed(3) + ')');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
   }
@@ -392,7 +492,7 @@ function drawBanner(ctx) {
 // ------------------------------------------------------------- 覆盖层
 
 function dim(ctx, alpha) {
-  ctx.fillStyle = 'rgba(6,9,13,' + alpha + ')';
+  ctx.fillStyle = 'rgba(0,0,0,' + alpha + ')';
   ctx.fillRect(0, 0, W, H);
 }
 

@@ -7,9 +7,13 @@ const ctx = canvas.getContext('2d', { alpha: false });
 
 function fitCanvas() {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
-  canvas.width = Math.round(W * dpr);
-  canvas.height = Math.round(H * dpr);
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  // 让后端像素尺寸和 CSS 显示尺寸一致：否则浏览器会重采样整幅画面，
+  // 相邻像素插值会凭空造出中间色相（红色玩家压上绿色弹幕 → 橙色边缘）。
+  const cssW = canvas.clientWidth || W;
+  const cssH = canvas.clientHeight || H;
+  canvas.width = Math.max(1, Math.round(cssW * dpr));
+  canvas.height = Math.max(1, Math.round(cssH * dpr));
+  ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
 }
 
 fitCanvas();

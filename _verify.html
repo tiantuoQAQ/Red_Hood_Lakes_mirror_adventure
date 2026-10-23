@@ -23,7 +23,15 @@
   var FRAMES = parseInt((location.search.match(/ff=(\d+)/) || [])[1] || '200', 10);
   for (var i = 0; i < FRAMES; i++) { update(STEP); Input.tick(); }
 
-  // 制造一次命中与一次擦弹，验证飘字与全屏反馈的渲染
+  // 进入第三阶段并强制打出激光与穿刺，方便截图检查光束/预警线渲染
+  Game.boss.hp = Game.boss.maxHp * 0.3;
+  update(STEP);
+  PATTERNS.lances.fire(Game, Game.boss, 0);
+  PATTERNS.laser.fire(Game, Game.boss, 0);
+  for (var j = 0; j < 52; j++) { update(STEP); Input.tick(); }
+  PATTERNS.lances.fire(Game, Game.boss, 0);
+
+  // 制造一次命中与一次擦弹，验证飘字与反馈渲染
   Game.shots.push({ x: Game.boss.x, y: Game.boss.y, vx: 0, vy: 0, r: 5, dmg: 3 });
   Game.bullets.push({
     x: Game.player.x + CFG.player.grazeR - 2, y: Game.player.y,

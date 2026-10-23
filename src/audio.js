@@ -129,6 +129,18 @@ const Sfx = (function () {
       noise(0.28, 0.12, 2200, 0.9);
     },
 
+    // 预警：两声上行的短提示，让玩家知道「有东西要来了」
+    warn: function () {
+      tone(520, 640, 0.07, 'square', 0.05);
+      tone(700, 880, 0.08, 'square', 0.05, 0.10);
+    },
+
+    // 激光 / 穿刺发射：高频噪声 + 下沉音
+    lance: function () {
+      noise(0.22, 0.14, 3600, 0.9);
+      tone(900, 180, 0.26, 'sawtooth', 0.10);
+    },
+
     dead: function () {
       tone(240, 40, 0.7, 'sawtooth', 0.16);
       noise(0.5, 0.10, 400, 0.6);
