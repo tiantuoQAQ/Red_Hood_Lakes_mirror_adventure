@@ -62,20 +62,32 @@ globalThis.__run = function (keydown, keyup, releaseAll, mousedown, mouseup) {
   out.dashActive = Game.player.dashT > 0;
   releaseAll();
 
-  // 2. 球形态：按住上 + 冲刺进入，不触发普通冲刺，并且立刻上冲
+  // 球形态：必须在空中长按冲刺才进入，按一下不够
   resetGame();
   const startY = Game.player.y;
-  keydown('ArrowUp');
+  keydown('Space');
+  step();
+  keyup('Space');
+  for (let i = 0; i < 6; i++) step();
+  out.wasAirborne = Game.player.onGround === false;
+
   keydown('ShiftLeft');
   step();
-  out.ballEntered = Game.player.ball === true;
-  out.ballSuppressedDash = Game.player.dashT === 0;
-  keyup('ShiftLeft');
-  for (let i = 0; i < 10; i++) update(STEP);
+  out.ballNotImmediate = Game.player.ball === false;   // 按一下不应该立刻变球
+  out.airDashFired = Game.player.dashT > 0;            // 但空中按下仍然会先冲刺
+
+  let ballFrame = -1;
+  for (let i = 0; i < 40; i++) {
+    step();
+    if (Game.player.ball) { ballFrame = i + 1; break; }
+  }
+  out.ballEnteredByHold = ballFrame >= 0;
+  out.ballHoldFrames = ballFrame;
+  out.ballHoldExpected = CFG.player.ballHoldFrames;
   out.ballRose = Game.player.y < startY - 20;
   out.ballStillActive = Game.player.ball === true;
 
-  // 3. 球形态是免疫伤害的
+  // 球形态免疫伤害
   Game.bullets.push({
     x: Game.player.x, y: Game.player.y, vx: 0, vy: 0,
     r: CFG.bullets.r, kind: 'hazard', grazed: true, life: 60
@@ -84,7 +96,7 @@ globalThis.__run = function (keydown, keyup, releaseAll, mousedown, mouseup) {
   step();
   out.ballImmuneToDamage = Game.lives === livesInBall;
 
-  // 4. 球形态：向下飞，落地必须自动取消（核心设计），且不是瞬间取消
+  // 球形态：向下飞，落地必须自动取消（核心设计），且不是瞬间取消
   keyup('ArrowUp');
   keydown('ArrowDown');
   let groundFrame = -1;
@@ -97,18 +109,32 @@ globalThis.__run = function (keydown, keyup, releaseAll, mousedown, mouseup) {
   out.ballGrounded = Math.abs(Game.player.y + CFG.player.visualR - GROUND_Y) < 1.5;
   releaseAll();
 
-  // 4. 球形态：体力耗尽也必须退出
+  // 地面上长按冲刺不应该变成球（否则会变成「站桩无敌」）
   resetGame();
-  keydown('ArrowUp');
   keydown('ShiftLeft');
+  for (let i = 0; i < 40; i++) step();
+  out.noBallOnGround = Game.player.ball === false;
+  releaseAll();
+
+  // 球形态：体力耗尽也必须退出
+  resetGame();
+  keydown('Space');
   step();
+  keyup('Space');
+  for (let i = 0; i < 6; i++) step();
+  keydown('ShiftLeft');
+  let gotBall = false;
+  for (let i = 0; i < 40; i++) {
+    step();
+    if (Game.player.ball) { gotBall = true; break; }
+  }
   keyup('ShiftLeft');
   let staminaFrame = -1;
   for (let i = 0; i < 600; i++) {
     step();
     if (!Game.player.ball) { staminaFrame = i; break; }
   }
-  out.ballExitByStamina = staminaFrame >= 0;
+  out.ballExitByStamina = gotBall && staminaFrame >= 0;
   out.ballStaminaFrames = staminaFrame;
   releaseAll();
 
@@ -207,8 +233,10 @@ const out = globalThis.__out;
 const checks = [
   ['冲刺给出无敌帧', out.dashIframes >= out.dashIframesExpected, out.dashIframes + ' 帧 / 期望 ≥ ' + out.dashIframesExpected],
   ['冲刺期间处于冲刺状态', out.dashActive === true, ''],
-  ['按住上+冲刺进入球形态', out.ballEntered === true, ''],
-  ['进入球形态时抑制普通冲刺', out.ballSuppressedDash === true, ''],
+  ['空中长按冲刺进入球形态', out.ballEnteredByHold && out.wasAirborne, '第 ' + out.ballHoldFrames + ' 帧成球 / 配置 ' + out.ballHoldExpected],
+  ['按一下冲刺不会直接成球', out.ballNotImmediate === true, ''],
+  ['空中按冲刺仍会先触发冲刺', out.airDashFired === true, ''],
+  ['地面上长按冲刺不会成球', out.noBallOnGround === true, ''],
   ['球形态起手强制上冲', out.ballRose === true, ''],
   ['球形态不会立刻被地面取消', out.ballStillActive === true, ''],
   ['球形态免疫伤害', out.ballImmuneToDamage === true, ''],

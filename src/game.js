@@ -39,6 +39,7 @@ function makePlayer() {
     invT: 0,
     ball: false,
     ballLaunch: 0,
+    dashHold: 0,
     stamina: 100,
     fireT: 0,
     jumpBuf: 0,
@@ -125,16 +126,24 @@ function updatePlayer(dt) {
   const up = Input.held('up');
   const down = Input.held('down');
 
-  // ---- 进入球形态：按住上 + 冲刺 ----
-  if (!p.ball && up && Input.pressed('dash') && p.stamina > P.ballMinStamina) {
-    Input.consume('dash');
-    p.ball = true;
-    p.ballLaunch = P.ballLaunchFrames; // 起手强制上冲，避免站在地上瞬间被地面取消
-    p.dashT = 0;
-    p.vx *= 0.4;
-    p.vy = -P.ballSpeed;
-    burst(p.x, p.y, COLORS.ice, 14);
-    Sfx.ballOn();
+  // ---- 进入球形态：空中长按冲刺 ----
+  // 长按而不是按一下：这段延迟本身是手感的一部分，玩家能预期「按住就是在蓄力」
+  if (!p.ball) {
+    if (Input.held('dash') && !p.onGround) p.dashHold++;
+    else p.dashHold = 0;
+
+    if (p.dashHold >= P.ballHoldFrames && p.stamina > P.ballMinStamina) {
+      p.ball = true;
+      p.dashHold = 0;
+      p.ballLaunch = P.ballLaunchFrames; // 起手强制上冲，避免贴地进入瞬间被地面取消
+      p.dashT = 0;
+      p.vx *= 0.4;
+      p.vy = -P.ballSpeed;
+      burst(p.x, p.y, COLORS.ice, 14);
+      Sfx.ballOn();
+    }
+  } else {
+    p.dashHold = 0;
   }
 
   // ---- 普通冲刺 ----
