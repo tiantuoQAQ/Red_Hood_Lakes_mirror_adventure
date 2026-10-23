@@ -1,0 +1,148 @@
+'use strict';
+
+// 入口：固定步长循环、画布适配、调参面板绑定。
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d', { alpha: false });
+
+function fitCanvas() {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  canvas.width = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+fitCanvas();
+window.addEventListener('resize', fitCanvas);
+
+// 浏览器要求音频在用户交互之后才能启动
+window.addEventListener('keydown', function () { Sfx.unlock(); });
+window.addEventListener('pointerdown', function () { Sfx.unlock(); });
+
+// ------------------------------------------------------------ 调参面板
+
+const panelEl = document.getElementById('panel');
+
+function togglePanel() {
+  if (panelEl) panelEl.classList.toggle('hidden');
+}
+
+function getByPath(obj, path) {
+  const parts = path.split('.');
+  let o = obj;
+  for (let i = 0; i < parts.length; i++) {
+    if (o === null || o === undefined) return undefined;
+    o = o[parts[i]];
+  }
+  return o;
+}
+
+function setByPath(obj, path, value) {
+  const parts = path.split('.');
+  let o = obj;
+  for (let i = 0; i < parts.length - 1; i++) o = o[parts[i]];
+  o[parts[parts.length - 1]] = value;
+}
+
+function fmt(v) {
+  return Number.isInteger(v) ? String(v) : Number(v).toFixed(2);
+}
+
+(function bindPanel() {
+  const sliders = document.querySelectorAll('#panel input[data-cfg]');
+  for (let i = 0; i < sliders.length; i++) {
+    const el = sliders[i];
+    const path = el.getAttribute('data-cfg');
+    const out = document.querySelector('[data-out="' + path + '"]');
+    const initial = getByPath(CFG, path);
+    el.value = initial;
+    if (out) out.textContent = fmt(initial);
+
+    el.addEventListener('input', function () {
+      const val = parseFloat(el.value);
+      setByPath(CFG, path, val);
+      if (out) out.textContent = fmt(val);
+
+      // BOSS 血量需要同步到当前这一场
+      if (path === 'boss.hp' && Game.boss) {
+        const ratio = Game.boss.hp / Game.boss.maxHp;
+        Game.boss.maxHp = val;
+        Game.boss.hp = Math.max(1, Math.min(val, val * ratio));
+      }
+    });
+  }
+
+  const btnRestart = document.getElementById('btn-restart');
+  if (btnRestart) btnRestart.addEventListener('click', function () { resetGame(); });
+
+  const btnJson = document.getElementById('btn-json');
+  if (btnJson) {
+    btnJson.addEventListener('click', function () {
+      const txt = JSON.stringify(CFG, null, 2);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).then(function () {
+          btnJson.textContent = '已复制';
+          setTimeout(function () { btnJson.textContent = '导出 JSON'; }, 1200);
+        }, function () { console.log(txt); });
+      } else {
+        console.log(txt);
+      }
+    });
+  }
+})();
+
+// ------------------------------------------------------------ 主循环
+
+function stepOnce() {
+  if (Input.pressed('toggleHitbox')) Game.debug.hitbox = !Game.debug.hitbox;
+  if (Input.pressed('togglePanel')) togglePanel();
+  if (Input.pressed('mute')) Sfx.toggleMute();
+
+  if (Game.mode === 'title') {
+    Game.frame++;
+    if (Input.pressed('start')) resetGame();
+  } else if (Game.mode === 'play') {
+    if (Input.pressed('pause')) Game.paused = !Game.paused;
+    if (Game.paused) Game.frame++;
+    else update(STEP);
+  } else {
+    Game.frame++;
+    if (Input.pressed('restart') || Input.pressed('start')) resetGame();
+  }
+
+  Input.tick();
+}
+
+let acc = 0;
+let last = performance.now();
+
+function frameLoop(now) {
+  const dt = Math.min(0.25, (now - last) / 1000);
+  last = now;
+  acc += dt;
+
+  let guard = 0;
+  while (acc >= STEP && guard < 6) {
+    stepOnce();
+    acc -= STEP;
+    guard++;
+  }
+  if (guard >= 6) acc = 0;   // 掉帧时丢弃积压，避免「越卡越快」
+
+  render(ctx);
+  requestAnimationFrame(frameLoop);
+}
+
+// 调试用：?auto=1 直接开局，?ff=N 预跑 N 帧（用于截图验证）
+(function autoStart() {
+  const params = new URLSearchParams(location.search);
+  if (params.get('auto') !== '1') return;
+  resetGame();
+  const ff = parseInt(params.get('ff') || '0', 10);
+  for (let i = 0; i < ff; i++) {
+    update(STEP);
+    Input.tick();
+  }
+})();
+
+requestAnimationFrame(frameLoop);

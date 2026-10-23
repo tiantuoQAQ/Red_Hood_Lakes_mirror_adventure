@@ -1,0 +1,25 @@
+# 依赖与构建产物（本项目无依赖，保留以防后续引入）
+node_modules/
+dist/
+build/
+
+# 编辑器与系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 日志与临时文件
+*.log
+*.tmp
+*.bak
+
+# 截图与调试产物
+screenshots/
+*.png
+*.jpg
+!docs/**/*.png
+
+# 本地覆盖配置
+config.local.js
