@@ -54,6 +54,10 @@ const CFG = {
     shotDamage: 3,
     shotRadius: 5,
     grazeR: 30,
+    grazeChainWindow: 80,     // 两次擦弹间隔超过这么多帧，连击归零
+    grazeChainCourageStep: 5, // 每 N 次连续擦弹提升一档倍率
+    grazeChainMaxMult: 3,     // 勇气倍率上限
+    grazeDashRefund: 2,       // 每次擦弹返还的冲刺冷却帧数
     courageMax: 100,
     couragePerHit: 2,
     couragePerGraze: 1,

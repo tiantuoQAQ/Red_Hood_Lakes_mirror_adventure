@@ -204,6 +204,53 @@ globalThis.__run = function (keydown, keyup, releaseAll, mousedown, mouseup) {
   out.invulnAfterHit = Game.player.invT;
   out.invulnExpected = CFG.player.hurtIFrames;
 
+  // 擦弹连击：连续擦弹勇气倍率上升
+  resetGame();
+  Game.boss.gap = 100000;          // 关掉 BOSS 弹幕，隔离测试
+  Game.courage = 0;
+  const gp = Game.player;
+  const gains = [];
+  for (let k = 0; k < 6; k++) {
+    const before = Game.courage;
+    Game.bullets.push({
+      x: gp.x + CFG.player.grazeR - 2, y: gp.y, vx: 0, vy: -300,
+      r: CFG.bullets.r, kind: 'hazard', grazed: false, life: 40
+    });
+    step();
+    gains.push(+(Game.courage - before).toFixed(2));
+  }
+  out.grazeChain = gp.grazeChain;
+  out.grazeGains = gains;
+  out.grazeGainRises = gains[gains.length - 1] > gains[0];
+
+  // 连击窗口超时后归零
+  for (let i = 0; i < CFG.player.grazeChainWindow + 6; i++) step();
+  out.chainExpired = gp.grazeChain === 0;
+
+  // 中弹清空擦弹连击
+  resetGame();
+  Game.boss.gap = 100000;
+  Game.player.grazeChain = 7;
+  Game.player.grazeTimer = 50;
+  Game.bullets.push({
+    x: Game.player.x, y: Game.player.y, vx: 0, vy: 0,
+    r: CFG.bullets.r, kind: 'hazard', grazed: true, life: 30
+  });
+  step();
+  out.chainClearedOnHit = Game.player.grazeChain === 0;
+
+  // 擦弹返还冲刺冷却
+  resetGame();
+  Game.boss.gap = 100000;
+  Game.player.dashCd = 20;
+  const cdBefore = Game.player.dashCd;
+  Game.bullets.push({
+    x: Game.player.x + CFG.player.grazeR - 2, y: Game.player.y, vx: 0, vy: -300,
+    r: CFG.bullets.r, kind: 'hazard', grazed: false, life: 40
+  });
+  step();
+  out.dashRefund = cdBefore - Game.player.dashCd;
+
   // 7. 阶段推进：越过阈值后切阶段并清屏
   resetGame();
   for (let i = 0; i < 200; i++) update(STEP);
@@ -286,6 +333,10 @@ const checks = [
   ['球形态体力耗尽自动取消', out.ballExitByStamina && out.ballStaminaFrames > 0, '第 ' + out.ballStaminaFrames + ' 帧耗尽'],
   ['判定点远小于视觉半径', out.hitboxRatio <= 0.3, 'hitR=' + out.hitR + ' visualR=' + out.visualR + ' 比例=' + out.hitboxRatio],
   ['擦弹增加勇气', out.grazeCourage > 0, '勇气=' + out.grazeCourage],
+  ['连续擦弹勇气倍率上升', out.grazeGainRises === true, '依次 ' + out.grazeGains.join(' / ')],
+  ['连击窗口超时归零', out.chainExpired === true, ''],
+  ['中弹清空擦弹连击', out.chainClearedOnHit === true, ''],
+  ['擦弹返还冲刺冷却', out.dashRefund >= 3, '-' + out.dashRefund + ' 帧'],
   ['中弹扣一条命', out.livesLost === 1, ''],
   ['中弹后进入无敌', out.invulnAfterHit >= out.invulnExpected, out.invulnAfterHit + ' 帧 / 期望 ≥ ' + out.invulnExpected],
   ['弹幕会生成', out.bulletsBeforePhase > 0, '200 帧时场上 ' + out.bulletsBeforePhase + ' 颗'],

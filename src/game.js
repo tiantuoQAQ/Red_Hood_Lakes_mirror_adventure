@@ -19,6 +19,7 @@ const Game = {
   hitstop: 0,
   screenHurt: 0,
   dmgTexts: [],
+  grazePulse: 0,
   deadT: 0,
   debug: { hitbox: true, latencyMs: 0 }
 };
@@ -41,6 +42,8 @@ function makePlayer() {
     ballLaunch: 0,
     ballLock: false,
     dashHold: 0,
+    grazeChain: 0,
+    grazeTimer: 0,
     stamina: 100,
     fireT: 0,
     jumpBuf: 0,
@@ -83,6 +86,7 @@ function resetGame() {
   Game.shake = 0;
   Game.hitstop = 0;
   Game.screenHurt = 0;
+  Game.grazePulse = 0;
   Game.dmgTexts.length = 0;
   Game.deadT = 0;
 }
@@ -95,6 +99,7 @@ function update(dt) {
   if (Game.shake > 0) Game.shake = Math.max(0, Game.shake - dt * 30);
   if (Game.bannerT > 0) Game.bannerT--;
   if (Game.screenHurt > 0) Game.screenHurt--;
+  if (Game.grazePulse > 0) Game.grazePulse--;
 
   if (Game.hitstop > 0) {
     Game.hitstop--;
@@ -121,6 +126,10 @@ function updatePlayer(dt) {
   if (p.jumpBuf > 0) p.jumpBuf--;
   if (p.fireT > 0) p.fireT--;
   if (p.coyote > 0) p.coyote--;
+  if (p.grazeTimer > 0) {
+    p.grazeTimer--;
+    if (p.grazeTimer === 0) p.grazeChain = 0;   // 窗口超时，连击中断
+  }
 
   const left = Input.held('left');
   const right = Input.held('right');
@@ -372,10 +381,21 @@ function updateBullets(dt) {
     } else if (!b.grazed && d < P.grazeR + b.r) {
       b.grazed = true;
       if (!invincible) {
-        Game.courage = Math.min(P.courageMax, Game.courage + P.couragePerGraze);
+        // 擦弹连击：连续贴身躲，勇气倍率上升，同时返还冲刺冷却
+        p.grazeChain++;
+        p.grazeTimer = P.grazeChainWindow;
+        const mult = Math.min(
+          P.grazeChainMaxMult,
+          1 + Math.floor(p.grazeChain / P.grazeChainCourageStep) * 0.5
+        );
+        const gain = P.couragePerGraze * mult;
+        Game.courage = Math.min(P.courageMax, Game.courage + gain);
+        p.dashCd = Math.max(0, p.dashCd - P.grazeDashRefund);
+        Game.grazePulse = 10;
+
         burst(b.x, b.y, COLORS.self, 2);
-        addDmgText(b.x, b.y - 6, '+' + P.couragePerGraze, COLORS.self, true);
-        Sfx.graze();
+        addDmgText(b.x, b.y - 6, '+' + (gain % 1 === 0 ? gain : gain.toFixed(1)), COLORS.self, true);
+        Sfx.graze(p.grazeChain);
       }
     }
   }
@@ -391,6 +411,8 @@ function hitPlayer(b) {
   p.hurtFlash = 12;
   p.ball = false;
   p.dashT = 0;
+  p.grazeChain = 0;      // 中弹清空擦弹连击：这是贴脸躲的代价
+  p.grazeTimer = 0;
 
   const dir = p.x < b.x ? -1 : 1;
   p.vx = dir * P.knockback;

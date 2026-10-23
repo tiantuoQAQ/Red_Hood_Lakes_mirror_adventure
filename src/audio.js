@@ -91,8 +91,11 @@ const Sfx = (function () {
       tone(240, 150, 0.07, 'triangle', 0.07);
     },
 
-    graze: function () {
-      tone(1500, 2100, 0.05, 'triangle', 0.045);
+    // 擦弹音高随连击升高：连击越久，声音越尖，玩家不用看 UI 也知道自己在连
+    graze: function (chain) {
+      const n = Math.min(chain || 1, 14);
+      const base = 1500 + n * 70;
+      tone(base, base * 1.35, 0.05, 'triangle', 0.045);
     },
 
     dash: function () {

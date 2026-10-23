@@ -242,6 +242,16 @@ function drawPlayer(ctx) {
     ctx.restore();
   }
 
+  // 擦弹脉冲：贴着弹幕掠过时向外扩散的一圈
+  if (Game.grazePulse > 0) {
+    const ga = Game.grazePulse / 10;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, P.grazeR + (1 - ga) * 20, 0, TAU);
+    ctx.strokeStyle = hexToRgba(COLORS.self, ga * 0.8);
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
   // 球形态体力条
   if (p.ball) {
     const w = 52;
@@ -331,6 +341,13 @@ function drawHUD(ctx) {
   mono(ctx, '勇气 ' + Math.floor(Game.courage) + '%', 60, 654, 11, COLORS.dim);
   if (Game.courage >= P.courageMax) {
     mono(ctx, 'L / X 释放冰封', 312, 668, 12, COLORS.self);
+  }
+
+  // 擦弹连击：数字 + 剩余窗口
+  const pl = Game.player;
+  if (pl && pl.grazeChain > 0) {
+    mono(ctx, '擦弹 x' + pl.grazeChain, 60, 638, 12, COLORS.self);
+    bar(ctx, 130, 628, 120, 5, pl.grazeTimer / P.grazeChainWindow, COLORS.self);
   }
 
   // 状态提示（右下）
