@@ -334,7 +334,7 @@ function drawHUD(ctx) {
   }
 
   // 状态提示（右下）
-  mono(ctx, '球形态: 空中长按冲刺 · 落地取消', W - 60, 668, 11, COLORS.dim, 'right');
+  mono(ctx, '点按冲刺=冲刺 · 按住冲刺=球形态 · 落地取消', W - 60, 668, 11, COLORS.dim, 'right');
 
   // 调试：真实输入延迟（按键到画面提交的平均值）
   if (Game.debug.hitbox && Game.debug.latencyMs > 0) {
@@ -369,8 +369,8 @@ function drawOverlay(ctx) {
     const lines = [
       ['移动', 'A / D  或  ← / →'],
       ['跳跃', 'Space'],
-      ['冲刺（空中按住可变球）', 'Shift 或 K'],
-      ['球形态（无敌，落地取消）', '空中长按冲刺'],
+      ['冲刺（点按）', 'Shift 或 K'],
+      ['球形态（长按，无敌，落地取消）', '按住冲刺'],
       ['射击（自动瞄准）', 'J 或 Z'],
       ['冰封（勇气满）', 'L 或 X'],
       ['静音 / 暂停 / 重开', 'M / P / R']

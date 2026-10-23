@@ -109,11 +109,51 @@ globalThis.__run = function (keydown, keyup, releaseAll, mousedown, mouseup) {
   out.ballGrounded = Math.abs(Game.player.y + CFG.player.visualR - GROUND_Y) < 1.5;
   releaseAll();
 
-  // 地面上长按冲刺不应该变成球（否则会变成「站桩无敌」）
+  // 点按冲刺只冲刺，不变成球
   resetGame();
   keydown('ShiftLeft');
-  for (let i = 0; i < 40; i++) step();
-  out.noBallOnGround = Game.player.ball === false;
+  step();
+  const tapDashed = Game.player.dashT > 0;
+  keyup('ShiftLeft');
+  for (let i = 0; i < 30; i++) step();
+  out.tapDashOnly = tapDashed && Game.player.ball === false;
+
+  // 地面上长按冲刺也能变成球（体力是唯一的成本）
+  resetGame();
+  keydown('ShiftLeft');
+  let groundBall = -1;
+  for (let i = 0; i < 40; i++) {
+    step();
+    if (Game.player.ball) { groundBall = i + 1; break; }
+  }
+  out.ballFromGround = groundBall >= 0;
+  out.ballFromGroundFrame = groundBall;
+
+  // 落地取消后若仍按住冲刺，不应立刻又变成球（必须松开再按）
+  keydown('ArrowDown');
+  let firstExit = -1;
+  for (let i = 0; i < 220; i++) {
+    step();
+    if (!Game.player.ball) { firstExit = i; break; }
+  }
+  let reentered = false;
+  for (let i = 0; i < 30; i++) {
+    step();
+    if (Game.player.ball) { reentered = true; break; }
+  }
+  out.noInstaReenter = firstExit >= 0 && reentered === false;
+  keyup('ArrowDown');
+  keyup('ShiftLeft');
+  step();
+
+  // 松开后重新长按，应该又能成球
+  keydown('ShiftLeft');
+  let reBall = -1;
+  for (let i = 0; i < 40; i++) {
+    step();
+    if (Game.player.ball) { reBall = i + 1; break; }
+  }
+  out.reenterAfterRelease = reBall >= 0;
   releaseAll();
 
   // 球形态：体力耗尽也必须退出
@@ -233,10 +273,12 @@ const out = globalThis.__out;
 const checks = [
   ['冲刺给出无敌帧', out.dashIframes >= out.dashIframesExpected, out.dashIframes + ' 帧 / 期望 ≥ ' + out.dashIframesExpected],
   ['冲刺期间处于冲刺状态', out.dashActive === true, ''],
-  ['空中长按冲刺进入球形态', out.ballEnteredByHold && out.wasAirborne, '第 ' + out.ballHoldFrames + ' 帧成球 / 配置 ' + out.ballHoldExpected],
-  ['按一下冲刺不会直接成球', out.ballNotImmediate === true, ''],
+  ['点按冲刺只冲刺不变球', out.tapDashOnly === true, ''],
+  ['长按冲刺变球（空中）', out.ballEnteredByHold && out.wasAirborne, '第 ' + out.ballHoldFrames + ' 帧成球'],
+  ['长按冲刺变球（地面也算）', out.ballFromGround === true, '第 ' + out.ballFromGroundFrame + ' 帧成球'],
+  ['落地取消后不会立刻再次成球', out.noInstaReenter === true, ''],
+  ['松开再长按可以再次成球', out.reenterAfterRelease === true, ''],
   ['空中按冲刺仍会先触发冲刺', out.airDashFired === true, ''],
-  ['地面上长按冲刺不会成球', out.noBallOnGround === true, ''],
   ['球形态起手强制上冲', out.ballRose === true, ''],
   ['球形态不会立刻被地面取消', out.ballStillActive === true, ''],
   ['球形态免疫伤害', out.ballImmuneToDamage === true, ''],
