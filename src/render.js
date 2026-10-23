@@ -328,6 +328,12 @@ function drawHUD(ctx) {
 
   // 状态提示（右下）
   mono(ctx, '球形态: 按住 ↑/W + Shift · 落地取消', W - 60, 668, 11, COLORS.dim, 'right');
+
+  // 调试：真实输入延迟（按键到画面提交的平均值）
+  if (Game.debug.hitbox && Game.debug.latencyMs > 0) {
+    mono(ctx, '输入延迟 ' + Game.debug.latencyMs.toFixed(1) + ' ms', W - 60, 54, 11, COLORS.dim, 'right');
+    mono(ctx, Math.round(1000 / Math.max(1, Game.debug.frameMs || 16.7)) + ' fps', W - 60, 70, 11, COLORS.dim, 'right');
+  }
 }
 
 function drawBanner(ctx) {

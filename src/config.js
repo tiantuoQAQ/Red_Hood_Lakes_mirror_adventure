@@ -41,6 +41,7 @@ const CFG = {
     dashIFrames: 16,
     dashCd: 16,
     ballSpeed: 450,
+    ballLaunchFrames: 5, // 进入球形态后强制上冲的帧数
     ballDrain: 32,       // 体力/秒
     ballRegen: 26,       // 落地回复/秒
     ballMinStamina: 20,  // 进入球形态所需最低体力

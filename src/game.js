@@ -21,7 +21,7 @@ const Game = {
   screenHurt: 0,
   dmgTexts: [],
   deadT: 0,
-  debug: { hitbox: true }
+  debug: { hitbox: true, latencyMs: 0 }
 };
 
 // ---------------------------------------------------------------- 构造
@@ -132,7 +132,7 @@ function updatePlayer(dt) {
   if (!p.ball && up && Input.pressed('dash') && p.stamina > P.ballMinStamina) {
     Input.consume('dash');
     p.ball = true;
-    p.ballLaunch = 5;            // 起手 5 帧强制上冲，避免站在地上瞬间被地面取消
+    p.ballLaunch = P.ballLaunchFrames; // 起手强制上冲，避免站在地上瞬间被地面取消
     p.dashT = 0;
     p.vx *= 0.4;
     p.vy = -P.ballSpeed;

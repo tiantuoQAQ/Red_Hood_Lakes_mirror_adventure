@@ -107,6 +107,34 @@
       <input type="range" data-cfg="player.ballDrain" min="8" max="90" step="1">
     </div>
     <div class="row">
+      <label>球形态起手上冲帧 <output data-out="player.ballLaunchFrames"></output></label>
+      <input type="range" data-cfg="player.ballLaunchFrames" min="0" max="20" step="1">
+    </div>
+    <div class="row">
+      <label>加速度 <output data-out="player.accel"></output></label>
+      <input type="range" data-cfg="player.accel" min="1000" max="12000" step="200">
+    </div>
+    <div class="row">
+      <label>摩擦（松手减速） <output data-out="player.friction"></output></label>
+      <input type="range" data-cfg="player.friction" min="800" max="12000" step="200">
+    </div>
+    <div class="row">
+      <label>冲刺冷却帧 <output data-out="player.dashCd"></output></label>
+      <input type="range" data-cfg="player.dashCd" min="0" max="60" step="1">
+    </div>
+    <div class="row">
+      <label>擦弹判定半径 <output data-out="player.grazeR"></output></label>
+      <input type="range" data-cfg="player.grazeR" min="10" max="60" step="1">
+    </div>
+    <div class="row">
+      <label>射击间隔帧 <output data-out="player.fireInterval"></output></label>
+      <input type="range" data-cfg="player.fireInterval" min="4" max="30" step="1">
+    </div>
+    <div class="row">
+      <label>每发命中的勇气 <output data-out="player.couragePerHit"></output></label>
+      <input type="range" data-cfg="player.couragePerHit" min="0" max="10" step="1">
+    </div>
+    <div class="row">
       <label>受伤无敌帧 <output data-out="player.hurtIFrames"></output></label>
       <input type="range" data-cfg="player.hurtIFrames" min="20" max="160" step="5">
     </div>

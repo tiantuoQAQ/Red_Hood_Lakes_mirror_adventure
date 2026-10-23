@@ -19,6 +19,12 @@ window.addEventListener('resize', fitCanvas);
 window.addEventListener('keydown', function () { Sfx.unlock(); });
 window.addEventListener('pointerdown', function () { Sfx.unlock(); });
 
+// 输入延迟测量：从按键事件到该帧真正画到屏幕上，这段时间才是玩家体感到的延迟
+let pendingKeyStamp = null;
+window.addEventListener('keydown', function () {
+  if (pendingKeyStamp === null) pendingKeyStamp = performance.now();
+});
+
 // ------------------------------------------------------------ 调参面板
 
 const panelEl = document.getElementById('panel');
@@ -121,6 +127,9 @@ function frameLoop(now) {
   last = now;
   acc += dt;
 
+  // 帧时间平滑，用于 HUD 显示的实际帧率
+  Game.debug.frameMs = Game.debug.frameMs ? Game.debug.frameMs * 0.9 + dt * 1000 * 0.1 : dt * 1000;
+
   let guard = 0;
   while (acc >= STEP && guard < 6) {
     stepOnce();
@@ -130,6 +139,14 @@ function frameLoop(now) {
   if (guard >= 6) acc = 0;   // 掉帧时丢弃积压，避免「越卡越快」
 
   render(ctx);
+
+  // 画面已经提交，此时计算「按键 → 画面」的真实延迟
+  if (pendingKeyStamp !== null) {
+    const ms = performance.now() - pendingKeyStamp;
+    Game.debug.latencyMs = Game.debug.latencyMs === 0 ? ms : Game.debug.latencyMs * 0.85 + ms * 0.15;
+    pendingKeyStamp = null;
+  }
+
   requestAnimationFrame(frameLoop);
 }
 

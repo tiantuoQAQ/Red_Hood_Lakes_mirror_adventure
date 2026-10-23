@@ -102,7 +102,8 @@ _verify.html        截图校验页（不加载主循环）
 ## 测试
 
 ```bash
-node test/logic_test.js
+node test/logic_test.js     # 17 项玩法机制断言
+node test/config_check.js   # 调参面板与 CFG 字段是否对得上
 ```
 
 覆盖：冲刺无敌帧、球形态进入/上冲/免疫/落地取消/体力耗尽退出、
