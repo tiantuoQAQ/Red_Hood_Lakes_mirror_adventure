@@ -502,10 +502,8 @@ function hitPlayer(b) {
   p.grazeChain = 0;      // 中弹清空擦弹连击：这是贴脸躲的代价
   p.grazeTimer = 0;
 
-  const dir = p.x < b.x ? -1 : 1;
-  p.vx = dir * P.knockback;
-  p.vy = -280;
-
+  // 不击飞。受击位置完全由玩家自己控制——被系统推走会立刻毁掉躲避的节奏，
+  // 还可能把人推进下一波弹幕里。只给无敌帧和视觉/听觉反馈就够。
   Game.shake = 9;
   Game.hitstop = 4;
   Game.screenHurt = 18;

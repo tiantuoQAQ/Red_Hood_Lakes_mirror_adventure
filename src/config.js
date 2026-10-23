@@ -48,7 +48,6 @@ const CFG = {
     ballRegen: 26,       // 落地回复/秒
     ballMinStamina: 20,  // 进入球形态所需最低体力
     hurtIFrames: 70,
-    knockback: 430,
     lives: 3,
     fireInterval: 9,
     shotSpeed: 900,

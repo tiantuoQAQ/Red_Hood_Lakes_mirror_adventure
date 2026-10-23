@@ -172,6 +172,23 @@ globalThis.__run = function (keydown, keyup, releaseAll, mousedown, mouseup) {
   });
   step();
   out.livesLost = livesBefore - Game.lives;
+
+  // 受击不击飞：速度与位置不能被系统改写，只给无敌帧
+  resetGame();
+  Game.boss.gap = 100000;
+  Game.player.vx = 0;
+  Game.player.vy = 0;
+  const px0 = Game.player.x;
+  const py0 = Game.player.y;
+  Game.bullets.push({
+    x: px0, y: py0, vx: 0, vy: 0,
+    r: CFG.bullets.r, kind: 'hazard', grazed: true, life: 40
+  });
+  step();
+  out.hurtNoKnockback = (Game.player.vx === 0 && Game.player.vy === 0 &&
+                         Math.abs(Game.player.x - px0) < 0.001 &&
+                         Math.abs(Game.player.y - py0) < 0.001);
+  out.hurtStillInvuln = Game.player.invT >= CFG.player.hurtIFrames - 1;
   out.invulnAfterHit = Game.player.invT;
   out.invulnExpected = CFG.player.hurtIFrames;
 
@@ -371,6 +388,8 @@ const checks = [
   ['中弹清空擦弹连击', out.chainClearedOnHit === true, ''],
   ['擦弹返还冲刺冷却', out.dashRefund >= 3, '-' + out.dashRefund + ' 帧'],
   ['中弹扣一条命', out.livesLost === 1, ''],
+  ['受击不击飞（速度与位置不变）', out.hurtNoKnockback === true, ''],
+  ['受击仍给足无敌帧', out.hurtStillInvuln === true, ''],
   ['中弹后进入无敌', out.invulnAfterHit >= out.invulnExpected, out.invulnAfterHit + ' 帧 / 期望 ≥ ' + out.invulnExpected],
   ['弹幕会生成', out.bulletsBeforePhase > 0, '200 帧时场上 ' + out.bulletsBeforePhase + ' 颗'],
   ['血量过阈值切换阶段', out.phaseAfterDrop === 1, 'phase=' + out.phaseAfterDrop],
