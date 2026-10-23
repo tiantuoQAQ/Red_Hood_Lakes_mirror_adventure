@@ -73,10 +73,7 @@ function drawBackground(ctx) {
 
 // ------------------------------------------------------------- BOSS
 
-function drawBossHex(ctx, x, y, r, rot, alpha) {
-  ctx.save();
-  ctx.globalAlpha = alpha === undefined ? 1 : alpha;
-
+function hexPath(ctx, x, y, r, rot) {
   ctx.beginPath();
   for (let i = 0; i < 6; i++) {
     const a = -Math.PI / 2 + (i * Math.PI) / 3 + rot;
@@ -86,21 +83,20 @@ function drawBossHex(ctx, x, y, r, rot, alpha) {
     else ctx.lineTo(px, py);
   }
   ctx.closePath();
+}
+
+function drawBossHex(ctx, x, y, r, rot, alpha) {
+  ctx.save();
+  ctx.globalAlpha = alpha === undefined ? 1 : alpha;
+
+  hexPath(ctx, x, y, r, rot);
   ctx.fillStyle = COLORS.bg3;
   ctx.fill();
   ctx.strokeStyle = COLORS.ice;
   ctx.lineWidth = 2;
   ctx.stroke();
 
-  ctx.beginPath();
-  for (let i = 0; i < 6; i++) {
-    const a = -Math.PI / 2 + (i * Math.PI) / 3 - rot * 1.6;
-    const px = x + Math.cos(a) * r * 0.62;
-    const py = y + Math.sin(a) * r * 0.62;
-    if (i === 0) ctx.moveTo(px, py);
-    else ctx.lineTo(px, py);
-  }
-  ctx.closePath();
+  hexPath(ctx, x, y, r * 0.62, -rot * 1.6);
   ctx.strokeStyle = hexToRgba(COLORS.ice, 0.35);
   ctx.lineWidth = 1;
   ctx.stroke();
@@ -115,13 +111,29 @@ function drawBoss(ctx) {
   // 镜像幽灵：提示「另一边也会开火」
   drawBossHex(ctx, mirrorX(b.x), b.y, b.r * 0.82, Game.frame * 0.004, 0.16);
 
-  ctx.save();
+  const pop = b.flash > 0 ? 1 + b.flash * 0.014 : 1;
+  const r = b.r * pop;
+  const rot = -Game.frame * 0.004;
+  drawBossHex(ctx, b.x, b.y, r, rot, 1);
+
+  // 命中反馈全部收在 BOSS 本体上：闪白 + 外扩冲击环，不污染整个屏幕
   if (b.flash > 0) {
-    ctx.shadowColor = COLORS.ink;
-    ctx.shadowBlur = 22;
+    const a = b.flash / 4;
+    ctx.save();
+    hexPath(ctx, b.x, b.y, r, rot);
+    ctx.fillStyle = 'rgba(255,255,255,' + (a * 0.55).toFixed(3) + ')';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,' + (a * 0.85).toFixed(3) + ')';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, r + 10 + (1 - a) * 26, 0, TAU);
+    ctx.strokeStyle = 'rgba(255,255,255,' + (a * 0.45).toFixed(3) + ')';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
   }
-  drawBossHex(ctx, b.x, b.y, b.r, -Game.frame * 0.004, 1);
-  ctx.restore();
 }
 
 // ------------------------------------------------------------- 弹幕
@@ -259,13 +271,8 @@ function drawDmgTexts(ctx) {
   }
 }
 
-// 全屏反馈：命中闪白（灰阶，不引入新色相）+ 受伤时四周品红渐晕
+// 全屏反馈：只保留受伤时的四周品红渐晕；命中不再全屏闪白（太刺眼，改为 BOSS 本体闪）
 function drawScreenEffects(ctx) {
-  if (Game.hitFlash > 0) {
-    ctx.fillStyle = 'rgba(255,255,255,' + (Game.hitFlash * 0.028).toFixed(3) + ')';
-    ctx.fillRect(0, 0, W, H);
-  }
-
   if (Game.screenHurt > 0) {
     const a = Game.screenHurt / 18;
     const g = ctx.createRadialGradient(

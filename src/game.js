@@ -17,7 +17,6 @@ const Game = {
   bannerT: 0,
   shake: 0,
   hitstop: 0,
-  hitFlash: 0,
   screenHurt: 0,
   dmgTexts: [],
   deadT: 0,
@@ -81,7 +80,6 @@ function resetGame() {
   Game.bannerT = 0;
   Game.shake = 0;
   Game.hitstop = 0;
-  Game.hitFlash = 0;
   Game.screenHurt = 0;
   Game.dmgTexts.length = 0;
   Game.deadT = 0;
@@ -94,7 +92,6 @@ function update(dt) {
 
   if (Game.shake > 0) Game.shake = Math.max(0, Game.shake - dt * 30);
   if (Game.bannerT > 0) Game.bannerT--;
-  if (Game.hitFlash > 0) Game.hitFlash--;
   if (Game.screenHurt > 0) Game.screenHurt--;
 
   if (Game.hitstop > 0) {
@@ -323,12 +320,11 @@ function updateShots(dt) {
     }
     if (Math.hypot(s.x - b.x, s.y - b.y) < b.r + s.r) {
       b.hp -= s.dmg;
-      b.flash = 3;
+      b.flash = 4;          // 闪的是 BOSS 本身，不是全屏
       Game.courage = Math.min(CFG.player.courageMax, Game.courage + CFG.player.couragePerHit);
       burst(s.x, s.y, COLORS.self, 4);
       addDmgText(s.x, s.y - 12, s.dmg, COLORS.self, false);
       Game.shake = Math.max(Game.shake, 1.8);
-      Game.hitFlash = 2;
       Sfx.bossHit();
       Game.shots.splice(i, 1);
       checkBossDeath();

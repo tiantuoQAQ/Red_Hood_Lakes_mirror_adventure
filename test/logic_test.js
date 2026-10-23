@@ -38,15 +38,25 @@ function releaseAll() {
   ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'ShiftLeft', 'Space', 'KeyJ', 'KeyL']
     .forEach(keyup);
 }
+function mousedown(button) {
+  (handlers.mousedown || []).forEach(function (fn) { fn({ button: button }); });
+}
+function mouseup(button) {
+  (handlers.mouseup || []).forEach(function (fn) { fn({ button: button }); });
+}
 
 const harness = `
-globalThis.__run = function (keydown, keyup, releaseAll) {
+globalThis.__run = function (keydown, keyup, releaseAll, mousedown, mouseup) {
   const out = {};
+
+  // 推进一帧：update 之后必须 tick，否则「本帧按下」的判定窗口永远不关闭，
+  // 上一个用例按下的键会污染下一个用例。
+  const step = function () { update(STEP); Input.tick(); };
 
   // 1. 冲刺必须给出无敌帧
   resetGame();
   keydown('ShiftLeft');
-  update(STEP);
+  step();
   out.dashIframes = Game.player.invT;
   out.dashIframesExpected = CFG.player.dashIFrames;
   out.dashActive = Game.player.dashT > 0;
@@ -57,7 +67,7 @@ globalThis.__run = function (keydown, keyup, releaseAll) {
   const startY = Game.player.y;
   keydown('ArrowUp');
   keydown('ShiftLeft');
-  update(STEP);
+  step();
   out.ballEntered = Game.player.ball === true;
   out.ballSuppressedDash = Game.player.dashT === 0;
   keyup('ShiftLeft');
@@ -71,7 +81,7 @@ globalThis.__run = function (keydown, keyup, releaseAll) {
     r: CFG.bullets.r, kind: 'hazard', grazed: true, life: 60
   });
   const livesInBall = Game.lives;
-  update(STEP);
+  step();
   out.ballImmuneToDamage = Game.lives === livesInBall;
 
   // 4. 球形态：向下飞，落地必须自动取消（核心设计），且不是瞬间取消
@@ -79,7 +89,7 @@ globalThis.__run = function (keydown, keyup, releaseAll) {
   keydown('ArrowDown');
   let groundFrame = -1;
   for (let i = 0; i < 180; i++) {
-    update(STEP);
+    step();
     if (!Game.player.ball) { groundFrame = i; break; }
   }
   out.ballExitByGround = groundFrame >= 3;
@@ -91,11 +101,11 @@ globalThis.__run = function (keydown, keyup, releaseAll) {
   resetGame();
   keydown('ArrowUp');
   keydown('ShiftLeft');
-  update(STEP);
+  step();
   keyup('ShiftLeft');
   let staminaFrame = -1;
   for (let i = 0; i < 600; i++) {
-    update(STEP);
+    step();
     if (!Game.player.ball) { staminaFrame = i; break; }
   }
   out.ballExitByStamina = staminaFrame >= 0;
@@ -115,7 +125,7 @@ globalThis.__run = function (keydown, keyup, releaseAll) {
     x: p.x + CFG.player.grazeR - 2, y: p.y, vx: 0, vy: -300,
     r: CFG.bullets.r, kind: 'hazard', grazed: false, life: 40
   });
-  update(STEP);
+  step();
   out.grazeCourage = Game.courage;
 
   const livesBefore = Game.lives;
@@ -123,7 +133,7 @@ globalThis.__run = function (keydown, keyup, releaseAll) {
     x: p.x, y: p.y, vx: 0, vy: 0,
     r: CFG.bullets.r, kind: 'hazard', grazed: true, life: 40
   });
-  update(STEP);
+  step();
   out.livesLost = livesBefore - Game.lives;
   out.invulnAfterHit = Game.player.invT;
   out.invulnExpected = CFG.player.hurtIFrames;
@@ -133,7 +143,7 @@ globalThis.__run = function (keydown, keyup, releaseAll) {
   for (let i = 0; i < 200; i++) update(STEP);
   out.bulletsBeforePhase = Game.bullets.length;
   Game.boss.hp = Game.boss.maxHp * 0.5;
-  update(STEP);
+  step();
   out.phaseAfterDrop = Game.boss.phase;
   out.bulletsClearedOnPhase = Game.bullets.length;
 
@@ -141,7 +151,7 @@ globalThis.__run = function (keydown, keyup, releaseAll) {
   resetGame();
   let peak = 0;
   for (let i = 0; i < 900; i++) {
-    update(STEP);
+    step();
     if (Game.bullets.length > peak) peak = Game.bullets.length;
   }
   out.peakBullets = peak;
@@ -149,6 +159,29 @@ globalThis.__run = function (keydown, keyup, releaseAll) {
 
   // 9. 弹药上限保护：连打 900 帧不释放也不会无限增长
   out.peakUnder1000 = peak < 1000;
+
+  // 10. 鼠标左键射击
+  resetGame();
+  mousedown(0);
+  step();
+  out.mouseFireShots = Game.shots.length;
+  mouseup(0);
+
+  // 11. 鼠标右键冲刺
+  resetGame();
+  mousedown(2);
+  step();
+  out.mouseDashIframes = Game.player.invT;
+  out.mouseDashActive = Game.player.dashT > 0;
+  mouseup(2);
+
+  // 12. 鼠标不应影响移动
+  resetGame();
+  const xBefore = Game.player.x;
+  mousedown(0);
+  for (let i = 0; i < 20; i++) update(STEP);
+  out.mouseNoMove = Math.abs(Game.player.x - xBefore) < 0.001;
+  mouseup(0);
 
   return out;
 };
@@ -158,11 +191,14 @@ globalThis.__run = function (keydown, keyup, releaseAll) {
 globalThis.__keydown = keydown;
 globalThis.__keyup = keyup;
 globalThis.__releaseAll = releaseAll;
+globalThis.__mousedown = mousedown;
+globalThis.__mouseup = mouseup;
 
 const code = files
   .map(function (f) { return fs.readFileSync(path.join(root, f), 'utf8'); })
   .join('\n') + '\n' + harness +
-  '\nglobalThis.__out = globalThis.__run(globalThis.__keydown, globalThis.__keyup, globalThis.__releaseAll);';
+  '\nglobalThis.__out = globalThis.__run(globalThis.__keydown, globalThis.__keyup, ' +
+  'globalThis.__releaseAll, globalThis.__mousedown, globalThis.__mouseup);';
 
 vm.runInThisContext(code, { filename: 'game-bundle.js' });
 
@@ -185,7 +221,10 @@ const checks = [
   ['弹幕会生成', out.bulletsBeforePhase > 0, '200 帧时场上 ' + out.bulletsBeforePhase + ' 颗'],
   ['血量过阈值切换阶段', out.phaseAfterDrop === 1, 'phase=' + out.phaseAfterDrop],
   ['换阶段清屏', out.bulletsClearedOnPhase === 0, ''],
-  ['弹幕峰值可控', out.peakUnder1000, '峰值 ' + out.peakBullets + ' 颗，900 帧后剩 ' + out.after900 + ' 颗']
+  ['弹幕峰值可控', out.peakUnder1000, '峰值 ' + out.peakBullets + ' 颗，900 帧后剩 ' + out.after900 + ' 颗'],
+  ['鼠标左键可射击', out.mouseFireShots > 0, '出膛 ' + out.mouseFireShots + ' 发'],
+  ['鼠标右键可冲刺', out.mouseDashActive && out.mouseDashIframes >= out.dashIframesExpected, out.mouseDashIframes + ' 帧无敌'],
+  ['鼠标不会让角色移动', out.mouseNoMove === true, '']
 ];
 
 let failed = 0;

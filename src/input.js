@@ -8,8 +8,8 @@ const Input = (function () {
     up: ['ArrowUp', 'KeyW'],
     down: ['ArrowDown', 'KeyS'],
     jump: ['Space'],
-    dash: ['ShiftLeft', 'ShiftRight', 'KeyK'],
-    fire: ['KeyJ', 'KeyZ'],
+    dash: ['ShiftLeft', 'ShiftRight', 'KeyK', 'Mouse2'],
+    fire: ['KeyJ', 'KeyZ', 'Mouse0'],
     skill: ['KeyL', 'KeyX'],
     start: ['Enter'],
     restart: ['KeyR'],
@@ -36,6 +36,27 @@ const Input = (function () {
 
   window.addEventListener('keyup', function (e) {
     held[e.code] = false;
+  });
+
+  // 鼠标：左键射击、右键冲刺。用与键盘相同的 code 表复用整套输入逻辑。
+  const MOUSE_CODE = { 0: 'Mouse0', 1: 'Mouse1', 2: 'Mouse2' };
+
+  window.addEventListener('mousedown', function (e) {
+    const code = MOUSE_CODE[e.button];
+    if (!code) return;
+    pressedAt[code] = frame;
+    held[code] = true;
+  });
+
+  window.addEventListener('mouseup', function (e) {
+    const code = MOUSE_CODE[e.button];
+    if (!code) return;
+    held[code] = false;
+  });
+
+  // 右键冲刺时不要弹出浏览器菜单
+  window.addEventListener('contextmenu', function (e) {
+    e.preventDefault();
   });
 
   // 失焦时清空，避免「角色自己一直往左跑」
