@@ -1009,6 +1009,16 @@ function drawWalkNpc(ctx) {
   } else if (kind === 'mabel') {
     // 地图内待机立绘：优先 art/char/mabel_idle.png，缺图时临时用对话立绘
     const nh = 340;
+    // 她全身是深灰单色，压在暗背景上会看不见，先垫一层弱光
+    ctx.save();
+    const halo = ctx.createRadialGradient(x, y - nh * 0.5, 10, x, y - nh * 0.5, nh * 0.55);
+    halo.addColorStop(0, 'rgba(255,255,255,0.13)');
+    halo.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(x, y - nh * 0.5, nh * 0.55, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
     drawCharIdle(ctx, 'mabel', x, y, nh);
     label(ctx, '梅贝尔', x, y - nh - 14, 16, 'rgba(255,255,255,0.8)', 'center', 500);
   } else {
