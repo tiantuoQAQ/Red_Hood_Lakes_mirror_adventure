@@ -157,10 +157,34 @@ const STORY = {
       { t: 'fade', to: 'black', frames: 35 },
       { t: 'scene', bg: 'mirror' },
       { t: 'fade', to: 'clear', frames: 45 },
-      { t: 'say', who: '', text: '镜面之后，是一整片被倒置的世界。' },
-      { t: 'say', who: '', text: '而在路的尽头，站着另一个「她」。' },
+
+      { t: 'say', who: '', text: '镜子里没有回声。' },
+      { t: 'say', who: '', text: '树是倒着长的——根在天上，枝叶垂进地面。' },
+      { t: 'say', who: '', text: '这片森林干净得像从来没有人来过。' },
+      { t: 'say', who: 'rek', expr: 'wary', show: true, text: '……这里什么都没有。' },
+      { t: 'say', who: '', text: '除了路中间站着的那个人。' },
+
       { t: 'intro', id: 'rek_crimson' },
-      { t: 'duel', left: '蕾克', right: '猩红魔姬', text: '【待填】魔姬：姐姐，你终于来陪我了。' },
+      { t: 'say', who: 'rek', expr: 'wary', show: true, text: '……你是谁。' },
+      { t: 'say', who: 'rek_crimson', show: true, text: '姐姐。' },
+      { t: 'say', who: 'rek', expr: 'shock', show: true, text: '你不是我。' },
+      { t: 'say', who: 'rek_crimson', show: true, text: '我是你呀。' },
+      { t: 'say', who: 'rek_crimson', show: true, text: '是被留下来的那一个。' },
+
+      { t: 'duel', left: '蕾克', right: '猩红魔姬', text: '魔姬：你把我一个人，丢在这里。' },
+      { t: 'say', who: 'rek', expr: 'eyes_closed', show: true, text: '……' },
+      { t: 'say', who: 'rek_crimson', show: true, text: '没关系。我不怪你。' },
+      { t: 'say', who: 'rek_crimson', show: true, text: '玛丽苏大人说，只要待在这里，我什么都不用怕。' },
+      { t: 'say', who: 'rek_crimson', show: true, text: '她给了我一个故事。故事里，你没有走。' },
+
+      { t: 'say', who: 'rek', expr: 'eyes_open', show: true, text: '那是假的。' },
+      { t: 'say', who: 'rek_crimson', show: true, text: '假的也很好呀。' },
+      { t: 'say', who: 'rek_crimson', show: true, text: '姐姐，留下来吧。在这里，你不用再死一次。' },
+
+      { t: 'say', who: 'rek', expr: 'eyes_closed', show: true, text: '……我不会留下。' },
+      { t: 'say', who: 'rek_crimson', show: true, text: '那就——' },
+      { t: 'say', who: 'rek_crimson', show: true, text: '让我把你留下来。' },
+
       { t: 'bossIntro', id: 'rek_crimson', frames: 170 },
       { t: 'battle', boss: 'crimson', after: 'crimson_fall' }
     ]
@@ -171,14 +195,36 @@ const STORY = {
     cmds: [
       { t: 'fade', to: 'black', frames: 45 },
       { t: 'fade', to: 'clear', frames: 45 },
+
+      { t: 'say', who: '', text: '红色的身体跪在地上，像一盏快要熄灭的灯。' },
+
       { t: 'intro', id: 'marysue' },
-      { t: 'say', who: '玛丽苏', text: '【待填】没用的孩子。你已经没有价值了。' },
-      { t: 'duel', left: '玛丽苏', right: '猩红魔姬', text: '【待填】魔姬：……不要，别丢下我。' },
-      { t: 'say', who: '玛丽苏', text: '【待填】镜子里多的是替代品。' },
-      { t: 'bubble', who: '猩红魔姬', text: '【待填】——那就把它拿去吧，姐姐。' },
-      { t: 'say', who: '', text: '红色的力量，顺着裂隙流进了蕾克的身体。' },
+      { t: 'say', who: 'marysue', show: true, text: '哎呀呀……' },
+      { t: 'say', who: 'marysue', show: true, text: '真是难看呢。' },
+      { t: 'say', who: 'rek_crimson', show: true, text: '玛丽苏大人……' },
+      { t: 'say', who: 'marysue', show: true, text: '人家给你的舞台，可不是让你这样收场的哦。' },
+      { t: 'say', who: 'marysue', show: true, text: '没用的孩子，是要被换掉的。' },
+
+      { t: 'say', who: 'rek', expr: 'ready', show: true, text: '住手。' },
+      { t: 'say', who: 'marysue', show: true, text: '为什么？' },
+      { t: 'say', who: 'marysue', show: true, text: '她只是个替身而已呀。' },
+      { t: 'say', who: 'marysue', show: true, text: '你该谢谢人家才对——人家替你，保管了她这么久。' },
+
+      { t: 'say', who: '', text: '玛丽苏抬起了手。' },
+      { t: 'say', who: 'rek_crimson', show: true, text: '姐姐。' },
+      { t: 'say', who: 'rek_crimson', show: true, text: '……对不起。' },
+      { t: 'say', who: 'rek_crimson', show: true, text: '那个东西……你拿走吧。' },
+
+      { t: 'pose', who: 'rek', expr: 'ready', frames: 40 },
+      { t: 'say', who: '', text: '红色顺着裂隙流进来。很烫，像有人把手按在胸口。' },
       { t: 'grant', skill: 'red_tragedy', banner: '红之惨剧' },
       { t: 'card', line1: '红之惨剧', line2: '夺回被夺走的一切', frames: 150 },
+
+      { t: 'say', who: 'rek', expr: 'eyes_open', show: true, text: '……我接住了。' },
+      { t: 'say', who: 'marysue', show: true, text: '……真恶心。' },
+      { t: 'say', who: 'marysue', show: true, text: '那你呢？' },
+      { t: 'say', who: 'marysue', show: true, text: '你要拿什么，来替她？' },
+
       { t: 'next', chapter: 'final' }
     ]
   },
@@ -187,11 +233,17 @@ const STORY = {
   final: {
     cmds: [
       { t: 'scene', bg: 'mirror' },
-      { t: 'duel', left: '蕾克', right: '玛丽苏', text: '【待填】玛丽苏：就凭你，也想照亮这面镜子？' },
-      { t: 'say', who: '玛丽苏', text: '【待填】你以为你在追谁？' },
-      { t: 'say', who: '蕾克', text: '我知道自己在追谁。' },
-      { t: 'say', who: '蕾克', text: '我是不会死的。' },
-      { t: 'say', who: '蕾克', text: '在斩下你的头颅之前。' },
+      { t: 'duel', left: '蕾克', right: '玛丽苏', text: '玛丽苏：就凭你，也想照亮这面镜子？' },
+
+      { t: 'say', who: 'marysue', show: true, text: '那面镜子已经把你记住了一次。' },
+      { t: 'say', who: 'marysue', show: true, text: '第二次，可不会那么客气哦。' },
+      { t: 'say', who: 'rek', expr: 'wary', show: true, text: '……上一次，我还没学会怎么杀你。' },
+      { t: 'say', who: 'marysue', show: true, text: '……' },
+      { t: 'say', who: 'marysue', show: true, text: '你不该回来的。' },
+      { t: 'say', who: 'marysue', show: true, text: '人家把门关上，是为了你好。' },
+      { t: 'say', who: 'rek', expr: 'eyes_open', show: true, text: '我不需要别人替我把门关上。' },
+      { t: 'say', who: 'rek', expr: 'ready', show: true, text: '我也不会，死在你的故事里。' },
+
       { t: 'bossIntro', id: 'marysue', frames: 180 },
       { t: 'battle', boss: 'marysue', after: 'ending' }
     ]
@@ -202,7 +254,13 @@ const STORY = {
     cmds: [
       { t: 'fade', to: 'black', frames: 60 },
       { t: 'card', line1: '镜面碎成了千万片', line2: '每一片里都有她', frames: 190 },
-      { t: 'say', who: '蕾克', text: '【待填】……回去了。' },
+      { t: 'fade', to: 'clear', frames: 45 },
+      { t: 'say', who: '', text: '她走出镜子的时候，天已经亮了。' },
+      { t: 'say', who: '', text: '森林还是那片森林。' },
+      { t: 'say', who: 'rek', expr: 'eyes_closed', show: true, text: '……累死了。' },
+      { t: 'say', who: 'rek', expr: 'eyes_open', show: true, text: '格林。' },
+      { t: 'say', who: 'rek', show: true, text: '我回来了。' },
+      { t: 'say', who: '', text: '——这一次，信不用再压在杯子底下了。' },
       { t: 'end', kind: 'win' }
     ]
   }
