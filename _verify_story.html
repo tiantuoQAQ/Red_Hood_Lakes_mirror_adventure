@@ -20,6 +20,8 @@
 <div class="cap">④ 新角色登场介绍 intro</div>
 <canvas id="c5" width="1280" height="720"></canvas>
 <div class="cap">⑤ 战斗前特写 bossIntro</div>
+<canvas id="c6" width="1280" height="720"></canvas>
+<div class="cap">⑥ 信 letter</div>
 
 <script src="src/config.js"></script>
 <script src="src/input.js"></script>
@@ -75,6 +77,14 @@
     S.intro = null;
     S.bossIntro = { id: 'rek_crimson' };
     Cutscene.draw(document.getElementById('c5').getContext('2d'));
+
+    // ⑥ 信
+    S.bossIntro = null;
+    S.text = {
+      mode: 'letter', who: '', shown: 9999, acc: 0, pause: 0, t: 40,
+      text: '格林：\n我要走了。\n这一次，我不知道自己还能不能回来。\n我知道，这只是我的任性。\n请你原谅我。\n我不想把你卷进这件事里来。\n我不会让这个世界如她所愿。\n只要我还活着，这个故事就永远不会结束。'
+    };
+    Cutscene.draw(document.getElementById('c6').getContext('2d'));
   }
 
   drawAll();

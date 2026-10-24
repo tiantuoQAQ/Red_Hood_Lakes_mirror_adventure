@@ -146,6 +146,14 @@ const Cutscene = (function () {
           left: c.left, right: c.right, hint: c.hint || ''
         };
         break;
+      case 'letter':
+        // 信件：浅色纸面，多行，逐字打出；按键翻到下一句（整段打完再按键继续）
+        S.text = {
+          mode: 'letter', who: '',
+          text: (c.lines || []).join('\n'),
+          shown: 0, acc: 0, pause: 0, t: 0
+        };
+        break;
       case 'scene':
         S.bg = c.bg || 'night';
         break;
@@ -686,6 +694,38 @@ const Cutscene = (function () {
     ctx.restore();
   }
 
+  function drawLetter(ctx) {
+    const k = easeOutCubic(prog(S.text.t, 14));
+    const w = 720;
+    const h = 540;
+    const x = W / 2 - w / 2;
+    const y = 110 + (1 - k) * 22;
+
+    ctx.save();
+    ctx.globalAlpha = k;
+
+    // 纸
+    roundRectPath(ctx, x, y, w, h, 8);
+    ctx.fillStyle = 'rgba(233,233,233,0.97)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 左上角一点压痕，别让纸太干净
+    ctx.fillStyle = 'rgba(0,0,0,0.05)';
+    ctx.fillRect(x + 24, y + 20, 120, 2);
+
+    ctx.font = '24px "Segoe UI", "Microsoft YaHei", system-ui, sans-serif';
+    const lines = wrapText(ctx, typedText(), w - 96);
+    for (let i = 0; i < lines.length; i++) {
+      label(ctx, lines[i], x + 48, y + 76 + i * 44, 24, '#1a1a1a', 'left', 400);
+    }
+    ctx.restore();
+
+    if (textDone()) nextArrow(ctx, x + w - 34, y + h - 30);
+  }
+
   function draw(ctx) {
     if (Game.mode !== 'story') return;
     drawBackground(ctx);
@@ -702,6 +742,7 @@ const Cutscene = (function () {
     if (S.text) {
       if (S.text.mode === 'bubble') drawBubble(ctx);
       else if (S.text.mode === 'duel') drawDuel(ctx);
+      else if (S.text.mode === 'letter') drawLetter(ctx);
       else drawSay(ctx);
     }
 

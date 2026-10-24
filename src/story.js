@@ -20,18 +20,44 @@
 const STORY = {
 
   // ---------------------------------------------------------------- 序章
+  // 以「蕾克留给格林的最后一封信」开场：把情绪压进信里，再让玩家自己走进那片森林。
   prologue: {
     cmds: [
+      { t: 'scene', bg: 'night' },
+      { t: 'fade', to: 'black', frames: 1 },
+
+      { t: 'say', who: '', text: '这封信，是在她走了三天之后被找到的。' },
+      { t: 'say', who: '', text: '桌子上留着它。压水杯底下，压得很平。' },
+
+      {
+        t: 'letter',
+        lines: [
+          '格林：',
+          '我要走了。',
+          '这一次，我不知道自己还能不能回来。',
+          '我知道，这只是我的任性。',
+          '请你原谅我。',
+          '我不想把你卷进这件事里来。',
+          '你总说，让我等你。',
+          '可这一次，我不能再等了。',
+          '我不会让这个世界如她所愿。',
+          '只要我还没有死，这个故事就永远不会结束。',
+          '所以，别难过。',
+          '等我回来——我们还有很多话，没来得及说完。'
+        ]
+      },
+
+      { t: 'say', who: '', text: '信就断在这里。' },
+      { t: 'say', who: '', text: '最后一个字写得很重，像是写的人后来不敢再往下写。' },
+
+      { t: 'fade', to: 'clear', frames: 40 },
       { t: 'scene', bg: 'forest' },
-      { t: 'fade', to: 'clear', frames: 50 },
-      { t: 'say', who: '', text: '她一个人离开了村子。' },
-      { t: 'say', who: '', text: '林道上还留着那道气息——玛丽苏的气息。' },
-      { t: 'bubble', who: '蕾克', text: '【待填】这次不会再让你跑掉了。' },
-      { t: 'say', who: '蕾克', text: '【待填】追击中的独白。' },
-      { t: 'fade', to: 'black', frames: 45 },
+      { t: 'say', who: '', text: '她把信压在桌上，一个人走进森林。' },
+
       { t: 'card', line1: '悲愤交加的勇者', line2: '踏上了寻回珍视之人的旅途', frames: 170 },
-      { t: 'say', who: '', text: '——然后，她被从背后偷袭了。' },
-      { t: 'fade', to: 'black', frames: 30 },
+
+      { t: 'say', who: '', text: '然后，她没能走出那片森林。' },
+      { t: 'fade', to: 'black', frames: 45 },
       { t: 'next', chapter: 'wake' }
     ]
   },
@@ -88,6 +114,10 @@ const STORY = {
     cmds: [
       { t: 'scene', bg: 'mirror' },
       { t: 'duel', left: '蕾克', right: '玛丽苏', text: '【待填】玛丽苏：就凭你，也想照亮这面镜子？' },
+      { t: 'say', who: '玛丽苏', text: '【待填】你以为你在追谁？' },
+      { t: 'say', who: '蕾克', text: '我知道自己在追谁。' },
+      { t: 'say', who: '蕾克', text: '我是不会死的。' },
+      { t: 'say', who: '蕾克', text: '在斩下你的头颅之前。' },
       { t: 'bossIntro', id: 'marysue', frames: 180 },
       { t: 'battle', boss: 'marysue', after: 'ending' }
     ]
