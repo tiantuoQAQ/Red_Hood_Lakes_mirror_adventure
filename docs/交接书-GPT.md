@@ -251,6 +251,53 @@ crimson: {
 **面板绘制函数**：`src/render.js` 的 `drawBossPanel(ctx, o)`，参数
 `{ name, phaseIdx, phaseCount, hideTotal, phaseName, skill, ratio, art, color }`。
 
+### 3.2.5 角色称号系统（怎么改怎么用）
+
+登场竖幅（剧情命令 `{ t:'intro', id:'<角色id>' }`）会显示**竖排名字 + 竖排称号**，
+名字用角色主色、称号用 `titleColor`。
+
+**数据在哪**：`src/cutscene.js` 顶部的 `CHARS` 表
+
+```js
+const CHARS = {
+  rek:         { name: '蕾克',   title: '小红帽',            titleColor: '#ffffff', color: '#ff0000', art: 'art/portrait/rek.png' },
+  rek_crimson: { name: '猩红魔姬', title: '自负的暴君',        titleColor: '#ff0000', color: '#c00000', art: 'art/portrait/crimson.png' },
+  norden:      { name: '诺登',   title: '计时者 白之兔',      titleColor: '#ffffff', color: '#ff5050', art: 'art/portrait/norden.png' },
+  marysue:     { name: '玛丽苏',  title: '扭曲的黑童话作家',   titleColor: '#82ff00', color: '#82ff00', art: 'art/portrait/marysue.png' },
+  mabel:       { name: '梅贝尔',  title: '来自虚空的虚无少女', titleColor: '#00baff', color: '#cfcfcf', art: 'art/portrait/mabel.png' }
+};
+```
+
+| 字段 | 作用 | 说明 |
+| --- | --- | --- |
+| `name` | 竖幅上的大名字 | 也用于对话框的角色名牌 |
+| `title` | 竖幅左侧的小字称号 | 想换称号只改这里 |
+| `titleColor` | 称号的文字颜色 | **必须是三色规范内的颜色**（见下） |
+| `color` | 名字/边框的主色 | 同上 |
+| `art` | 对话立绘路径 | 表情差分在 `art` 基础上加 `_<expr>` |
+
+**可用颜色（三色规范）**
+
+| 用途 | 色值 |
+| --- | --- |
+| 白 / 中性灰 | `#ffffff`、`#cfcfcf`、`#9a9a9a` |
+| 青蓝 | `#00baff` |
+| 红 | `#ff0000`、`#c00000` |
+| 黄绿 | `#82ff00` |
+
+**怎么加一个新称号**
+1. 在 `CHARS` 里给对应角色填 `title` 与 `titleColor`
+2. 剧情里用 `{ t:'intro', id:'<角色id>' }` 触发竖幅
+
+**BOSS 面板上的称号**：面板读取 `src/config.js` 的 `BOSSES[id].name`，
+所以改战斗里显示的名字要动 `BOSSES`，不是 `CHARS`（两处都要改才完全一致）。
+
+**调试**：`index.html?intro=norden`（可换 `mabel` / `rek_crimson` / `marysue`），
+直接看竖幅效果，不用跑剧情。
+
+**调版式**：`drawIntro()` 里的 `bw`（幅宽 100）、名字字号 `32`、称号字号 `19`、
+入场帧 `16`；竖幅高度按「名字/称号较长者」自动算（`bh`）。
+
 ### 3.3 渲染
 - 世界宽 `WORLD_W = 2400`，屏幕 1280×720，地面 `GROUND_Y = 574`
 - 镜头平滑跟随 `1 - Math.pow(0.0001, dt)`，Boss 出场时会把双方框进画面
