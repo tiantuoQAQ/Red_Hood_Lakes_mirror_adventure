@@ -3,7 +3,7 @@
 // ---- 舞台与全局常量 ------------------------------------------------------
 const W = 1280;
 const H = 720;
-const GROUND_Y = 612;
+const GROUND_Y = 574;   // 地面线：不要贴屏幕底端，下方留出一段给倒影/UI
 const STEP = 1 / 60;
 
 const ARENA = { left: 48, right: 1232, top: 48, bottom: GROUND_Y };

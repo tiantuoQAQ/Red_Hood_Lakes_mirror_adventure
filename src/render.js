@@ -32,6 +32,11 @@ function render(ctx) {
     }
     drawPlayer(ctx);
   }
+  // 镜中世界：先画地面，再把角色倒影叠在地面上
+  if (Game.theme === 'mirror') {
+    drawMirrorGround(ctx);
+    drawReflections(ctx);
+  }
   drawParticles(ctx);
   drawDmgTexts(ctx);
   ctx.restore();
@@ -66,6 +71,43 @@ function getBgImg(key, path) {
   }
   const img = BG_IMG[key];
   return (img.complete && img.naturalWidth > 0) ? img : null;
+}
+
+// 镜中世界的地面 + 倒影
+function drawMirrorGround(ctx) {
+  const g = ctx.createLinearGradient(0, GROUND_Y, 0, H);
+  g.addColorStop(0, 'rgba(18,18,18,0.96)');
+  g.addColorStop(1, 'rgba(6,6,6,0.99)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+
+  // 地面高光线：把「地面」和「倒影区」分开
+  ctx.fillStyle = 'rgba(255,255,255,0.30)';
+  ctx.fillRect(0, GROUND_Y, W, 1.5);
+
+  // 一条淡淡的镜面反光，暗示这不是普通地面
+  const rg = ctx.createLinearGradient(0, GROUND_Y, 0, H);
+  rg.addColorStop(0, 'rgba(255,255,255,0.10)');
+  rg.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = rg;
+  ctx.fillRect(0, GROUND_Y + 2, W, H - GROUND_Y);
+}
+
+// 倒影：把角色沿地面线翻转、压暗，只在地面区域里显示
+function drawReflections(ctx) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, GROUND_Y, W, H - GROUND_Y);
+  ctx.clip();
+
+  ctx.globalAlpha = 0.26;
+  ctx.translate(0, GROUND_Y * 2);
+  ctx.scale(1, -1);
+
+  if (Game.boss) drawBoss(ctx);
+  if (Game.player) drawPlayer(ctx);
+
+  ctx.restore();
 }
 
 function drawBackground(ctx) {
