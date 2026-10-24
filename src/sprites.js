@@ -1,12 +1,12 @@
 'use strict';
 
-// 角色贴图系统：单图 + 少量分件（cape / hair / body 三层）。
+// 角色贴图系统：分件动画（cape / hair / body / head 四层）。
 //
 // 契约（给美术）：
-//   - 三张 PNG 画布尺寸完全相同（CFG.sprite.w / h）
-//   - 角色「脚底中心」对齐画布底部中央，三张图的站位必须一致
-//   - 顺序：cape 在最下层，hair 中间，body 最上层
-//   - 缺图不会崩，会自动退回程序化图形
+//   - 四张 PNG 画布尺寸完全相同（CFG.sprite.w / h）
+//   - 角色「脚底中心」对齐画布底部中央，四张图的站位必须一致
+//   - 顺序：cape 最底，hair 次底，body 中，head 最上
+//   - 缺哪一层就跳过哪一层，不会崩；body 缺失时整体退回程序化图形
 
 const Sprites = (function () {
   const cache = Object.create(null);
@@ -16,7 +16,7 @@ const Sprites = (function () {
     const entry = { id: id, layers: {}, loaded: 0, need: 0 };
     cache[id] = entry;
 
-    const names = ['cape', 'hair', 'body'];
+    const names = ['cape', 'hair', 'body', 'head'];
     entry.need = names.length;
 
     for (let i = 0; i < names.length; i++) {
@@ -79,6 +79,17 @@ function drawCharacterSprite(ctx, p) {
     ctx.restore();
   }
 
+  // 绕「脖子」转，而不是绕脚底转：头只摇头，不会整个人平移
+  function layerPivot(img, dx, dy, rot, pivotY) {
+    if (!img || !img.naturalWidth) return;
+    ctx.save();
+    ctx.translate(dx, dy - pivotY);
+    ctx.rotate(rot);
+    ctx.translate(0, pivotY);
+    ctx.drawImage(img, -w / 2, -h, w, h);
+    ctx.restore();
+  }
+
   // 斗篷甩得最晚、幅度最大；后发次之；身体不动
   const dashBoost = dashing ? 0.10 : 0;
   layer(ent.layers.cape, S.capeDx, S.capeDy,
@@ -86,6 +97,10 @@ function drawCharacterSprite(ctx, p) {
   layer(ent.layers.hair, S.hairDx, S.hairDy,
         Math.sin(t * 0.13) * 0.04 + dashBoost * 1.2);
   layer(ent.layers.body, 0, 0, 0);
+
+  // 头：绕脖子转，待机轻晃，冲刺时朝前压低
+  const headRot = Math.sin(t * 0.09 + 0.3) * 0.015 - (dashing ? 0.10 : 0);
+  layerPivot(ent.layers.head, S.headDx || 0, S.headDy || 0, headRot, h * 0.70);
 
   ctx.restore();
   return true;

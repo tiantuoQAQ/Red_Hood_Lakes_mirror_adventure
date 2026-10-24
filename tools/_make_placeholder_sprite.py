@@ -30,10 +30,9 @@ d = ImageDraw.Draw(hair)
 d.ellipse([CX - 70, 80, CX + 40, 300], fill=DARK)
 hair.save(os.path.join(OUT, 'hair.png'))
 
-# --- 身体：头 + 躯干 + 双腿 ---
+# --- 身体：躯干 + 双腿（头已经拆出去了） ---
 body = canvas()
 d = ImageDraw.Draw(body)
-d.ellipse([CX - 45, 70, CX + 45, 190], fill=DARK)          # 头
 d.polygon([(CX - 55, 185), (CX + 55, 185), (CX + 40, 430), (CX - 40, 430)], fill=RED)  # 躯干
 d.rectangle([CX - 38, 430, CX - 8, FOOT_Y], fill=DARK)     # 左腿
 d.rectangle([CX + 8, 430, CX + 38, FOOT_Y], fill=DARK)     # 右腿
@@ -41,7 +40,17 @@ d.ellipse([CX - 45, FOOT_Y - 14, CX - 2, FOOT_Y + 6], fill=DARK)   # 左靴
 d.ellipse([CX + 2, FOOT_Y - 14, CX + 45, FOOT_Y + 6], fill=DARK)   # 右靴
 body.save(os.path.join(OUT, 'body.png'))
 
+# --- 头部：脸 + 兜帽 + 两只兽耳（绕脖子转，用来验证 head 层） ---
+head = canvas()
+d = ImageDraw.Draw(head)
+d.ellipse([CX - 45, 70, CX + 45, 190], fill=DARK)                       # 脸
+d.pieslice([CX - 52, 58, CX + 52, 178], 180, 360, fill=RED)             # 兜帽
+d.polygon([(CX - 46, 96), (CX - 26, 42), (CX - 8, 92)], fill=RED)       # 左耳
+d.polygon([(CX + 8, 92), (CX + 26, 42), (CX + 46, 96)], fill=RED)       # 右耳
+d.ellipse([CX + 8, 118, CX + 24, 134], fill=WHITE)                      # 眼睛
+head.save(os.path.join(OUT, 'head.png'))
+
 print('占位贴图生成完成 ->', OUT)
-for n in ('cape.png', 'hair.png', 'body.png'):
+for n in ('cape.png', 'hair.png', 'body.png', 'head.png'):
     p = os.path.join(OUT, n)
     print('  ', n, os.path.getsize(p), 'bytes')

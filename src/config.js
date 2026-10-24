@@ -86,8 +86,8 @@ const CFG = {
     spiralSpeed: 250,
     rainSpeed: 300
   },
-  // 角色贴图：单图 + 少量分件。三张图必须同尺寸同站位。
-  // hairDx/capeDx 是「对齐微调」，即梦出的分件对不齐时在这里拖到对齐。
+  // 角色贴图：分件动画（cape/hair/body/head 四层）。四张图必须同尺寸同站位。
+  // headDx/headDy 是「对齐微调」，即梦出的分件对不齐时在这里拖到对齐。
   sprite: {
     id: 'rek',
     dir: 'art/rek',
@@ -95,7 +95,9 @@ const CFG = {
     hairDx: 0,
     hairDy: 0,
     capeDx: 0,
-    capeDy: 0
+    capeDy: 0,
+    headDx: 0,
+    headDy: 0
   },
   beam: { width: 26, warmup: 45, active: 34, len: 1700 },
   bossDash: { speed: 1500, frames: 18 },
