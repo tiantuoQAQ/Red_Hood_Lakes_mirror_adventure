@@ -74,7 +74,7 @@ mirror-jam/
 │   ├── input.js            键鼠输入，鼠标坐标 → Game.mouse
 │   └── main.js             启动、URL 参数、固定步长 1/60 循环、截图辅助
 ├── art/
-│   ├── portrait/           ★ 对话立绘（20 张，已全部压色通过）
+│   ├── portrait/           ★ 对话立绘（21 张，已全部压色 + 肤色统一）
 │   ├── obj/throne.png      王座贴图（走位段用）
 │   ├── bg/mirror.jpg       镜中世界背景（+ mirror_alt.jpg 备用）
 │   ├── fx/particle_strip.png
@@ -85,6 +85,8 @@ mirror-jam/
 │   ├── force_palette.py    强制压色（去色/归位）
 │   ├── unify_palette.py    统一色相（红/绿/青三通道）
 │   ├── prep_portrait.py    白底→透明、裁边、缩放、底部对齐（512×768）
+│   ├── despeckle.py        清除压色后残留的绿色斑点（皮肤上的脏点）
+│   ├── match_skin.py       把各张立绘的肤色灰阶对齐到统一值
 │   └── recolor.py          改色工具
 ├── test/                   四个 node 测试
 ├── art_preview/            验收图（cast.png / marysue_check.jpg / throne.png / meet.png …）
@@ -221,6 +223,7 @@ Game = {
 | | `crimson_seated_open.png` | 坐王座·睁眼（蔑视） |
 | | `crimson_seated_closed.png` | 坐王座·闭眼 |
 | | `crimson_stand_ready.png` | 备战（持刀压低重心） |
+| | `crimson_defeated.png` | **战损**（单膝跪地、捂胸、斗篷破损） |
 | 玛丽苏 | `marysue.png` | 得意 |
 | | `marysue_tease.png` | 调戏/挑衅 |
 | | `marysue_fake.png` | 假惺惺（假哭） |
@@ -264,15 +267,24 @@ Game = {
 python tools/check_palette.py art/portrait        # 逐张报越界百分比，必须 0.00%
 python tools/unify_palette.py <png>               # 统一色相（红/绿/青三通道）
 python tools/force_palette.py <png>               # 最后一道：残余杂色去色
+python tools/despeckle.py <png>                   # 清绿斑（压色后皮肤上的脏点）
+python tools/match_skin.py <png...> --target 0.70 # 统一肤色灰阶（只动低彩度像素）
 ```
-**正确顺序**：`prep_portrait.py` → `unify_palette.py` → `force_palette.py` → `check_palette.py`
+**正确顺序**：`prep_portrait.py` → `unify_palette.py` → `force_palette.py` → `despeckle.py` → `match_skin.py` → `check_palette.py`
+
+> 肤色规范：皮肤只能是**中性灰（R=G=B）**，这是「最多 3 个色相」的直接结果，
+> 所以立绘天生带一点“石像感”。能调的只有**明度**，目前全员统一到脸部灰阶 **0.70**。
+> 如果觉得某张偏暗/偏白，用 `match_skin.py <png> --target 0.70` 重跑即可，不要手动调色。
 
 ### 踩过的坑（已经在工具里修好，改动工具时注意）
 1. **肤色被判成红色** → 红通道门槛现在是「彩度 ≥ 0.42」，否则皮肤会变粉红。
 2. **黄绿与青的色相重叠带（151°–167°）** → 判定顺序必须**绿在前、青在后**，否则绿泳衣上会冒青斑。
 3. **浅色头发丢掉绿色** → 绿通道条件改成「彩度 ≥ 0.16 且亮度 ≤ 0.88」。
 4. **force_palette 不要「拧」色相**：高彩度错色一律去色，拧会把肤色拧成红色。
-5. `unify_palette.py` 目前只认红/绿/青三通道，加新色相要同时改 `check_palette.py`。
+5. **绿/青重叠带（151°–167°）** 会让绿衣服上冒青斑 → 判定顺序必须**绿在前、青在后**；绿通道门槛现在是「彩度 ≥ 0.20 且亮度 ≤ 0.86」，太松会把皮肤染绿，太紧会丢头发。
+6. **肤色深浅不统一**：出图批次不同，脸亮度会从 0.49 飘到 0.85 → 一律用 `match_skin.py` 拉回 0.70。
+7. `unify_palette.py` 目前只认红/绿/青三通道，加新色相要同时改 `check_palette.py`。
+8. `despeckle.py` 的判定是「孤立绿像素转灰」，窗口默认 9×9、阈值 0.35，改小会把头发的细边啃掉。
 
 ---
 
@@ -296,7 +308,7 @@ python tools/force_palette.py <png>               # 最后一道：残余杂色�
 - [x] 玛丽苏狂言、诺登收场、梅贝尔伏笔
 
 ### 美术
-- [x] 20 张立绘，全部统一到同一画风 / 5 头身 / 三色规范
+- [x] 21 张立绘，全部统一到同一画风 / 5 头身 / 三色规范
 - [x] 王座贴图、镜中世界背景、粒子条
 - [x] 调色管线三件套 + 修完所有已知 bug
 
