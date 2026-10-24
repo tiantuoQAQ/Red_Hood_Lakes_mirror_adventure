@@ -592,6 +592,28 @@ function updateShots(dt) {
   const b = Game.boss;
   for (let i = Game.shots.length - 1; i >= 0; i--) {
     const s = Game.shots[i];
+
+    // 弱吸附：靠近 BOSS 时朝它轻微转向，降低瞄准难度（不是完整追踪，绕不过也甩不掉）
+    if (b && b.hp > 0) {
+      const dx = b.x - s.x;
+      const dy = b.y - s.y;
+      const dist = Math.hypot(dx, dy);
+      const MAGNET_R = 280;
+      if (dist < MAGNET_R && dist > 1) {
+        const want = Math.atan2(dy, dx);
+        let cur = Math.atan2(s.vy, s.vx);
+        let dA = want - cur;
+        while (dA > Math.PI) dA -= Math.PI * 2;
+        while (dA < -Math.PI) dA += Math.PI * 2;
+        const strength = 1 - dist / MAGNET_R;      // 越近越强
+        const maxTurn = 3.4 * dt * (0.35 + strength); // 每秒最多转 ~3.4 弧度
+        cur += Math.max(-maxTurn, Math.min(maxTurn, dA));
+        const sp = Math.hypot(s.vx, s.vy);
+        s.vx = Math.cos(cur) * sp;
+        s.vy = Math.sin(cur) * sp;
+      }
+    }
+
     s.x += s.vx * dt;
     s.y += s.vy * dt;
     if (s.x < ARENA.left - 160 || s.x > ARENA.right + 160 || s.y < -60 || s.y > H + 60) {

@@ -355,15 +355,48 @@ function glowSprite(color) {
   return c;
 }
 
-// 一颗弹：外光晕 + 旋转星形 + 白芯
-function drawBulletStar(ctx, x, y, r, color, rot, glowScale) {
+// 一颗弹：按类型分层
+//   hazard → 五角星（基础）
+//   homing → 星 + 旋转环 + 拖尾（会转弯）
+//   rain   → 细长水滴（直落，速度快，视觉上"轻")
+//   lance  → 细长梭形（穿刺弹，方向锐利）
+function drawBulletStar(ctx, x, y, r, color, rot, glowScale, kind, vx, vy) {
   const gs = glowScale || 3.0;
   const sprite = glowSprite(color);
   if (sprite) {
     const s = r * gs * 2;
     ctx.drawImage(sprite, x - s / 2, y - s / 2, s, s);
   }
+
   const pulse = 1 + Math.sin(Game.frame * 0.18 + x * 0.01) * 0.06;
+
+  if (kind === 'rain' || kind === 'lance') {
+    // 沿速度方向拉长的梭形/水滴
+    const sp = Math.hypot(vx || 0, vy || 0) || 1;
+    const ang = Math.atan2(vy || 0, vx || 0);
+    const len = r * (kind === 'lance' ? 2.6 : 1.9);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(ang);
+    ctx.beginPath();
+    ctx.moveTo(len, 0);
+    ctx.quadraticCurveTo(0, r * 0.95, -len * 0.8, 0);
+    ctx.quadraticCurveTo(0, -r * 0.95, len, 0);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.beginPath();
+    ctx.arc(x, y, r * 0.34, 0, TAU);
+    ctx.fillStyle = 'rgba(255,255,255,0.98)';
+    ctx.fill();
+    return;
+  }
+
   starPath(ctx, x, y, r * 1.45 * pulse, 5, 0.44, rot);
   ctx.fillStyle = color;
   ctx.fill();
@@ -401,10 +434,11 @@ function drawBulletStar(ctx, x, y, r, color, rot, glowScale) {
 
 function drawBullets(ctx) {
   const list = Game.bullets;
-  const spin = Game.frame * 0.05;
   for (let i = 0; i < list.length; i++) {
     const b = list[i];
-    drawBulletStar(ctx, b.x, b.y, b.r, COLORS.hazard, spin + i * 0.15, 3.2);
+    // 大小决定自转速度：小弹转得快、大弹慢，视觉层次更好
+    const spin = Game.frame * 0.05 * (7 / Math.max(2, b.r)) + i * 0.15;
+    drawBulletStar(ctx, b.x, b.y, b.r, COLORS.hazard, spin, 3.2, b.kind, b.vx, b.vy);
 
     // 追踪弹：多一圈旋转环 + 拖尾，让玩家一眼分辨「这个会转弯」
     if (b.kind === 'homing') {
@@ -442,7 +476,7 @@ function drawShots(ctx) {
     ctx.stroke();
     ctx.restore();
 
-    drawBulletStar(ctx, s.x, s.y, s.r, COLORS.player, Game.frame * 0.12, 2.6);
+    drawBulletStar(ctx, s.x, s.y, s.r, COLORS.player, Game.frame * 0.12 * (6 / Math.max(2, s.r)), 2.6);
   }
 }
 

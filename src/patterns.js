@@ -83,7 +83,7 @@ const PATTERNS = {
       const p = G.player;
       const bias = (Math.random() - 0.5) * 420;
       const x = Math.max(ARENA.left + 20, Math.min(ARENA.right - 20, p.x + bias));
-      spawnBullet(G.bullets, x, ARENA.top - 12, Math.PI / 2, CFG.bullets.rainSpeed);
+      spawnBullet(G.bullets, x, ARENA.top - 12, Math.PI / 2, CFG.bullets.rainSpeed, CFG.bullets.r, 'rain');
     }
   },
 
@@ -114,7 +114,7 @@ const PATTERNS = {
       if (ph === 30 && boss.pending) {
         for (let i = 0; i < boss.pending.length; i++) {
           const s = boss.pending[i];
-          spawnBullet(G.bullets, s.x, s.y, s.a, 640, CFG.bullets.r * 0.85);
+          spawnBullet(G.bullets, s.x, s.y, s.a, 640, CFG.bullets.r * 0.85, 'lance');
         }
         boss.pending = null;
         Sfx.lance();
