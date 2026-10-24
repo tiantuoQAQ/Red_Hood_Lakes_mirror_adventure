@@ -589,7 +589,7 @@ const Cutscene = (function () {
   function drawSpeakerPortrait(ctx) {
     if (!S.portrait) return;
     const bump = S.text && S.text.bump ? Math.sin(Game.frame * 2.4) * 5 : 0;
-    portrait(ctx, S.portrait.who, W * 0.73, H * 0.50 + bump, 330, 470,
+    portrait(ctx, S.portrait.who, W * 0.74, H * 0.52 + bump, 380, 540,
              { expr: S.portrait.expr, inFrames: 1, flip: true, phase: 3 });
   }
 
