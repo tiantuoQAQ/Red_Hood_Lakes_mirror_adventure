@@ -84,7 +84,8 @@ const Cutscene = (function () {
   // 表情差分：有 art/portrait/<id>_<expr>.png 就用它，没有就继续用基础立绘 / 占位块
   // 约定的 expr：eyes_closed（闭眼） / eyes_open（睁眼） / ready（备战） / shock（震惊） / shadow（黑影）
   const EXPR_LABEL = {
-    '': '', eyes_closed: '闭眼', eyes_open: '睁眼', ready: '备战', shock: '震惊', shadow: '黑影'
+    '': '', eyes_closed: '闭眼', eyes_open: '睁眼', ready: '备战', shock: '震惊', shadow: '黑影',
+    seated_closed: '坐·闭眼', seated_open: '坐·睁眼', stand_ready: '备战', stand: '起身'
   };
 
   function artPathOf(c, expr) {
