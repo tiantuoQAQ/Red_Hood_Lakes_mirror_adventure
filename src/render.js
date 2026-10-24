@@ -1071,44 +1071,28 @@ function drawHUD(ctx) {
   ctx.fillStyle = scrim;
   ctx.fillRect(0, 0, W, 96);
 
-  // ---------------- BOSS 血条（右上角） ----------------
+  // ---------------- BOSS 面板（右上角） ----------------
   const def = bossDef(b);
   const phases = (def && def.phases) || PHASES;
   const hideTotal = !!(def && def.hideTotal);
-  const bw = 380;
-  const bx = W - 60 - bw;
-  const by = 34;
+  const ph = phases[b.phase] || phases[0];
 
-  // 名字
-  label(ctx, b.name || 'BOSS', W - 60, by - 12, 15, COLORS.ink, 'right', 700);
-
-  // 条底 + 血：一根条 = 一个阶段，进新阶段自动补满再掉
-  const top = phases[b.phase].at;
-  const bot = (b.phase + 1 < phases.length) ? phases[b.phase + 1].at : 0;
-  let seg = (b.hp / b.maxHp - bot) / Math.max(0.0001, top - bot);
-  seg = Math.max(0, Math.min(1, seg));
-
-  ctx.fillStyle = 'rgba(255,255,255,0.10)';
-  ctx.fillRect(bx, by, bw, 8);
-  bar(ctx, bx, by, bw, 8, seg, COLORS.hazard);
-
-  // 阶段分隔小点（最终 BOSS 不显示总数，所以点也一起藏掉）
-  if (!hideTotal) {
-    for (let i = 0; i < phases.length; i++) {
-      const px = W - 60 - (phases.length - 1 - i) * 12;
-      ctx.fillStyle = i <= b.phase ? hexToRgba(COLORS.hazard, 0.9) : 'rgba(255,255,255,0.18)';
-      ctx.fillRect(px - 4, by + 16, 6, 3);
-    }
-  }
-
-  // 阶段文字
-  const phaseLabel = hideTotal
-    ? 'PHASE ' + (b.phase + 1)
-    : 'PHASE ' + (b.phase + 1) + ' / ' + phases.length;
-  mono(ctx, phaseLabel, W - 60, by + 38, 11, COLORS.dim, 'right');
-
-  // 右侧小菱形（BOSS 标记）
-  drawDiamond(ctx, W - 40, by + 4, 7, COLORS.hazard, true);
+  drawBossPanel(ctx, {
+    name: b.name || 'BOSS',
+    phaseIdx: b.phase,
+    phaseCount: phases.length,
+    hideTotal: hideTotal,
+    phaseName: ph.name || '',
+    skill: ph.skill || '',
+    ratio: (function () {
+      const top = ph.at;
+      const bot = (b.phase + 1 < phases.length) ? phases[b.phase + 1].at : 0;
+      let r = (b.hp / b.maxHp - bot) / Math.max(0.0001, top - bot);
+      return Math.max(0, Math.min(1, r));
+    })(),
+    art: def && def.portrait ? def.portrait : null,
+    color: (def && def.barColor) || COLORS.hazard
+  });
 
   // 生命
   for (let i = 0; i < P.lives; i++) {
@@ -1139,6 +1123,130 @@ function drawHUD(ctx) {
     mono(ctx, '输入延迟 ' + Game.debug.latencyMs.toFixed(1) + ' ms', W - 60, 692, 11, COLORS.dim, 'right');
     mono(ctx, Math.round(1000 / Math.max(1, Game.debug.frameMs || 16.7)) + ' fps', W - 170, 692, 11, COLORS.dim, 'right');
   }
+}
+
+// ------------------------------------------------------------- BOSS 面板
+// 参考格斗/弹幕游戏的 Boss 名条：斜切铭牌 + 分段血条 + STAGE n/N + 技名 + 圆形头像
+// 全部程序绘制，不依赖贴图，天然满足三色规范
+function drawBossPanel(ctx, o) {
+  const bw = 360;                 // 血条宽
+  const bx = W - 150 - bw;        // 左端（右侧留头像位）
+  const by = 74;                  // 血条 y
+  const bh = 16;
+
+  ctx.save();
+
+  // ---- 背板：斜切梯形，半透黑底 + 白色细边
+  const pl = bx - 16, pr = W - 26, pt = by - 40, pb = by + 46;
+  const skew = 14;
+  ctx.beginPath();
+  ctx.moveTo(pl + skew, pt);
+  ctx.lineTo(pr, pt);
+  ctx.lineTo(pr, pb);
+  ctx.lineTo(pl, pb);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(8,8,10,0.72)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.65)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // ---- 名字（斜切铭牌，靠右上）
+  const nameW = Math.min(300, 26 + o.name.length * 20);
+  const nx = pr - nameW;
+  ctx.beginPath();
+  ctx.moveTo(nx + skew, pt - 22);
+  ctx.lineTo(pr, pt - 22);
+  ctx.lineTo(pr, pt + 4);
+  ctx.lineTo(nx, pt + 4);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(255,255,255,0.92)';
+  ctx.fill();
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  label(ctx, o.name, nx + nameW / 2 + skew / 2, pt - 2, 17, '#111', 'center', 700);
+
+  // ---- 血条：底槽 + 当前段
+  ctx.fillStyle = 'rgba(255,255,255,0.14)';
+  ctx.fillRect(bx, by, bw, bh);
+  // 当前阶段血量
+  const fw = Math.max(0, Math.min(1, o.ratio)) * bw;
+  const g = ctx.createLinearGradient(bx, by, bx, by + bh);
+  g.addColorStop(0, hexToRgba(o.color, 0.95));
+  g.addColorStop(1, hexToRgba(o.color, 0.62));
+  ctx.fillStyle = g;
+  ctx.fillRect(bx, by, fw, bh);
+  // 顶部高光
+  ctx.fillStyle = 'rgba(255,255,255,0.28)';
+  ctx.fillRect(bx, by, bw, 3);
+  // 外框
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(bx, by, bw, bh);
+
+  // ---- 阶段分段刻线（每段等宽；隐藏总数时不画总刻度）
+  if (!o.hideTotal && o.phaseCount > 1) {
+    ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+    ctx.lineWidth = 2;
+    for (let i = 1; i < o.phaseCount; i++) {
+      const x = bx + (bw * i) / o.phaseCount;
+      ctx.beginPath();
+      ctx.moveTo(x, by);
+      ctx.lineTo(x, by + bh);
+      ctx.stroke();
+    }
+  }
+
+  // ---- STAGE n / N
+  const stageTxt = o.hideTotal
+    ? 'STAGE ' + (o.phaseIdx + 1) + ' / ?'
+    : 'STAGE ' + (o.phaseIdx + 1) + ' / ' + o.phaseCount;
+  label(ctx, stageTxt, bx, by + 34, 15, COLORS.ink, 'left', 700);
+
+  // ---- 技名（引号内的短名）
+  if (o.skill) {
+    label(ctx, '「' + o.skill + '」', bx + 118, by + 34, 15, o.color, 'left', 600);
+  }
+  // ---- 阶段名（右侧，灰一点）
+  if (o.phaseName) {
+    label(ctx, o.phaseName, bx + bw, by + 34, 14, COLORS.dim, 'right', 500);
+  }
+
+  // ---- 头像：圆形裁切
+  const cx = W - 78;
+  const cy = by + 8;
+  const r = 30;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.closePath();
+  ctx.clip();
+  const img = o.art ? getObjImg('boss_' + o.art, o.art) : null;
+  if (img) {
+    // 只取头部区域
+    const iw = img.naturalWidth;
+    const ih = img.naturalHeight;
+    const sh = ih * 0.42;           // 头在上 42%
+    const sw = sh * 1.1;
+    ctx.drawImage(img, (iw - sw) / 2, ih * 0.06, sw, sh, cx - r, cy - r, r * 2, r * 2);
+  } else {
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+  }
+  ctx.restore();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r + 3, 0, Math.PI * 2);
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.restore();
 }
 
 // 取当前 BOSS 的配置（BOSSES 表），取不到就用 CFG.boss

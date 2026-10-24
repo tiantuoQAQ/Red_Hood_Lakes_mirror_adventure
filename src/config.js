@@ -121,27 +121,31 @@ const PHASES = [
 // 每个 BOSS 自带阶段表：at 是血量比例阈值，script 是该阶段的招式循环。
 const BOSSES = {
   crimson: {
-    name: '猩红魔姬 蕾克',
+    name: '猩红魔姬 · 雷帝',
+    portrait: 'art/portrait/crimson_stand.png',
+    barColor: '#FF0000',
     hp: 240,
     phases: [
-      { at: 1.0, script: ['ring'] },
-      { at: 0.8, script: ['ring', 'mirrorFan'] },
-      { at: 0.6, script: ['mirrorFan', 'lances'] },
-      { at: 0.4, script: ['lances', 'laser'] },
-      { at: 0.2, script: ['laser', 'homing', 'bossDash'] }
+      { at: 1.0, script: ['ring'],                                     name: '壹 · 试锋',       skill: '浅露' },
+      { at: 0.8, script: ['ring', 'mirrorFan'],                        name: '贰 · 裂帛',       skill: '剑气' },
+      { at: 0.6, script: ['mirrorFan', 'lances'],                      name: '叁 · 血雨',       skill: '连斩' },
+      { at: 0.4, script: ['lances', 'laser'],                          name: '肆 · 镜刃',       skill: '突刺' },
+      { at: 0.2, script: ['laser', 'homing', 'bossDash'],              name: '伍 · 红之惨剧',   skill: '断罪' }
     ]
   },
   marysue: {
     name: '幕后黑手 玛丽苏',
+    portrait: 'art/portrait/marysue.png',
+    barColor: '#82FF00',
     hp: 420,
     hideTotal: true,        // 不告诉玩家一共几阶段
     phases: [
-      { at: 1.0, script: ['ring'] },
-      { at: 5 / 6, script: ['ring', 'mirrorFan'] },
-      { at: 4 / 6, script: ['mirrorFan', 'lances'] },
-      { at: 3 / 6, script: ['lances', 'laser'] },
-      { at: 2 / 6, script: ['laser', 'homing', 'orbit'] },
-      { at: 1 / 6, script: ['bossDash', 'lances', 'laser', 'orbit'] }
+      { at: 1.0,   script: ['ring'],                                    name: '壹 · 箱庭',       skill: '开门' },
+      { at: 5 / 6, script: ['ring', 'mirrorFan'],                       name: '贰 · 反语',       skill: '假笑' },
+      { at: 4 / 6, script: ['mirrorFan', 'lances'],                     name: '叁 · 镜廊',       skill: '复写' },
+      { at: 3 / 6, script: ['lances', 'laser'],                         name: '肆 · 断线',       skill: '操偶' },
+      { at: 2 / 6, script: ['laser', 'homing', 'orbit'],                name: '伍 · 狂言',       skill: '终幕将至' },
+      { at: 1 / 6, script: ['bossDash', 'lances', 'laser', 'orbit'],    name: '陆 · 天地倒悬',   skill: '镜界颠倒' }
     ]
   }
 };
