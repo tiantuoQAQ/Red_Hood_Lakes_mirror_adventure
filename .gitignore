@@ -19,7 +19,9 @@ desktop.ini
 screenshots/
 *.png
 *.jpg
+# 但美术资产与文档配图要进仓库
 !docs/**/*.png
+!art/**/*.png
 
 # 本地覆盖配置
 config.local.js

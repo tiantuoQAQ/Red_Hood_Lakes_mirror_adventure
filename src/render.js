@@ -298,24 +298,11 @@ function drawPlayer(ctx) {
   ctx.save();
   if (blink) ctx.globalAlpha = 0.40;
 
-  // 有贴图就用贴图，没有就退回程序化的菱形。
-  // 注意：这里不能自己 restore，外面还有一次配对的 restore。
-  const usingSprite = drawCharacterSprite(ctx, p);
-  if (!usingSprite && p.ball) {
-    // 球形态：外环 + 旋转弧
-    glowCircle(ctx, p.x, p.y, P.visualR * 1.05, COLORS.player, 2.2, 0.5);
-    ctx.strokeStyle = hexToRgba(COLORS.env, 0.85);
-    ctx.lineWidth = 2;
-    for (let k = 0; k < 3; k++) {
-      const a0 = Game.frame * 0.12 + (k * TAU) / 3;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, P.visualR * 1.35, a0, a0 + 0.9);
-      ctx.stroke();
-    }
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, P.visualR * 0.55, 0, TAU);
-    ctx.fillStyle = hexToRgba(COLORS.player, 0.30);
-    ctx.fill();
+  // 球形态：球体由 Fx 负责（脉动 + 旋转弧 + 冲击波 + 粒子拖尾），
+  // 不再画角色贴图——否则会看到「人形球」。
+  const usingSprite = p.ball ? false : drawCharacterSprite(ctx, p);
+  if (p.ball) {
+    Fx.drawBall(ctx, p);
   } else if (!usingSprite) {
     // 常态：菱形冰晶
     ctx.translate(p.x, p.y);
@@ -381,8 +368,10 @@ function drawPlayer(ctx) {
 }
 
 function drawParticles(ctx) {
+  Fx.drawBallParticles(ctx);
   for (let i = 0; i < Game.particles.length; i++) {
     const q = Game.particles[i];
+    if (q.kind === 'fx') continue;   // 拖尾粒子已由 Fx 画过
     const a = q.life / q.max;
     ctx.beginPath();
     ctx.arc(q.x, q.y, q.r * a, 0, TAU);

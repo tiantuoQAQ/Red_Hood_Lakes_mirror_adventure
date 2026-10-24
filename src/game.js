@@ -296,6 +296,28 @@ function updatePlayer(dt) {
     p.onGround = false;
   }
 
+  // 光球拖尾：每两帧在身后撒一颗，速度反向于移动方向
+  if (p.ball && Game.frame % 2 === 0 && Game.particles.length < 260) {
+    const back = Math.atan2(-p.vy, -p.vx || 0.0001);
+    const a = back + (Math.random() - 0.5) * 0.9;
+    const sp = 40 + Math.random() * 90;
+    const life = 16 + Math.random() * 10;
+    Game.particles.push({
+      kind: 'fx',
+      x: p.x + (Math.random() - 0.5) * 12,
+      y: p.y + (Math.random() - 0.5) * 12,
+      vx: Math.cos(a) * sp,
+      vy: Math.sin(a) * sp,
+      life: life,
+      max: life,
+      r: 2,
+      size: 56 + Math.random() * 44,
+      rot: Math.random() * 6.283,
+      spin: (Math.random() - 0.5) * 0.22,
+      color: COLORS.player
+    });
+  }
+
   // 冲刺残影衰减
   for (let i = p.trail.length - 1; i >= 0; i--) {
     p.trail[i].life--;
@@ -581,10 +603,19 @@ function burst(x, y, color, n) {
 function updateParticles(dt) {
   for (let i = Game.particles.length - 1; i >= 0; i--) {
     const q = Game.particles[i];
-    q.x += q.vx * dt;
-    q.y += q.vy * dt;
-    q.vx *= 0.94;
-    q.vy = q.vy * 0.94 + 60 * dt;
+    if (q.kind === 'fx') {
+      // 光球拖尾：无重力、只做阻尼，带自转
+      q.x += q.vx * dt;
+      q.y += q.vy * dt;
+      q.vx *= 0.90;
+      q.vy *= 0.90;
+      q.rot += q.spin;
+    } else {
+      q.x += q.vx * dt;
+      q.y += q.vy * dt;
+      q.vx *= 0.94;
+      q.vy = q.vy * 0.94 + 60 * dt;
+    }
     q.life--;
     if (q.life <= 0) Game.particles.splice(i, 1);
   }
