@@ -114,7 +114,7 @@
     render(document.getElementById('c9').getContext('2d'));
   }
 
-  drawAll();
+  try { drawAll(); } catch (e) { document.title = 'ERR: ' + e.message; }
   // 立绘是异步加载的：加载完再重画一遍，否则截到的是占位块
   setTimeout(drawAll, 600);
   setTimeout(drawAll, 1200);
