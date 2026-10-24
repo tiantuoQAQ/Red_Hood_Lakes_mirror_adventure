@@ -95,27 +95,59 @@ const STORY = {
     ]
   },
 
-  // ---------------------------------------------------------------- 醒来 · 诺登
-  // 文案待填：玩家按 W 交互之后才进来。
+  // ---------------------------------------------------------------- 醒来 · 诺登（按 W 之后）
   wake_talk: {
     cmds: [
-      { t: 'say', who: 'norden', show: true, text: '【待填】你醒了。' },
-      { t: 'say', who: 'norden', show: true, text: '【待填】是我把你捡回来的。' },
+      { t: 'intro', id: 'norden' },
+
+      { t: 'say', who: 'norden', show: true, text: '你醒了。' },
+      { t: 'say', who: 'rek', show: true, text: '……' },
+      { t: 'say', who: 'norden', show: true, text: '你倒在林道上。是我把你捡回来的。' },
+      { t: 'say', who: 'rek', show: true, text: '这里是哪儿。' },
+      { t: 'say', who: 'norden', show: true, text: '一个什么都没有的地方。和你倒下时看见的一样吧。' },
+
+      { t: 'say', who: 'rek', show: true, text: '诺登。' },
+      { t: 'say', who: 'norden', show: true, text: '嗯。' },
+      { t: 'say', who: 'rek', show: true, text: '我输了。一次都没碰到她。' },
+      { t: 'say', who: 'norden', show: true, text: '……' },
+      { t: 'say', who: 'norden', show: true, text: '那不是你的错。' },
+      { t: 'say', who: 'rek', show: true, text: '我知道。是她的错。' },
+
+      { t: 'say', who: 'norden', show: true, text: '你总是这样。' },
+      { t: 'say', who: 'rek', show: true, text: '哪样。' },
+      { t: 'say', who: 'norden', show: true, text: '把所有事都算在自己头上，再一个人去还。' },
+      { t: 'say', who: 'rek', show: true, text: '……那本来就该我还。' },
+
       { t: 'next', chapter: 'wake' }
     ]
   },
 
-  // ---------------------------------------------------------------- 醒来 · 诺登
+  // ---------------------------------------------------------------- 诺登说明 · 去镜中世界
   wake: {
     cmds: [
-      { t: 'fade', to: 'clear', frames: 40 },
-      { t: 'scene', bg: 'night' },
-      { t: 'bubble', who: '蕾克', text: '【待填】……这里是？' },
-      { t: 'intro', id: 'norden' },
-      { t: 'duel', left: '蕾克', right: '诺登', text: '【待填】诺登：你醒了。是我把你捡回来的。' },
-      { t: 'say', who: '诺登', text: '【待填】玛丽苏已经不在这个世界了。她躲进了「镜中世界」。' },
-      { t: 'say', who: '诺登', text: '【待填】……我以为你会问「为什么」。' },
-      { t: 'bubble', who: '蕾克', text: '【待填】带路。' },
+      { t: 'say', who: 'norden', show: true, text: '你要找的人，不在这个世界了。' },
+      { t: 'say', who: 'rek', show: true, text: '她去哪了。' },
+      { t: 'say', who: 'norden', show: true, text: '「镜中世界」。' },
+      { t: 'say', who: 'rek', show: true, text: '镜子。' },
+      { t: 'say', who: 'norden', show: true, text: '她把门开在了自己身上。所以你能站在这儿——你已经半个身子在镜子里了。' },
+
+      { t: 'say', who: 'rek', show: true, text: '……' },
+      { t: 'say', who: 'norden', show: true, text: '那里的一切都是反的。方向、颜色、还有她给你的东西。' },
+      { t: 'say', who: 'rek', show: true, text: '反的。' },
+      { t: 'say', who: 'norden', show: true, text: '在那里，你会看见另一个你。' },
+      { t: 'say', who: 'rek', show: true, text: '另一个我。' },
+      { t: 'say', who: 'norden', show: true, text: '她会用你的脸，说你想听的话。她只想让你停下来。' },
+
+      { t: 'say', who: 'rek', show: true, text: '那我就不停。' },
+      { t: 'say', who: 'norden', show: true, text: '……' },
+      { t: 'say', who: 'norden', show: true, text: '你还是这样。' },
+
+      { t: 'say', who: 'rek', show: true, text: '我走了。' },
+      { t: 'say', who: 'norden', show: true, text: '蕾克。' },
+      { t: 'say', who: 'norden', show: true, text: '这次，别一个人扛着。' },
+      { t: 'say', who: 'rek', show: true, text: '……嗯。' },
+
+      { t: 'fade', to: 'black', frames: 45 },
       { t: 'next', chapter: 'mirror' }
     ]
   },
