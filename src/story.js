@@ -63,21 +63,25 @@ const STORY = {
   //   art/portrait/rek_eyes_closed.png 等；没有图时代码自动退回基础立绘或占位块。
   ambush: {
     cmds: [
-      { t: 'say', who: 'marysue', expr: 'shadow', show: true, text: '库嘻嘻…沉浸在人家赐予你的美好中，迎来属于自己的结局不好吗？为什么这么急于跳脱人家的童话呢～' },
+      { t: 'say', who: 'marysue', expr: 'shadow', show: true, text: '库嘻嘻……' },
+      { t: 'say', who: 'marysue', expr: 'shadow', show: true, text: '沉浸在人家赐予你的美好里，迎来属于自己的结局，不好吗？' },
+      { t: 'say', who: 'marysue', expr: 'shadow', show: true, text: '为什么这么急着，跳出人家的童话呢～' },
 
-      { t: 'say', who: 'rek', show: true, text: '真让人感到恶心…' },
-      { t: 'say', who: 'rek', expr: 'eyes_closed', show: true, text: '你的所谓创作中，主角最后等到的只有悲惨结局。' },
+      { t: 'say', who: 'rek', show: true, text: '……真让人恶心。' },
+      { t: 'say', who: 'rek', expr: 'eyes_closed', show: true, text: '在你写的故事里，主角等到的，永远只有悲惨结局。' },
       { t: 'say', who: 'rek', expr: 'eyes_open', show: true, text: '我，不认可这样的结局。' },
-      { t: 'say', who: 'rek', style: 'red', shake: true, show: true, text: '玛丽苏…在砍下你的头颅之前，我是不会死的。' },
+      { t: 'say', who: 'rek', style: 'red', shake: true, show: true, text: '玛丽苏……' },
+      { t: 'say', who: 'rek', style: 'red', shake: true, show: true, text: '在砍下你的头颅之前，我是不会死的。' },
 
       { t: 'pose', who: 'rek', expr: 'ready', frames: 40 },
 
       { t: 'say', who: 'marysue', show: true, text: '哎呀呀，人家好怕啊～' },
-      { t: 'say', who: 'marysue', expr: 'eyes_closed', show: true, text: '你真觉得…' },
+      { t: 'say', who: 'marysue', expr: 'eyes_closed', show: true, text: '你真觉得……' },
       { t: 'say', who: 'marysue', expr: 'eyes_open', show: true, text: '你能碰到我吗？' },
 
       { t: 'say', who: '', text: '「啪嗒。」' },
-      { t: 'say', who: 'rek', expr: 'shock', show: true, bump: true, text: '！？' },
+      { t: 'say', who: 'rek', expr: 'shock', show: true, bump: true, screenshake: 12, shakeAmp: 7, text: '！？' },
+      { t: 'wait', frames: 26 },
 
       // CG：玛丽苏身后浮现法环陷阱（art/cg/trap.png；没有图就画占位法环）
       { t: 'cg', art: 'art/cg/trap.png', label: '法环陷阱', frames: 130 },

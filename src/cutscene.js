@@ -55,6 +55,7 @@ const Cutscene = (function () {
     cg: null,             // CG 大图：{ art, label, t }
     flash: null,          // 闪白/闪黑：{ seq, i, f }
     portrait: null,       // 对话时右侧的说话者立绘：{ who, expr }
+    shake: null,          // 画面震动：{ t, amp }
     leaving: false,       // 正在播「丝滑退出」
     leaveT: 0,
     framesLeft: 0,
@@ -114,6 +115,7 @@ const Cutscene = (function () {
     S.bossIntro = null;
     S.cg = null;
     S.flash = null;
+    S.shake = null;
     S.leaving = false;
     S.leaveT = 0;
     S.framesLeft = 0;
@@ -156,6 +158,7 @@ const Cutscene = (function () {
           mode: 'say', who: c.who || '', text: c.text || '', shown: 0, acc: 0, pause: 0, t: 0,
           expr: c.expr || '', style: c.style || '', shake: !!c.shake, bump: !!c.bump
         };
+        if (c.screenshake) S.shake = { t: c.screenshake, amp: c.shakeAmp || 6 };
         // show:true 时右侧画出说话者的立绘（表情跟着 expr 走）
         if (c.show) S.portrait = { who: c.who, expr: c.expr || '' };
         break;
@@ -278,6 +281,7 @@ const Cutscene = (function () {
     S.bossIntro = null;
     S.cg = null;
     S.flash = null;
+    S.shake = null;
     step();
   }
 
@@ -299,6 +303,7 @@ const Cutscene = (function () {
     S.frame = (S.frame || 0) + 1;
     S.t++;
     if (S.cg) S.cg.t++;
+    if (S.shake && S.shake.t > 0) S.shake.t--;
 
     // 闪屏序列：白 → 黑 → 白，播完自动往下走
     if (S.flash) {
@@ -858,10 +863,17 @@ const Cutscene = (function () {
     drawBackground(ctx);
 
     const outK = S.leaving ? easeInOutQuad(prog(S.leaveT, LEAVE_OUT)) : 0;
+    // 画面震动（衰减正弦，比随机抖动更「有力」）
+    let sx = 0, sy = 0;
+    if (S.shake && S.shake.t > 0) {
+      const k = S.shake.t / 12;
+      sx = Math.sin(Game.frame * 2.3) * S.shake.amp * k;
+      sy = Math.cos(Game.frame * 1.7) * S.shake.amp * 0.6 * k;
+    }
 
     ctx.save();
     ctx.globalAlpha = 1 - outK;
-    ctx.translate(0, outK * 10);
+    ctx.translate(sx, sy + outK * 10);
 
     if (S.card) drawCard(ctx);
     if (S.cg) drawCG(ctx);
