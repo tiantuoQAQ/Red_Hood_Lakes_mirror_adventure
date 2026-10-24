@@ -177,6 +177,10 @@ requestAnimationFrame(frameLoop);
 // 调试用：?auto=1 直接开局（跳过剧情），?ff=N 预跑 N 帧（用于截图验证）
 // ?story=0 回标题画面；默认直接从序章开始播
 (function boot() {
+  // 预载必杀技名用的毛笔体，避免第一次演出时字体还没到
+  if (document.fonts && document.fonts.load) {
+    document.fonts.load('80px CutinBrush');
+  }
   const params = new URLSearchParams(location.search);
   if (params.get('theme')) Game.theme = params.get('theme');
   if (params.get('auto') === '1') {

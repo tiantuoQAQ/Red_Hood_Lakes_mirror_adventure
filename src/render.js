@@ -680,40 +680,74 @@ function drawCutin(ctx) {
     ctx.restore();
   }
 
-  // 技名：左下角，斜切、描边、逐字拉开字距（更像格斗游戏的字）
+  // 技名：左下角，毛笔体 + 斜切 + 逐字不齐，下方一道红色笔锋
   if (c.main) {
     const k = Math.min(1, Math.max(0, (t - 10) / 10));
     if (k > 0) {
       const slide = (1 - k) * -70;
-      // 注意：下面会做斜切，斜切会把 x 往左拉 ~0.18*y，这里提前补偿
-      drawCutinName(ctx, c.main, W * 0.145 + slide, H * 0.795, 62, 1, alpha * k, '#FFFFFF', '#000000');
+      const nx = W * 0.135 + slide;
+      const ny = H * 0.80;
+      const size = 74;
+
+      // 红色笔锋（衬在字下面，像扫出来的一笔）
+      ctx.save();
+      ctx.globalAlpha = alpha * k * 0.9;
+      ctx.transform(1, 0, -0.14, 1, 0, 0);
+      ctx.font = size + 'px "CutinBrush","STXingkai","KaiTi",serif';
+      const tw = ctx.measureText(c.main).width;
+      ctx.fillStyle = '#FF0000';
+      ctx.beginPath();
+      ctx.moveTo(nx - 14, ny + 10);
+      ctx.lineTo(nx + tw + 26, ny - 2);
+      ctx.lineTo(nx + tw + 18, ny + 16);
+      ctx.lineTo(nx - 8, ny + 26);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      // 注意：下面会做斜切，斜切会把 x 往左拉，这里提前补偿
+      drawCutinName(ctx, c.main, nx, ny, size, 1, alpha * k, '#FFFFFF', '#000000');
       if (c.sub) {
-        drawCutinName(ctx, c.sub, W * 0.155 + slide * 1.2, H * 0.875, 24, 1, alpha * k * 0.92, '#FF0000', '#000000');
+        drawCutinName(ctx, c.sub, nx + 6, ny + 46, 26, 1, alpha * k * 0.95, '#FFFFFF', '#000000');
       }
     }
   }
 }
 
 // 逐字绘制 + 手写字距（canvas 没有 letterSpacing 的稳妥写法）
+// 毛笔体：CutinBrush 是打包的华文行楷；加载失败自动回退到系统楷体
 function drawCutinName(ctx, text, x, y, size, skew, alpha, fill, stroke) {
   ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.transform(1, 0, -0.18 * skew, 1, 0, 0);   // 轻微右倾，像毛笔/招牌字
-  ctx.font = '900 ' + size + 'px "Microsoft YaHei","SimHei","PingFang SC",sans-serif';
+  ctx.transform(1, 0, -0.14 * skew, 1, 0, 0);   // 轻微右倾，像挥出去的笔势
+  ctx.font = size + 'px "CutinBrush","STXingkai","KaiTi","STKaiti",serif';
+  ctx.textBaseline = 'alphabetic';
   ctx.lineJoin = 'round';
-  ctx.lineWidth = Math.max(4, size * 0.13);
+  ctx.lineWidth = Math.max(3, size * 0.10);
   ctx.strokeStyle = stroke;
   ctx.fillStyle = fill;
 
-  const gap = size * 0.10;
+  const gap = size * 0.045;
   let cx = x;
-  for (let i = 0; i < text.length; i++) {
+  const n = text.length;
+  for (let i = 0; i < n; i++) {
     const ch = text[i];
+    const w = ctx.measureText(ch).width;
     if (ch !== ' ') {
-      ctx.strokeText(ch, cx, y);
-      ctx.fillText(ch, cx, y);
+      // 每字轻微随机：大小 ±4%、上下 ±3px、旋转 ±2.5°，模仿手写的不齐
+      const seed = (i * 37 + Math.floor(size)) % 7;
+      const sc = 1 + ((seed % 3) - 1) * 0.02;
+      const dy = ((seed % 5) - 2) * 1.2;
+      const rot = ((seed % 3) - 1) * 0.012;
+      ctx.save();
+      ctx.translate(cx + w / 2, y + dy);
+      ctx.rotate(rot);
+      ctx.scale(sc, sc);
+      ctx.strokeText(ch, -w / 2, 0);
+      ctx.fillText(ch, -w / 2, 0);
+      ctx.restore();
     }
-    cx += ctx.measureText(ch).width + gap;
+    cx += w + gap;
   }
   ctx.restore();
 }
