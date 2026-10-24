@@ -293,22 +293,55 @@ const STORY = {
       { t: 'say', who: 'marysue', expr: 'creepy', show: true, text: '由我来全部毁掉。' },
 
       { t: 'bossIntro', id: 'marysue', frames: 180 },
-      { t: 'battle', boss: 'marysue', after: 'ending' }
+      { t: 'battle', boss: 'marysue', after: 'marysue_defeat' }
+    ]
+  },
+
+  // ---------------------------------------------------------------- 玛丽苏战败 · 诺登收场
+  marysue_defeat: {
+    cmds: [
+      { t: 'say', who: 'marysue', expr: 'shock', show: true, text: '这不可能……！' },
+      { t: 'say', who: 'marysue', expr: 'shock', show: true, text: '我怎么会……输给一个样本……' },
+      { t: 'say', who: 'rek', expr: 'ready', show: true, text: '到此为止了。' },
+
+      { t: 'say', who: '', text: '空间里，响起另一个声音。' },
+      { t: 'intro', id: 'norden' },
+      { t: 'say', who: 'norden', show: true, text: '玛丽苏。' },
+      { t: 'say', who: 'norden', show: true, text: '我要收回箱庭的权能。' },
+
+      { t: 'say', who: 'marysue', expr: 'shock', show: true, text: '原来是你！？' },
+      { t: 'say', who: 'marysue', expr: 'shock', show: true, text: '我就说，蕾克怎么可能……！' },
+      { t: 'say', who: 'marysue', expr: 'smug', show: true, text: '给我等着！' },
+      { t: 'say', who: 'marysue', expr: 'smug', show: true, text: '我们没完，白之女王——' },
+
+      { t: 'flash', seq: [{ c: 'green', f: 6 }, { c: 'white', f: 4 }, { c: 'black', f: 12 }] },
+      { t: 'say', who: '', text: '绿色的光炸开，又迅速熄灭。' },
+
+      { t: 'say', who: 'norden', show: true, text: '……很可惜，让她跑了。' },
+      { t: 'say', who: 'norden', show: true, text: '不过这样也好。剩下的，交给时间。' },
+      { t: 'say', who: 'norden', show: true, text: '就此别过吧，蕾克小姐。' },
+
+      { t: 'say', who: 'rek', expr: 'wary', show: true, text: '诺登。' },
+      { t: 'say', who: 'norden', show: true, text: '以后还会再见的。' },
+      { t: 'say', who: 'norden', show: true, text: '——回去吧。' },
+
+      { t: 'flash', seq: [{ c: 'white', f: 8 }, { c: 'black', f: 14 }] },
+      { t: 'next', chapter: 'ending' }
     ]
   },
 
   // ---------------------------------------------------------------- 结局
   ending: {
     cmds: [
-      { t: 'fade', to: 'black', frames: 60 },
-      { t: 'card', line1: '镜面碎成了千万片', line2: '每一片里都有她', frames: 190 },
       { t: 'fade', to: 'clear', frames: 45 },
       { t: 'say', who: '', text: '她走出镜子的时候，天已经亮了。' },
       { t: 'say', who: '', text: '森林还是那片森林。' },
       { t: 'say', who: 'rek', expr: 'eyes_closed', show: true, text: '……累死了。' },
       { t: 'say', who: 'rek', expr: 'eyes_open', show: true, text: '格林。' },
       { t: 'say', who: 'rek', show: true, text: '我回来了。' },
-      { t: 'say', who: '', text: '——这一次，信不用再压在杯子底下了。' },
+      { t: 'say', who: '', text: '空地上站着一个人。' },
+      { t: 'say', who: '', text: '她没有见过她。' },
+      { t: 'card', line1: '主线 · 终', line2: '镜面碎成了千万片，每一片里都有她', frames: 190 },
       { t: 'end', kind: 'win' }
     ]
   }

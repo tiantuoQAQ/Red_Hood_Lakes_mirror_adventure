@@ -924,8 +924,10 @@ const Cutscene = (function () {
   function drawFlash(ctx) {
     if (!S.flash) return;
     const seg = S.flash.seq[S.flash.i];
-    const col = seg.c === 'white' ? '255,255,255' : '0,0,0';
-    ctx.fillStyle = 'rgba(' + col + ',1)';
+    const rgb = seg.c === 'white' ? '255,255,255'
+              : seg.c === 'green' ? '130,255,0'
+              : '0,0,0';
+    ctx.fillStyle = 'rgba(' + rgb + ',1)';
     ctx.fillRect(0, 0, W, H);
   }
 
