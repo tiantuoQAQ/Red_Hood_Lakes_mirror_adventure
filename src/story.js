@@ -184,6 +184,7 @@ const STORY = {
 
       { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '吾乃猩红魔姬·雷帝。' },
       { t: 'title', who: 'rek_crimson', title: '猩红魔姬 · 雷帝', frames: 150 },
+      { t: 'pose', who: 'rek_crimson', expr: 'stand', frames: 40 },
       { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '玛丽苏大人最得意的作品。' },
       { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '背弃血亲与友人，以此换得力量之人。' },
       { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '而你，小红帽蕾克——' },
@@ -193,7 +194,8 @@ const STORY = {
       { t: 'say', who: 'rek', expr: 'wary', show: true, text: '……失败样本。' },
       { t: 'say', who: 'rek', expr: 'eyes_open', show: true, text: '那就让这个样本，看看你有多成功。' },
 
-      { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '此即，汝葬身之地。' },
+      { t: 'pose', who: 'rek_crimson', expr: 'stand_ready', frames: 40 },
+      { t: 'say', who: 'rek_crimson', expr: 'stand_ready', show: true, text: '此即，汝葬身之地。' },
 
       { t: 'bossIntro', id: 'rek_crimson', frames: 170 },
       { t: 'battle', boss: 'crimson', after: 'crimson_fall' }

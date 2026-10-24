@@ -84,6 +84,18 @@ function getBgImg(key, path) {
   return (img.complete && img.naturalWidth > 0) ? img : null;
 }
 
+// 场景道具贴图（王座等）
+const OBJ_IMG = {};
+function getObjImg(key, path) {
+  if (!OBJ_IMG[key]) {
+    if (typeof Image === 'undefined') return null;
+    OBJ_IMG[key] = new Image();
+    OBJ_IMG[key].src = path;
+  }
+  const img = OBJ_IMG[key];
+  return (img.complete && img.naturalWidth > 0) ? img : null;
+}
+
 // 镜中世界的地面 + 倒影
 function drawMirrorGround(ctx) {
   const g = ctx.createLinearGradient(0, GROUND_Y, 0, H);
@@ -627,7 +639,7 @@ function drawVoidBackground(ctx) {
   ctx.fillRect(0, GROUND_Y, W, 2);
 }
 
-// 走位段里的场景道具（目前只有王座）
+// 走位段里的场景道具（王座）
 function drawWalkProps(ctx) {
   const w = Game.walk;
   if (!w || !w.props || !w.props.length) return;
@@ -638,43 +650,44 @@ function drawWalkProps(ctx) {
 
     const x = p.x;
     const y = GROUND_Y;
+    const img = getObjImg('throne', 'art/obj/throne.png');
+
     ctx.save();
 
-    // 台座
-    ctx.fillStyle = 'rgba(14,14,16,0.96)';
-    ctx.fillRect(x - 96, y - 26, 192, 26);
-    ctx.fillStyle = 'rgba(255,255,255,0.10)';
-    ctx.fillRect(x - 96, y - 26, 192, 2);
+    if (img) {
+      const th = 340;
+      const tw = img.naturalWidth * (th / img.naturalHeight);
+      ctx.drawImage(img, x - tw / 2, y - th, tw, th);
+    } else {
+      // 占位：黑色剪影
+      ctx.fillStyle = 'rgba(14,14,16,0.96)';
+      ctx.fillRect(x - 96, y - 26, 192, 26);
+      ctx.fillRect(x - 84, y - 200, 168, 174);
+      ctx.fillRect(x - 104, y - 128, 26, 102);
+      ctx.fillRect(x + 78, y - 128, 26, 102);
+      ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x - 84, y - 200, 168, 174);
+    }
 
-    // 靠背与扶手
-    ctx.fillStyle = 'rgba(14,14,16,0.96)';
-    ctx.fillRect(x - 84, y - 200, 168, 174);
-    ctx.fillRect(x - 104, y - 128, 26, 102);
-    ctx.fillRect(x + 78, y - 128, 26, 102);
-
-    // 描边
-    ctx.strokeStyle = 'rgba(255,255,255,0.22)';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x - 84, y - 200, 168, 174);
-
-    // 坐着的人（占位：暗红剪影 + 头）
+    // 坐着的人（占位：暗红剪影 + 头 + 兽耳）——坐垫位置贴合贴图
     if (p.char) {
+      const seatY = y - 132;     // 坐垫高度（按王座贴图比例）
       ctx.fillStyle = 'rgba(176,0,0,0.95)';
-      ctx.fillRect(x - 34, y - 150, 68, 110);       // 身体
+      ctx.fillRect(x - 24, seatY - 62, 48, 68);     // 身体
       ctx.beginPath();
-      ctx.arc(x, y - 168, 30, 0, Math.PI * 2);      // 头
+      ctx.arc(x, seatY - 82, 20, 0, Math.PI * 2);   // 头
       ctx.fill();
-      // 兽耳（提示这是蕾克剪影）
-      ctx.beginPath();
-      ctx.moveTo(x - 26, y - 190);
-      ctx.lineTo(x - 8, y - 214);
-      ctx.lineTo(x + 2, y - 188);
+      ctx.beginPath();                               // 兽耳
+      ctx.moveTo(x - 17, seatY - 96);
+      ctx.lineTo(x - 5, seatY - 112);
+      ctx.lineTo(x + 3, seatY - 94);
       ctx.closePath();
       ctx.fill();
       ctx.beginPath();
-      ctx.moveTo(x + 26, y - 190);
-      ctx.lineTo(x + 8, y - 214);
-      ctx.lineTo(x - 2, y - 188);
+      ctx.moveTo(x + 17, seatY - 96);
+      ctx.lineTo(x + 5, seatY - 112);
+      ctx.lineTo(x - 3, seatY - 94);
       ctx.closePath();
       ctx.fill();
     }
