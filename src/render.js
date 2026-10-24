@@ -1185,17 +1185,11 @@ function drawBossPanel(ctx, o) {
   ctx.lineWidth = 2;
   ctx.strokeRect(bx, by, bw, bh);
 
-  // ---- 阶段分段刻线（每段等宽；隐藏总数时不画总刻度）
-  if (!o.hideTotal && o.phaseCount > 1) {
-    ctx.strokeStyle = 'rgba(0,0,0,0.55)';
-    ctx.lineWidth = 2;
-    for (let i = 1; i < o.phaseCount; i++) {
-      const x = bx + (bw * i) / o.phaseCount;
-      ctx.beginPath();
-      ctx.moveTo(x, by);
-      ctx.lineTo(x, by + bh);
-      ctx.stroke();
-    }
+  // ---- 一根条：打空后进入下一阶段、血条自动回满
+  // 换阶段时闪一下，提示「回满了」
+  if (Game.barFlash > 0) {
+    ctx.fillStyle = 'rgba(255,255,255,' + (0.55 * Game.barFlash / 12).toFixed(3) + ')';
+    ctx.fillRect(bx, by, bw, bh);
   }
 
   // ---- STAGE n / N

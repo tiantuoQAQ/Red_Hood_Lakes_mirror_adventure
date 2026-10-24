@@ -30,6 +30,7 @@ const Game = {
   screenHurt: 0,
   dmgTexts: [],
   grazePulse: 0,
+  barFlash: 0,     // 换阶段时血条回满的闪光计时
   deadT: 0,
   cutin: null,        // 必杀演出：{ id, t, dur }
   debug: { hitbox: true, latencyMs: 0 }
@@ -129,6 +130,7 @@ function resetGame(bossId) {
   Game.beams.length = 0;
   Game.dmgTexts.length = 0;
   Game.deadT = 0;
+  Game.barFlash = 0;
   Game.cutin = null;
 }
 
@@ -173,6 +175,7 @@ function update(dt) {
   if (Game.bannerT > 0) Game.bannerT--;
   if (Game.screenHurt > 0) Game.screenHurt--;
   if (Game.grazePulse > 0) Game.grazePulse--;
+  if (Game.barFlash > 0) Game.barFlash--;
 
   if (Game.hitstop > 0) {
     Game.hitstop--;
@@ -567,6 +570,7 @@ function updateBoss(dt) {
     b.scriptT = 0;
     Game.bullets.length = 0;     // 换阶段清屏：给玩家一口喘息，也算难度重置
     Game.shake = 10;
+    Game.barFlash = 14;
     Game.banner = 'PHASE ' + (ph + 1);
     Game.bannerT = 90;
     burst(b.x, b.y, COLORS.hazard, 30);

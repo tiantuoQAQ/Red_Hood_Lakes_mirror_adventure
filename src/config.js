@@ -134,7 +134,7 @@ const BOSSES = {
     ]
   },
   marysue: {
-    name: '幕后黑手 玛丽苏',
+    name: '黑童话之母 玛丽苏',
     portrait: 'art/portrait/marysue.png',
     barColor: '#82FF00',
     hp: 420,

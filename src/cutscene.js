@@ -30,7 +30,7 @@ const Cutscene = (function () {
     rek:         { name: '蕾克',   title: '小红帽',        color: '#ff0000', art: 'art/portrait/rek.png' },
     rek_crimson: { name: '猩红魔姬', title: '另一个她',      color: '#c00000', art: 'art/portrait/crimson.png' },
     norden:      { name: '诺登',   title: '白之兔',        color: '#ff5050', art: 'art/portrait/norden.png' },
-    marysue:     { name: '玛丽苏',  title: '幕后黑手',      color: '#00baff', art: 'art/portrait/marysue.png' },
+    marysue:     { name: '玛丽苏',  title: '黑童话之母',      color: '#00baff', art: 'art/portrait/marysue.png' },
     mabel:       { name: '梅贝尔',  title: '虚空少女',      color: '#cfcfcf', art: 'art/portrait/mabel.png' }
   };
 
