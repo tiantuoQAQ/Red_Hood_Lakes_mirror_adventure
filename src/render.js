@@ -579,19 +579,39 @@ function drawHUD(ctx) {
   const b = Game.boss;
   const P = CFG.player;
 
-  // BOSS 血条
-  const bw = 520;
-  const bx = W / 2 - bw / 2;
-  bar(ctx, bx, 28, bw, 7, b.hp / b.maxHp, COLORS.hazard);
-  mono(ctx, 'BOSS', bx - 12, 35, 11, COLORS.dim, 'right');
-  mono(ctx, 'PHASE ' + (b.phase + 1) + ' / ' + PHASES.length, bx + bw + 12, 35, 11, COLORS.dim, 'left');
+  // 顶部压暗，保证血条/文字在亮背景上也读得清
+  const scrim = ctx.createLinearGradient(0, 0, 0, 96);
+  scrim.addColorStop(0, 'rgba(0,0,0,0.55)');
+  scrim.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = scrim;
+  ctx.fillRect(0, 0, W, 96);
+
+  // ---------------- BOSS 血条（右上角） ----------------
+  const phases = (bossDef(b) && bossDef(b).phases) || PHASES;
+  const bw = 380;
+  const bx = W - 60 - bw;
+  const by = 34;
+
+  // 名字
+  label(ctx, b.name || 'BOSS', W - 60, by - 12, 15, COLORS.ink, 'right', 700);
+
+  // 条底 + 血
+  ctx.fillStyle = 'rgba(255,255,255,0.10)';
+  ctx.fillRect(bx, by, bw, 8);
+  bar(ctx, bx, by, bw, 8, b.hp / b.maxHp, COLORS.hazard);
 
   // 阶段刻度
-  for (let i = 1; i < PHASES.length; i++) {
-    const x = bx + bw * PHASES[i].at;
-    ctx.fillStyle = hexToRgba(COLORS.ink, 0.35);
-    ctx.fillRect(x - 0.5, 25, 1, 13);
+  for (let i = 1; i < phases.length; i++) {
+    const x = bx + bw * phases[i].at;
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(x - 1, by - 1, 2, 10);
   }
+
+  // 阶段文字
+  mono(ctx, 'PHASE ' + (b.phase + 1) + ' / ' + phases.length, W - 60, by + 26, 11, COLORS.dim, 'right');
+
+  // 右侧小菱形（BOSS 标记）
+  drawDiamond(ctx, W - 40, by + 4, 7, COLORS.hazard, true);
 
   // 生命
   for (let i = 0; i < P.lives; i++) {
@@ -602,7 +622,9 @@ function drawHUD(ctx) {
   bar(ctx, 60, 660, 240, 8, Game.courage / P.courageMax, COLORS.player);
   mono(ctx, '勇气 ' + Math.floor(Game.courage) + '%', 60, 654, 11, COLORS.dim);
   if (Game.courage >= P.courageMax) {
-    mono(ctx, 'L / X 释放冰封', 312, 668, 12, COLORS.env);
+    const hasTragedy = Game.skills && Game.skills.red_tragedy;
+    mono(ctx, hasTragedy ? 'L / X 红之惨剧' : 'L / X 释放冰封', 312, 668, 12,
+         hasTragedy ? COLORS.player : COLORS.env);
   }
 
   // 擦弹连击：数字 + 剩余窗口
@@ -617,9 +639,15 @@ function drawHUD(ctx) {
 
   // 调试：真实输入延迟（按键到画面提交的平均值）
   if (Game.debug.hitbox && Game.debug.latencyMs > 0) {
-    mono(ctx, '输入延迟 ' + Game.debug.latencyMs.toFixed(1) + ' ms', W - 60, 54, 11, COLORS.dim, 'right');
-    mono(ctx, Math.round(1000 / Math.max(1, Game.debug.frameMs || 16.7)) + ' fps', W - 60, 70, 11, COLORS.dim, 'right');
+    mono(ctx, '输入延迟 ' + Game.debug.latencyMs.toFixed(1) + ' ms', W - 60, 692, 11, COLORS.dim, 'right');
+    mono(ctx, Math.round(1000 / Math.max(1, Game.debug.frameMs || 16.7)) + ' fps', W - 170, 692, 11, COLORS.dim, 'right');
   }
+}
+
+// 取当前 BOSS 的配置（BOSSES 表），取不到就用 CFG.boss
+function bossDef(b) {
+  if (!b || typeof BOSSES === 'undefined') return null;
+  return BOSSES[b.id] || null;
 }
 
 function drawBanner(ctx) {
