@@ -76,6 +76,7 @@ mirror-jam/
 ├── art/
 │   ├── portrait/           ★ 对话立绘（21 张，已全部压色 + 肤色统一）
 │   ├── obj/throne.png      王座贴图（走位段用）
+│   ├── cg/cutin_*.png      ★ 必杀演出大特写（Boss 最后阶段切入）
 │   ├── bg/mirror.jpg       镜中世界背景（+ mirror_alt.jpg 备用）
 │   ├── fx/particle_strip.png
 │   ├── ref/                出图参考（AI 生成原图，不需要进游戏）
@@ -145,6 +146,16 @@ Game = {
 - 谁说话谁亮（100%），另一方压到 **60% 不透明度**
 - 说话者背后有一团柔光 `focusGlow()`
 - 表情通过文件名自动解析：`art/portrait/<角色>_<expr>.png`，找不到就退回基础图，再找不到画占位块
+
+### 3.2.1 必杀演出（cutin）
+Boss 血量掉到**最后一个阶段**时，冻结战场插一张 16:9 大特写（黑白漫画斜切分格 + 感叹号），
+从右侧冲入 → 白闪 → 停留 → 淡出，全程约 156 帧（2.6 秒）。
+
+- 触发：src/game.js 的 updateBoss() 里，ph === phases.length - 1 时调用 startCutin(b.id)
+- 冻结：update() 开头检测 Game.cutin，只推进计时、不更新任何实体
+- 绘制：src/render.js 的 drawCutin()，图片路径固定为 rt/cg/cutin_<bossId>.png
+- 每个 Boss 只放一次（oss.cutinDone）
+- 缺图时画占位提示，不会崩
 
 ### 3.3 渲染
 - 世界宽 `WORLD_W = 2400`，屏幕 1280×720，地面 `GROUND_Y = 574`
@@ -298,6 +309,7 @@ python tools/match_skin.py <png...> --target 0.70 # 统一肤色灰阶（只动�
 - [x] 技能：冰封 36 伤；**红之惨剧**（清屏 + 200 帧无敌 + 80 伤）
 - [x] 两个 Boss 的分阶段血条（魔姬 240HP/5 阶段，玛丽苏 420HP/6 阶段且总血条隐藏）
 - [x] 走位段系统（`untilX` 触发 / `target` + W 交互 / 场景道具 props / 可选镜头跟随）
+- [x] **必杀演出 cutin**：最后阶段切入大特写 + 冻结 + 白闪 + 电影黑边
 - [x] 剧情引擎全部 19 条命令；双人构图 + 说话者高亮 + 10 帧平滑退场 + 防连点
 - [x] 打字机文本（句号 14 帧、逗号 7 帧、CPS 0.9）
 - [x] 绿色闪光（`flash` 的 `green`）供玛丽苏逃跑使用
@@ -335,6 +347,8 @@ python tools/match_skin.py <png...> --target 0.70 # 统一肤色灰阶（只动�
    - 落点：`src/audio.js`、`src/game.js` 的 `startBattle`
 
 ### P1 · 内容补完
+3.5 **必杀演出的音效与台词**：现在只有画面，建议配一声碎裂音 + 屏幕上打一行技名（例：「魔炮 · 超新星人花」那种格式）
+
 4. **梅贝尔的菜单对话**（设定已给：虚无少女，结尾出现在森林空地）
    - 新章节 `mabel_talk`，在 `ending` 之后触发
    - 立绘 `mabel.png` 已有

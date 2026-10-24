@@ -31,6 +31,7 @@ const Game = {
   dmgTexts: [],
   grazePulse: 0,
   deadT: 0,
+  cutin: null,        // 必杀演出：{ id, t, dur }
   debug: { hitbox: true, latencyMs: 0 }
 };
 
@@ -84,8 +85,16 @@ function makeBoss(id) {
     flash: 0,
     pending: null,
     dashT: 0,
-    dashTo: null
+    dashTo: null,
+    cutinDone: false
   };
+}
+
+// 必杀演出：进入最后阶段时插入的大特写（渲染在 render.js 的 drawCutin）
+function startCutin(bossId) {
+  Game.cutin = { id: bossId, t: 0, dur: 156 };
+  Game.shake = 14;
+  if (typeof Sfx !== 'undefined' && Sfx.phase) Sfx.phase();
 }
 
 function resetGame(bossId) {
@@ -113,6 +122,7 @@ function resetGame(bossId) {
   Game.beams.length = 0;
   Game.dmgTexts.length = 0;
   Game.deadT = 0;
+  Game.cutin = null;
 }
 
 // ---------------------------------------------------------------- 更新
@@ -122,6 +132,15 @@ function update(dt) {
 
   // 走位段：只有移动，没有 BOSS / 弹幕 / 射击
   if (Game.mode === 'walk') { updateWalk(dt); return; }
+
+  // 必杀演出（最后一阶段切入的大特写）：期间冻结整个战场
+  if (Game.cutin) {
+    Game.cutin.t++;
+    if (Game.cutin.t >= Game.cutin.dur) Game.cutin = null;
+    Game.hitstop = 0;
+    if (Game.shake > 0) Game.shake = Math.max(0, Game.shake - dt * 30);
+    return;
+  }
 
   // 濒死慢动作：只在死亡瞬间使用。帧计数会随之变慢，这是演出效果的可接受代价
   if (Game.slowT > 0) {
@@ -545,6 +564,12 @@ function updateBoss(dt) {
     Game.bannerT = 90;
     burst(b.x, b.y, COLORS.hazard, 30);
     Sfx.phase();
+
+    // 进入最后阶段：插一张必杀演出大特写（每个 BOSS 只放一次）
+    if (ph === phases.length - 1 && !b.cutinDone) {
+      b.cutinDone = true;
+      startCutin(b.id);
+    }
   }
 
   if (b.gap > 0) { b.gap--; return; }

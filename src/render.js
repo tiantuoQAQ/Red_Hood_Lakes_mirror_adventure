@@ -67,6 +67,7 @@ function render(ctx) {
   if (Game.player && Game.boss) drawHUD(ctx);
   if (Game.mode === 'walk') drawWalkNpc(ctx);
   drawBanner(ctx);
+  drawCutin(ctx);
   drawOverlay(ctx);
 }
 
@@ -597,6 +598,66 @@ function drawParticles(ctx) {
     ctx.fillStyle = hexToRgba(q.color, a * 0.9);
     ctx.fill();
   }
+}
+
+// 必杀演出（进入最后阶段时的大特写）：从右侧斜切入画，白闪，停留，淡出
+const CUTIN_IMG = {};
+function getCutinImg(id) {
+  const key = id || 'marysue';
+  if (!CUTIN_IMG[key]) {
+    if (typeof Image === 'undefined') return null;
+    CUTIN_IMG[key] = new Image();
+    CUTIN_IMG[key].src = 'art/cg/cutin_' + key + '.png';
+  }
+  const img = CUTIN_IMG[key];
+  return (img.complete && img.naturalWidth > 0) ? img : null;
+}
+
+function drawCutin(ctx) {
+  const c = Game.cutin;
+  if (!c) return;
+  const img = getCutinImg(c.id);
+  const t = c.t;
+  const dur = c.dur;
+
+  // 进场 0-14 帧：从右侧冲入 + 白闪；出场最后 24 帧淡出
+  const inK = Math.min(1, t / 14);
+  const ease = 1 - Math.pow(1 - inK, 3);
+  const outK = t > dur - 24 ? 1 - (t - (dur - 24)) / 24 : 1;
+  const alpha = Math.max(0, outK);
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  if (img) {
+    // 覆盖整个画面（等比裁切，不做拉伸）
+    const s = Math.max(W / img.naturalWidth, H / img.naturalHeight);
+    const dw = img.naturalWidth * s;
+    const dh = img.naturalHeight * s;
+    const dx = (W - dw) / 2 + (1 - ease) * W * 0.35;
+    const dy = (H - dh) / 2;
+    ctx.drawImage(img, dx, dy, dw, dh);
+  } else {
+    ctx.fillStyle = 'rgba(10,10,12,0.96)';
+    ctx.fillRect(0, 0, W, H);
+    label(ctx, '必杀演出占位 ' + (c.id || ''), W / 2, H / 2, 28, 'rgba(255,255,255,0.35)', 'center', 700);
+  }
+
+  // 进场白闪
+  if (t < 8) {
+    ctx.globalAlpha = alpha * (1 - t / 8) * 0.85;
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // 上下黑边，电影感
+  ctx.globalAlpha = alpha;
+  const barH = H * 0.055 * Math.min(1, t / 10);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, barH);
+  ctx.fillRect(0, H - barH, W, barH);
+
+  ctx.restore();
 }
 
 function drawDmgTexts(ctx) {

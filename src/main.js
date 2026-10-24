@@ -204,6 +204,16 @@ requestAnimationFrame(frameLoop);
     Game.mode = 'title';
     return;
   }
+  // 调试：?cutinf=crimson 直接看必杀演出大特写
+  const cine = params.get('cutinf');
+  if (cine) {
+    const cid = (cine === 'true' ? 'crimson' : cine);
+    resetGame(cid);
+    Game.cutin = { id: cid, t: 30, dur: 9999 };
+    const cff = parseInt(params.get('ff') || '0', 10);
+    for (let i = 0; i < cff; i++) { update(STEP); Input.tick(); }
+    return;
+  }
   // 调试：?chapter=wake 直接从某一章开始；?walk=1 直接进走位段
   const ch = params.get('chapter');
   if (ch) { Cutscene.start(ch); return; }
