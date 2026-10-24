@@ -620,44 +620,65 @@ function drawCutin(ctx) {
   const t = c.t;
   const dur = c.dur;
 
-  // 进场 0-14 帧：从右侧冲入 + 白闪；出场最后 24 帧淡出
+  // 进场 0-14 帧：从右侧滑入 + 白闪；出场最后 24 帧淡出
   const inK = Math.min(1, t / 14);
   const ease = 1 - Math.pow(1 - inK, 3);
   const outK = t > dur - 24 ? 1 - (t - (dur - 24)) / 24 : 1;
   const alpha = Math.max(0, outK);
 
+  // 战场压暗，但仍能看见双方位置（原作也是「画面里切一块」而不是全屏）
+  ctx.save();
+  ctx.globalAlpha = alpha * 0.55;
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+
+  // 斜切分镜框：只在画面中间占一块，四周露出战场
+  const pw = W * 0.62;
+  const ph = H * 0.74;
+  const cx = W * 0.47 + (1 - ease) * W * 0.5;
+  const cy = H * 0.5;
+  const rot = -0.075;
+
   ctx.save();
   ctx.globalAlpha = alpha;
+  ctx.translate(cx, cy);
+  ctx.rotate(rot);
 
   if (img) {
-    // 覆盖整个画面（等比裁切，不做拉伸）
-    const s = Math.max(W / img.naturalWidth, H / img.naturalHeight);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(-pw / 2, -ph / 2, pw, ph);
+    ctx.clip();
+    // 等比裁切填满这块分镜
+    const s = Math.max(pw / img.naturalWidth, ph / img.naturalHeight);
     const dw = img.naturalWidth * s;
     const dh = img.naturalHeight * s;
-    const dx = (W - dw) / 2 + (1 - ease) * W * 0.35;
-    const dy = (H - dh) / 2;
-    ctx.drawImage(img, dx, dy, dw, dh);
+    ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
+    ctx.restore();
   } else {
-    ctx.fillStyle = 'rgba(10,10,12,0.96)';
-    ctx.fillRect(0, 0, W, H);
-    label(ctx, '必杀演出占位 ' + (c.id || ''), W / 2, H / 2, 28, 'rgba(255,255,255,0.35)', 'center', 700);
+    ctx.fillStyle = 'rgba(12,12,14,0.96)';
+    ctx.fillRect(-pw / 2, -ph / 2, pw, ph);
+    label(ctx, '必杀演出占位 ' + (c.id || ''), 0, 0, 24, 'rgba(255,255,255,0.35)', 'center', 700);
   }
+
+  // 描边：外侧细黑线 + 内侧粗白框（漫画分镜的观感）
+  ctx.strokeStyle = '#FFFFFF';
+  ctx.lineWidth = 7;
+  ctx.strokeRect(-pw / 2, -ph / 2, pw, ph);
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(-pw / 2 - 5, -ph / 2 - 5, pw + 10, ph + 10);
+  ctx.restore();
 
   // 进场白闪
   if (t < 8) {
-    ctx.globalAlpha = alpha * (1 - t / 8) * 0.85;
+    ctx.save();
+    ctx.globalAlpha = alpha * (1 - t / 8) * 0.55;
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, W, H);
+    ctx.restore();
   }
-
-  // 上下黑边，电影感
-  ctx.globalAlpha = alpha;
-  const barH = H * 0.055 * Math.min(1, t / 10);
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, W, barH);
-  ctx.fillRect(0, H - barH, W, barH);
-
-  ctx.restore();
 }
 
 function drawDmgTexts(ctx) {
