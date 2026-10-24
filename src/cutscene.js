@@ -29,7 +29,7 @@ const Cutscene = (function () {
   // titleColor：登场竖幅里「称号」的颜色（三色规范内：白 / 青蓝 / 红 / 黄绿）
   const CHARS = {
     rek:         { name: '蕾克',   title: '小红帽',              titleColor: '#ffffff', color: '#ff0000', art: 'art/portrait/rek.png' },
-    rek_crimson: { name: '猩红魔姬', title: '自负的暴君',          titleColor: '#ff0000', color: '#c00000', art: 'art/portrait/crimson.png' },
+    rek_crimson: { name: '猩红魔姬·雷帝', title: '自负的暴君',          titleColor: '#ff0000', color: '#c00000', art: 'art/portrait/crimson.png' },
     norden:      { name: '诺登',   title: '计时者 白之兔',        titleColor: '#ffffff', color: '#ff5050', art: 'art/portrait/norden.png' },
     marysue:     { name: '玛丽苏',  title: '扭曲的黑童话作家',     titleColor: '#82ff00', color: '#82ff00', art: 'art/portrait/marysue.png' },
     mabel:       { name: '梅贝尔',  title: '来自虚空的虚无少女',   titleColor: '#00baff', color: '#cfcfcf', art: 'art/portrait/mabel.png' }
@@ -776,6 +776,40 @@ const Cutscene = (function () {
   }
 
   // 竖排文字（称号用）
+  // 烫印风格的竖排字：黑描边 → 角色色描边 → 白色细描边 → 填充
+  // 注意：规范只允许三色，所以「烫金」用银白 + 角色色模拟，不用金色
+  function vtextEmboss(ctx, text, x, y, size, color, weight) {
+    ctx.font = (weight || 700) + ' ' + size + 'px "Segoe UI", "Microsoft YaHei", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    for (let i = 0; i < text.length; i++) {
+      const cy = y + i * (size + 8);
+      const ch = text[i];
+      // 外黑边
+      ctx.lineWidth = 8;
+      ctx.strokeStyle = 'rgba(0,0,0,0.9)';
+      ctx.strokeText(ch, x, cy);
+      // 角色色中边
+      ctx.lineWidth = 4.5;
+      ctx.strokeStyle = color;
+      ctx.strokeText(ch, x, cy);
+      // 内白细边（模拟压印高光）
+      ctx.lineWidth = 1.6;
+      ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+      ctx.strokeText(ch, x, cy);
+      // 填充
+      ctx.fillStyle = color;
+      ctx.fillText(ch, x, cy);
+      // 左上偏移的白色高光，做出立体烫印感
+      ctx.save();
+      ctx.globalAlpha *= 0.35;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(ch, x - 1.1, cy - 1.1);
+      ctx.restore();
+    }
+  }
+
   function vtext(ctx, text, x, y, size, color, weight) {
     ctx.font = (weight || 700) + ' ' + size + 'px "Segoe UI", "Microsoft YaHei", system-ui, sans-serif';
     ctx.textAlign = 'center';
@@ -874,7 +908,7 @@ const Cutscene = (function () {
     ctx.save();
     ctx.shadowColor = hexToRgba(c.color, 0.9);
     ctx.shadowBlur = 16;
-    vtext(ctx, c.name, cx - 10, by + 42, 34, c.color, 700);
+    vtextEmboss(ctx, c.name, cx - 10, by + 42, 34, c.color, 700);
     ctx.restore();
 
     // 名字下的分隔线

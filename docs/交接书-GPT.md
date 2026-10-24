@@ -261,7 +261,7 @@ crimson: {
 ```js
 const CHARS = {
   rek:         { name: '蕾克',   title: '小红帽',            titleColor: '#ffffff', color: '#ff0000', art: 'art/portrait/rek.png' },
-  rek_crimson: { name: '猩红魔姬', title: '自负的暴君',        titleColor: '#ff0000', color: '#c00000', art: 'art/portrait/crimson.png' },
+  rek_crimson: { name: '猩红魔姬·雷帝', title: '自负的暴君',  titleColor: '#ff0000', color: '#c00000', art: 'art/portrait/crimson.png' },
   norden:      { name: '诺登',   title: '计时者 白之兔',      titleColor: '#ffffff', color: '#ff5050', art: 'art/portrait/norden.png' },
   marysue:     { name: '玛丽苏',  title: '扭曲的黑童话作家',   titleColor: '#82ff00', color: '#82ff00', art: 'art/portrait/marysue.png' },
   mabel:       { name: '梅贝尔',  title: '来自虚空的虚无少女', titleColor: '#00baff', color: '#cfcfcf', art: 'art/portrait/mabel.png' }
@@ -295,8 +295,13 @@ const CHARS = {
 **调试**：`index.html?intro=norden`（可换 `mabel` / `rek_crimson` / `marysue`），
 直接看竖幅效果，不用跑剧情。
 
-**调版式**：`drawIntro()` 里的 `bw`（幅宽 100）、名字字号 `32`、称号字号 `19`、
+**调版式**：`drawIntro()` 里的 `bw`（幅宽 108）、名字字号 `34`、称号字号 `20`、
 入场帧 `16`；竖幅高度按「名字/称号较长者」自动算（`bh`）。
+
+**烫印描边**：名字用 `vtextEmboss()` 绘制，分四层——黑外描边 → 角色色描边 → 白色细描边 → 填充，
+再叠一个左上偏移的白色高光，做出金属压印感。
+> **注意**：规范只允许三色，所以“烫金”是**用银白 + 角色色模拟**的，禁止直接上金色/铜色。
+> 想更“贵”一点，可以加大白色细描边的宽度，或给高光再加一层 45° 斜向渐变。
 
 ### 3.3 渲染
 - 世界宽 `WORLD_W = 2400`，屏幕 1280×720，地面 `GROUND_Y = 574`
