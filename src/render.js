@@ -943,11 +943,13 @@ function drawWalkProps(ctx) {
 //   约定文件 art/char/<id>_idle.png —— 单张 PNG、脚底在画布底部、高度约 300px
 //   缺失时退回对话立绘（art/portrait/<id>.png）临时顶替，不会崩
 const CHAR_IDLE = {};
+// 换图后浏览器可能用旧缓存，带个版本号强制刷新
+const ART_VER = '?v=7';
 function getCharIdle(id) {
   if (!CHAR_IDLE[id]) {
     if (typeof Image === 'undefined') return null;
     CHAR_IDLE[id] = new Image();
-    CHAR_IDLE[id].src = 'art/char/' + id + '_idle.png';
+    CHAR_IDLE[id].src = 'art/char/' + id + '_idle.png' + ART_VER;
   }
   const img = CHAR_IDLE[id];
   return (img.complete && img.naturalWidth > 0) ? img : null;

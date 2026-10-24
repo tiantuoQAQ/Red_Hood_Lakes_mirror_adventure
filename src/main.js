@@ -238,6 +238,15 @@ requestAnimationFrame(frameLoop);
     for (let i = 0; i < ff; i++) { update(STEP); Input.tick(); }
     return;
   }
+  // 调试：?nordenscene=1 直接进诺登走位段（检查待机立绘有没有被裁）
+  if (params.get('nordenscene') === '1') {
+    Game.mode = 'walk';
+    startWalk({ cam: true, target: { kind: 'norden', x: 1180, label: '诺登' }, next: 'wake_talk' });
+    if (Game.player) Game.player.x = 1000;
+    const nff = parseInt(params.get('ff') || '0', 10);
+    for (let i = 0; i < nff; i++) { update(STEP); Input.tick(); }
+    return;
+  }
   // 调试：?mabelscene=1 直接进「走向梅贝尔」的走位段
   if (params.get('mabelscene') === '1') {
     Game.mode = 'walk';
