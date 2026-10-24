@@ -77,6 +77,7 @@ const STORY = {
 
       { t: 'say', who: 'marysue', show: true, text: '哎呀呀，人家好怕啊～' },
       { t: 'say', who: 'marysue', expr: 'eyes_closed', show: true, text: '你真觉得……' },
+      { t: 'say', who: 'marysue', show: true, text: '人家可是……从来没有把你当成敌人哦。' },
       { t: 'say', who: 'marysue', expr: 'eyes_open', show: true, text: '你能碰到我吗？' },
 
       { t: 'say', who: '', text: '「啪嗒。」' },
