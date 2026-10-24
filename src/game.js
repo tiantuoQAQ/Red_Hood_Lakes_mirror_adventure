@@ -3,11 +3,14 @@
 // 游戏状态与主循环逻辑。所有手感参数都来自 CFG，可运行时修改。
 
 const Game = {
-  mode: 'title',      // title | play | dead | win
+  mode: 'title',      // title | story | play | dead | win
   paused: false,
   frame: 0,
   lives: 3,
   courage: 0,
+  skills: {},         // 剧情解锁的技能，例如 { red_tragedy: true }
+  afterBattle: null,  // 打完这场接哪个剧情章节；空则回结算
+  currentBossId: 'marysue',
   bullets: [],
   shots: [],
   particles: [],
@@ -58,14 +61,18 @@ function makePlayer() {
   };
 }
 
-function makeBoss() {
+function makeBoss(id) {
   const B = CFG.boss;
+  const def = (typeof BOSSES !== 'undefined' && id && BOSSES[id]) || null;
+  const hp = def ? def.hp : B.hp;
   return {
+    id: id || 'marysue',
+    name: def ? def.name : 'BOSS',
     x: B.x,
     y0: B.y,
     y: B.y,
-    hp: B.hp,
-    maxHp: B.hp,
+    hp: hp,
+    maxHp: hp,
     r: B.r,
     phase: 0,
     scriptIdx: 0,
@@ -78,7 +85,8 @@ function makeBoss() {
   };
 }
 
-function resetGame() {
+function resetGame(bossId) {
+  Game.currentBossId = bossId || Game.currentBossId || 'marysue';
   Game.mode = 'play';
   Game.paused = false;
   Game.frame = 0;
@@ -88,7 +96,7 @@ function resetGame() {
   Game.shots.length = 0;
   Game.particles.length = 0;
   Game.player = makePlayer();
-  Game.boss = makeBoss();
+  Game.boss = makeBoss(Game.currentBossId);
   Game.banner = '';
   Game.bannerT = 0;
   Game.shake = 0;
@@ -341,16 +349,33 @@ function updatePlayer(dt) {
   }
 
   // ---- 技能：勇气满时释放 ----
+  // 剧情中期解锁「红之惨剧」后，同一个键升格成清场 + 长无敌。
   if (Input.pressed('skill') && Game.courage >= P.courageMax) {
+    const hasTragedy = !!(Game.skills && Game.skills.red_tragedy);
     Game.courage = 0;
-    p.invT = Math.max(p.invT, CFG.skill.invFrames);
-    Game.boss.hp -= CFG.skill.damage;
-    Game.shake = 12;
-    Game.hitstop = 6;
-    Game.banner = '冰 封';
-    Game.bannerT = 60;
-    burst(Game.boss.x, Game.boss.y, COLORS.env, 44);
-    addDmgText(Game.boss.x, Game.boss.y - 30, CFG.skill.damage, COLORS.env, false);
+    if (hasTragedy) {
+      p.invT = Math.max(p.invT, 200);
+      Game.boss.hp -= 80;
+      Game.bullets.length = 0;          // 全屏清弹：翻盘键
+      Game.shake = 18;
+      Game.hitstop = 10;
+      Game.banner = '红 之 惨 剧';
+      Game.bannerT = 90;
+      burst(Game.boss.x, Game.boss.y, COLORS.player, 70);
+      for (let i = 0; i < 8; i++) {
+        burst(p.x + (Math.random() - 0.5) * 260, p.y + (Math.random() - 0.5) * 160, COLORS.player, 6);
+      }
+      addDmgText(Game.boss.x, Game.boss.y - 30, 80, COLORS.player, false);
+    } else {
+      p.invT = Math.max(p.invT, CFG.skill.invFrames);
+      Game.boss.hp -= CFG.skill.damage;
+      Game.shake = 12;
+      Game.hitstop = 6;
+      Game.banner = '冰 封';
+      Game.bannerT = 60;
+      burst(Game.boss.x, Game.boss.y, COLORS.env, 44);
+      addDmgText(Game.boss.x, Game.boss.y - 30, CFG.skill.damage, COLORS.env, false);
+    }
     Sfx.skill();
     checkBossDeath();
   }
@@ -572,11 +597,19 @@ function checkBossDeath() {
   const b = Game.boss;
   if (b.hp <= 0) {
     b.hp = 0;
-    Game.mode = 'win';
     Game.shake = 16;
     Game.hitstop = 8;
     burst(b.x, b.y, COLORS.hazard, 60);
     Sfx.win();
+
+    // 剧情推进：这场打完有后续章节就切过场，没有才进结算
+    if (Game.afterBattle && typeof Cutscene !== 'undefined') {
+      const next = Game.afterBattle;
+      Game.afterBattle = null;
+      Cutscene.start(next);
+      return;
+    }
+    Game.mode = 'win';
   }
 }
 

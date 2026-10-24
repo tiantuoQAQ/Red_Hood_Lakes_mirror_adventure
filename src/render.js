@@ -3,6 +3,12 @@
 const TAU = Math.PI * 2;
 
 function render(ctx) {
+  // 剧情演出：完全接管画面（背景/立绘/对话框都在 Cutscene 里画）
+  if (Game.mode === 'story') {
+    Cutscene.draw(ctx);
+    return;
+  }
+
   ctx.save();
   if (Game.shake > 0) {
     // 用衰减正弦而不是随机抖动：震动更「有力」，也不会让画面糊掉

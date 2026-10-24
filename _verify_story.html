@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>verify-story</title>
+<style>
+  html,body{margin:0;background:#000}
+  canvas{display:block;width:1280px;height:720px}
+  .cap{color:#888;font:14px monospace;padding:4px 8px}
+</style>
+</head>
+<body>
+<canvas id="c1" width="1280" height="720"></canvas>
+<div class="cap">① 章节卡 card</div>
+<canvas id="c2" width="1280" height="720"></canvas>
+<div class="cap">② 场景气泡 bubble</div>
+<canvas id="c3" width="1280" height="720"></canvas>
+<div class="cap">③ 双立绘对峙 duel</div>
+
+<script src="src/config.js"></script>
+<script src="src/input.js"></script>
+<script src="src/gfx.js"></script>
+<script src="src/patterns.js"></script>
+<script src="src/sprites.js"></script>
+<script src="src/fx.js"></script>
+<script src="src/audio.js"></script>
+<script src="src/story.js"></script>
+<script src="src/game.js"></script>
+<script src="src/cutscene.js"></script>
+<script src="src/render.js"></script>
+<script>
+  // 离线校验页：把三种演出形式各画一遍，用于截图确认排版。
+  resetGame('marysue');
+  Game.mode = 'story';
+  var S = Cutscene.state;
+  Cutscene.start('prologue');      // 初始化场景
+  S.bg = 'forest';
+  S.black = 0;
+
+  // ① 章节卡
+  S.card = { line1: '悲愤交加的勇者', line2: '踏上了寻回珍视之人的旅途' };
+  S.text = null;
+  Cutscene.draw(document.getElementById('c1').getContext('2d'));
+
+  // ② 场景气泡
+  S.card = null;
+  S.text = {
+    mode: 'bubble', who: '蕾克', shown: 99, chars: 99,
+    text: '这次不会再让你跑掉了。'
+  };
+  Cutscene.draw(document.getElementById('c2').getContext('2d'));
+
+  // ③ 双立绘对峙
+  S.text = {
+    mode: 'duel', who: '', shown: 99, chars: 99,
+    text: '没用的孩子。你已经没有价值了。',
+    left: '蕾克', right: '玛丽苏'
+  };
+  Cutscene.draw(document.getElementById('c3').getContext('2d'));
+</script>
+</body>
+</html>

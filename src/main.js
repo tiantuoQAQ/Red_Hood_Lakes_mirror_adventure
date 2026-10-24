@@ -110,14 +110,17 @@ function stepOnce() {
 
   if (Game.mode === 'title') {
     Game.frame++;
-    if (Input.pressed('start')) resetGame();
+    if (Input.pressed('start')) Cutscene.start('prologue');
+  } else if (Game.mode === 'story') {
+    Game.frame++;
+    Cutscene.update(STEP);
   } else if (Game.mode === 'play') {
     if (Input.pressed('pause')) Game.paused = !Game.paused;
     if (Game.paused) Game.frame++;
     else update(STEP);
   } else {
     Game.frame++;
-    if (Input.pressed('restart') || Input.pressed('start')) resetGame();
+    if (Input.pressed('restart') || Input.pressed('start')) resetGame(Game.currentBossId);
   }
 
   Input.tick();
@@ -157,16 +160,24 @@ Sprites.load(CFG.sprite.id, CFG.sprite.dir);
 requestAnimationFrame(frameLoop);
 }
 
-// 调试用：?auto=1 直接开局，?ff=N 预跑 N 帧（用于截图验证）
-(function autoStart() {
+// 调试用：?auto=1 直接开局（跳过剧情），?ff=N 预跑 N 帧（用于截图验证）
+// ?story=0 回标题画面；默认直接从序章开始播
+(function boot() {
   const params = new URLSearchParams(location.search);
-  if (params.get('auto') !== '1') return;
-  resetGame();
-  const ff = parseInt(params.get('ff') || '0', 10);
-  for (let i = 0; i < ff; i++) {
-    update(STEP);
-    Input.tick();
+  if (params.get('auto') === '1') {
+    resetGame();
+    const ff = parseInt(params.get('ff') || '0', 10);
+    for (let i = 0; i < ff; i++) {
+      update(STEP);
+      Input.tick();
+    }
+    return;
   }
+  if (params.get('story') === '0') {
+    Game.mode = 'title';
+    return;
+  }
+  Cutscene.start('prologue');
 })();
 
 requestAnimationFrame(frameLoop);

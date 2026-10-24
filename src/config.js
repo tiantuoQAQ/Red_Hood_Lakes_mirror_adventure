@@ -113,3 +113,20 @@ const PHASES = [
   { at: 0.66, script: ['mirrorFan', 'lances', 'laser'] },
   { at: 0.33, script: ['laser', 'homing', 'bossDash', 'orbit'] }
 ];
+
+// ---- BOSS 表（剧情两场）--------------------------------------------------
+// 同一个状态机，靠这张表区分「中段魔姬」和「最终玛丽苏」。
+// 招式脚本暂时共用 PHASES，之后各自细化时在这里覆盖 phases。
+const BOSSES = {
+  crimson: {
+    name: '猩红魔姬 蕾克',
+    hp: 240,
+    phases: PHASES
+  },
+  marysue: {
+    name: '幕后黑手 玛丽苏',
+    hp: 420,
+    phases: PHASES
+  }
+};
+
