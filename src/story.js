@@ -285,10 +285,10 @@ const STORY = {
       { t: 'say', who: 'rek', expr: 'ready', show: true, text: '我也不会，死在你的故事里。' },
 
       // 玛丽苏的狂言
-      { t: 'say', who: 'marysue', expr: 'smug', show: true, text: '我最喜欢的故事，是那种——' },
-      { t: 'say', who: 'marysue', expr: 'smug', show: true, text: '去厮杀、去侵犯、被欺骗、被背叛，' },
-      { t: 'say', who: 'marysue', expr: 'smug', show: true, text: '最后迎来没有救赎的结局的故事。' },
-      { t: 'say', who: 'marysue', expr: 'star', show: true, text: '越是挣扎，结尾就越难看哦。' },
+      { t: 'say', who: 'marysue', expr: 'creepy', show: true, text: '我最喜欢的故事，是那种——' },
+      { t: 'say', who: 'marysue', expr: 'creepy', show: true, text: '去厮杀、去侵犯、被欺骗、被背叛，' },
+      { t: 'say', who: 'marysue', expr: 'creepy', show: true, text: '最后迎来没有救赎的结局的故事。' },
+      { t: 'say', who: 'marysue', expr: 'creepy', show: true, text: '越是挣扎，结尾就越难看哦。' },
       { t: 'say', who: 'marysue', expr: 'creepy', show: true, text: '而你迄今为止所积累的一切——' },
       { t: 'say', who: 'marysue', expr: 'creepy', show: true, text: '由我来全部毁掉。' },
 
