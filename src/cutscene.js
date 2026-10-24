@@ -244,6 +244,13 @@ const Cutscene = (function () {
       case 'battle':
         startBattle(c.boss || 'marysue', c.after || null);
         return;
+      case 'music':
+        // 战斗曲：进 Boss 战之前的对话里就开始放
+        if (typeof Music !== 'undefined') {
+          if (c.name === 'stop') Music.stop(c.fade || 600);
+          else Music.play(c.name);
+        }
+        break;
       case 'grant':
         Game.skills = Game.skills || {};
         Game.skills[c.skill] = true;

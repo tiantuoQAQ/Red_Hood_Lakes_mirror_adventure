@@ -163,3 +163,102 @@ const Sfx = (function () {
     }
   };
 })();
+
+// ---------------------------------------------------------------- 战斗 BGM
+// 两首战斗曲随包分发（mp4 里的音轨，浏览器原生解码）。
+// 由剧情命令 { t:'music', name:'crimson' } 触发：打完一段对话、进战斗前就开始响。
+const Music = (function () {
+  const TRACKS = {
+    crimson: 'audio/crimson_bgm.mp4',    // 黑之裁判 —— 猩红魔姬
+    marysue: 'audio/marysue_bgm.mp4'     // 玛丽·安 —— 玛丽苏
+  };
+  const VOLUME = 0.55;
+  const FADE_MS = 800;
+
+  let cur = null;
+  let curName = null;
+  let wantName = null;      // 记住「应该放哪首」，等用户交互后补播
+  let muted = false;
+  let timer = null;
+
+  function clearTimer() {
+    if (timer) { clearInterval(timer); timer = null; }
+  }
+
+  function ramp(el, to, ms, done) {
+    clearTimer();
+    const from = el.volume;
+    const t0 = Date.now();
+    timer = setInterval(function () {
+      const k = Math.min(1, (Date.now() - t0) / ms);
+      el.volume = Math.max(0, Math.min(1, from + (to - from) * k));
+      if (k >= 1) { clearTimer(); if (done) done(); }
+    }, 40);
+  }
+
+  function make(name) {
+    const el = new Audio(TRACKS[name]);
+    el.loop = true;
+    el.preload = 'auto';
+    el.volume = 0;
+    return el;
+  }
+
+  function play(name) {
+    if (!TRACKS[name]) return;
+    if (typeof Audio === 'undefined') return;   // node 测试环境没有 Audio
+    wantName = name;
+    if (curName === name && cur && !cur.paused) return;
+
+    if (!cur) cur = make(name);
+    else if (curName !== name) {
+      cur.pause();
+      cur.src = TRACKS[name];
+      cur.load();
+    }
+    curName = name;
+    cur.volume = 0;
+    const p = cur.play();
+    if (p && p.catch) {
+      p.catch(function () { /* 浏览器要求用户手势，交给重试监听 */ });
+    }
+    if (!muted) ramp(cur, VOLUME, FADE_MS);
+  }
+
+  function stop(ms) {
+    wantName = null;
+    if (!cur) return;
+    ramp(cur, 0, ms || 500, function () {
+      if (cur) { cur.pause(); cur.currentTime = 0; }
+    });
+  }
+
+  function retry() {
+    if (!wantName || !cur) return;
+    if (cur.paused) {
+      cur.volume = 0;
+      const p = cur.play();
+      if (p && p.catch) p.catch(function () {});
+      if (!muted) ramp(cur, VOLUME, 400);
+    }
+  }
+
+  // 首次按键/点击后再尝试播放（自动播放策略）
+  if (typeof window !== 'undefined') {
+    window.addEventListener('keydown', retry, true);
+    window.addEventListener('pointerdown', retry, true);
+  }
+
+  return {
+    play: play,
+    stop: stop,
+    retry: retry,
+    name: function () { return curName; },
+    toggleMute: function () {
+      muted = !muted;
+      if (cur) cur.volume = muted ? 0 : VOLUME;
+      return muted;
+    },
+    isMuted: function () { return muted; }
+  };
+})();

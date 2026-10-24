@@ -160,6 +160,22 @@ Boss 血量掉到**最后一个阶段**时冻结战场，在画面中央插入�
   由 drawCutinName() 逐字绘制（斜切 + 粗描边 + 手写字距），改名字只改这张表
 - 缺图时画占位提示，不会崩
 
+### 3.2.2 战斗 BGM
+两首战斗曲随包放在 udio/（都是 mp4 容器里的 AAC 音轨，浏览器原生解码）：
+
+| 文件 | 用在 |
+| --- | --- |
+| udio/crimson_bgm.mp4 | 猩红魔姬战（黑之裁判） |
+| udio/marysue_bgm.mp4 | 玛丽苏战（BlackSouls2 - 玛丽·安） |
+
+- 播放入口：src/audio.js 的 Music.play('crimson'|'marysue') / Music.stop(fade)
+- 触发方式：剧情命令 { t:'music', name:'crimson' }，插在**战斗前的对话开头**，
+  即 mirror_meet（魔姬）与 crimson_fall（玛丽苏登场）两章的第一条
+- 结局第一章用 { t:'music', name:'stop', fade:1200 } 淡出
+- 自动播放策略：首次按键/点击会重试播放（Music.retry 挂了 keydown/pointerdown 监听）
+- 调试：?mtest=crimson 直接试播
+- 缺音量条：目前固定 0.55，想加设置项可接 Music.toggleMute() / Sfx.toggleMute()
+
 ### 3.3 渲染
 - 世界宽 `WORLD_W = 2400`，屏幕 1280×720，地面 `GROUND_Y = 574`
 - 镜头平滑跟随 `1 - Math.pow(0.0001, dt)`，Boss 出场时会把双方框进画面

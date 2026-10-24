@@ -176,6 +176,7 @@ const STORY = {
   // ---------------------------------------------------------------- 王座 · 蕾帝
   mirror_meet: {
     cmds: [
+      { t: 'music', name: 'crimson' },
       { t: 'say', who: 'rek_crimson', expr: 'seated_closed', show: true, text: '……' },
       { t: 'say', who: 'rek', expr: 'shock', show: true, text: '！？' },
       { t: 'say', who: 'rek', show: true, text: '（她怎么……和我长得一模一样。）' },
@@ -209,6 +210,7 @@ const STORY = {
   // ---------------------------------------------------------------- 魔姬战败 · 真相 · 传承
   crimson_fall: {
     cmds: [
+      { t: 'music', name: 'marysue' },
       { t: 'say', who: 'rek_crimson', expr: 'defeated', show: true, text: '怎么可能！……你的力量，怎么会这么强？' },
       { t: 'say', who: 'rek', expr: 'ready', show: true, text: '你被玛丽苏蛊惑了，误入歧途。' },
       { t: 'say', who: 'rek', expr: 'ready', show: true, text: '为何到了这般地步，还不醒悟？' },
@@ -333,6 +335,7 @@ const STORY = {
   // ---------------------------------------------------------------- 结局
   ending: {
     cmds: [
+      { t: 'music', name: 'stop', fade: 1200 },
       { t: 'fade', to: 'clear', frames: 45 },
       { t: 'say', who: '', text: '她走出镜子的时候，天已经亮了。' },
       { t: 'say', who: '', text: '森林还是那片森林。' },

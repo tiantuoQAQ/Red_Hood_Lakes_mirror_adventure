@@ -204,6 +204,15 @@ requestAnimationFrame(frameLoop);
     }
     return;
   }
+  // 调试：?mtest=crimson 检查战斗曲能否加载/播放
+  if (params.get('mtest')) {
+    const nm = params.get('mtest');
+    Music.play(nm === 'true' ? 'crimson' : nm);
+    setTimeout(function () {
+      const el = document.querySelector('audio');
+      document.title = 'MUSIC ' + (typeof Music !== 'undefined' ? Music.name() : '?');
+    }, 1200);
+  }
   if (params.get('story') === '0') {
     Game.mode = 'title';
     return;
