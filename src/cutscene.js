@@ -794,19 +794,13 @@ const Cutscene = (function () {
       ctx.lineWidth = 4.5;
       ctx.strokeStyle = color;
       ctx.strokeText(ch, x, cy);
-      // 内白细边（模拟压印高光，别太亮，否则字会糊）
-      ctx.lineWidth = 1.0;
-      ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+      // 内白细边：只留一丝，太亮会糊
+      ctx.lineWidth = 0.6;
+      ctx.strokeStyle = 'rgba(255,255,255,0.22)';
       ctx.strokeText(ch, x, cy);
       // 填充
       ctx.fillStyle = color;
       ctx.fillText(ch, x, cy);
-      // 轻微左上高光
-      ctx.save();
-      ctx.globalAlpha *= 0.16;
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText(ch, x - 0.9, cy - 0.9);
-      ctx.restore();
     }
   }
 
@@ -906,13 +900,9 @@ const Cutscene = (function () {
     ctx.closePath();
     ctx.fill();
 
-    // 名字（竖排，主色，极轻光晕）：在幅面内垂直居中，避免短名字上面空一大截
+    // 名字（竖排，主色）：在幅面内垂直居中，避免短名字上面空一大截
     const nameTop = by + Math.max(40, (bh - nameH) / 2 + 10);
-    ctx.save();
-    ctx.shadowColor = hexToRgba(c.color, 0.45);
-    ctx.shadowBlur = 6;
     vtextEmboss(ctx, c.name, cx - 10, nameTop, 34, c.color, 700);
-    ctx.restore();
 
     // 名字下的分隔线
     ctx.fillStyle = hexToRgba(c.color, 0.55);
