@@ -939,6 +939,35 @@ function drawWalkProps(ctx) {
   }
 }
 
+// 地图内「待机立绘」（站桩小人）：
+//   约定文件 art/char/<id>_idle.png —— 单张 PNG、脚底在画布底部、高度约 300px
+//   缺失时退回对话立绘（art/portrait/<id>.png）临时顶替，不会崩
+const CHAR_IDLE = {};
+function getCharIdle(id) {
+  if (!CHAR_IDLE[id]) {
+    if (typeof Image === 'undefined') return null;
+    CHAR_IDLE[id] = new Image();
+    CHAR_IDLE[id].src = 'art/char/' + id + '_idle.png';
+  }
+  const img = CHAR_IDLE[id];
+  return (img.complete && img.naturalWidth > 0) ? img : null;
+}
+
+function drawCharIdle(ctx, id, x, y, h) {
+  const idle = getCharIdle(id);
+  const img = idle || getObjImg('npc_' + id, 'art/portrait/' + id + '.png');
+  if (!img) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(20,20,20,0.85)';
+    ctx.fillRect(x - 26, y - 150, 52, 150);
+    ctx.restore();
+    return false;
+  }
+  const iw = img.naturalWidth * (h / img.naturalHeight);
+  ctx.drawImage(img, x - iw / 2, y - h, iw, h);
+  return !!idle;   // true = 用的是正式待机立绘
+}
+
 function drawWalkNpc(ctx) {
   const w = Game.walk;
   if (!w) return;
@@ -976,28 +1005,22 @@ function drawWalkNpc(ctx) {
     ctx.restore();
     label(ctx, '镜子', x, y - mh - 26, 16, 'rgba(0,0,0,0.5)', 'center', 500);
   } else if (kind === 'mabel') {
-    // 梅贝尔：直接立绘站桩（她本来就是「站在空地上等你的那个人」）
-    const img = getObjImg('npc_mabel', 'art/portrait/mabel.png');
+    // 地图内待机立绘：优先 art/char/mabel_idle.png，缺图时临时用对话立绘
     const nh = 300;
-    if (img) {
-      const nw = img.naturalWidth * (nh / img.naturalHeight);
-      ctx.drawImage(img, x - nw / 2, y - nh, nw, nh);
-    } else {
-      ctx.save();
-      ctx.fillStyle = 'rgba(20,20,20,0.85)';
-      ctx.fillRect(x - 26, y - 150, 52, 150);
-      ctx.restore();
-    }
+    drawCharIdle(ctx, 'mabel', x, y, nh);
     label(ctx, '梅贝尔', x, y - nh - 14, 16, 'rgba(255,255,255,0.8)', 'center', 500);
   } else {
-    // 诺登占位：亮红身体 + 两只长耳（等立绘/分件到位后替换）
-    ctx.save();
-    ctx.fillStyle = hexToRgba(COLORS.player, 0.9);
-    ctx.fillRect(x - 20, y - 96, 40, 96);
-    ctx.fillRect(x - 18, y - 158, 8, 62);
-    ctx.fillRect(x + 10, y - 158, 8, 62);
-    ctx.restore();
-    label(ctx, '诺登', x, y - 176, 16, 'rgba(0,0,0,0.55)', 'center', 500);
+    // 诺登：优先 art/char/norden_idle.png，缺图时退回程序化占位（红色剪影 + 长耳）
+    const nhNorden = 300;
+    if (!drawCharIdle(ctx, 'norden', x, y, nhNorden)) {
+      ctx.save();
+      ctx.fillStyle = hexToRgba(COLORS.player, 0.9);
+      ctx.fillRect(x - 20, y - 96, 40, 96);
+      ctx.fillRect(x - 18, y - 158, 8, 62);
+      ctx.fillRect(x + 10, y - 158, 8, 62);
+      ctx.restore();
+    }
+    label(ctx, '诺登', x, y - nhNorden - 14, 16, 'rgba(255,255,255,0.75)', 'center', 500);
   }
 
   const near = Game.player && Math.abs(Game.player.x - x) < 120;
