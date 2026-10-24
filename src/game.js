@@ -11,6 +11,7 @@ const Game = {
   skills: {},         // 剧情解锁的技能，例如 { red_tragedy: true }
   afterBattle: null,  // 打完这场接哪个剧情章节；空则回结算
   currentBossId: 'marysue',
+  walk: null,         // 走位段：{ untilX, next }
   bullets: [],
   shots: [],
   particles: [],
@@ -116,6 +117,9 @@ function resetGame(bossId) {
 function update(dt) {
   Game.frame++;
 
+  // 走位段：只有移动，没有 BOSS / 弹幕 / 射击
+  if (Game.mode === 'walk') { updateWalk(dt); return; }
+
   // 濒死慢动作：只在死亡瞬间使用。帧计数会随之变慢，这是演出效果的可接受代价
   if (Game.slowT > 0) {
     Game.slowT--;
@@ -155,6 +159,50 @@ function update(dt) {
   updateBeams(dt);
   updateParticles(dt);
   updateDmgTexts(dt);
+}
+
+// ---------------------------------------------------------------- 走位段
+// 剧情用的「可操控向前走」：只有移动和跳跃，没有 BOSS、弹幕、射击。
+// 走到 untilX 之后自动切回演出（Cutscene.start(next)）。
+
+function startWalk(opts) {
+  const P = CFG.player;
+  Game.mode = 'walk';
+  Game.paused = false;
+  Game.boss = null;
+  Game.bullets.length = 0;
+  Game.shots.length = 0;
+  Game.warnings.length = 0;
+  Game.beams.length = 0;
+  Game.dmgTexts.length = 0;
+  Game.player = makePlayer();
+  Game.player.x = ARENA.left + 60;
+  Game.player.y = GROUND_Y - P.visualR;
+  Game.walk = {
+    untilX: (opts && opts.untilX) || (ARENA.right - 140),
+    next: (opts && opts.next) || null,
+    doneT: 0
+  };
+}
+
+function updateWalk(dt) {
+  const p = Game.player;
+  updatePlayer(dt);
+
+  // 越界钳制（走位段不许走出画面）
+  if (p.x < ARENA.left + CFG.player.visualR) p.x = ARENA.left + CFG.player.visualR;
+  if (p.x > ARENA.right - CFG.player.visualR) p.x = ARENA.right - CFG.player.visualR;
+
+  if (Game.walk && p.x >= Game.walk.untilX) {
+    const next = Game.walk.next;
+    Game.walk = null;
+    if (next && typeof Cutscene !== 'undefined') {
+      Game.mode = 'story';
+      Cutscene.start(next);
+    } else {
+      Game.mode = 'title';
+    }
+  }
 }
 
 function updatePlayer(dt) {
@@ -333,6 +381,8 @@ function updatePlayer(dt) {
   }
 
   // ---- 射击：自动瞄准 BOSS ----
+  // 走位段没有目标，直接不进入这一段
+  if (Game.mode === 'walk') return;
   if (Input.held('fire') && p.fireT <= 0) {
     p.fireT = P.fireInterval;
     const b = Game.boss;

@@ -114,6 +114,10 @@ function stepOnce() {
   } else if (Game.mode === 'story') {
     Game.frame++;
     Cutscene.update(STEP);
+  } else if (Game.mode === 'walk') {
+    if (Input.pressed('pause')) Game.paused = !Game.paused;
+    if (Game.paused) Game.frame++;
+    else update(STEP);
   } else if (Game.mode === 'play') {
     if (Input.pressed('pause')) Game.paused = !Game.paused;
     if (Game.paused) Game.frame++;
@@ -175,6 +179,15 @@ requestAnimationFrame(frameLoop);
   }
   if (params.get('story') === '0') {
     Game.mode = 'title';
+    return;
+  }
+  // 调试：?chapter=wake 直接从某一章开始；?walk=1 直接进走位段
+  const ch = params.get('chapter');
+  if (ch) { Cutscene.start(ch); return; }
+  if (params.get('walk') === '1') {
+    startWalk({ untilX: 1040, next: 'ambush' });
+    const ff = parseInt(params.get('ff') || '0', 10);
+    for (let i = 0; i < ff; i++) { update(STEP); Input.tick(); }
     return;
   }
   Cutscene.start('prologue');

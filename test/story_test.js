@@ -49,11 +49,18 @@ function check(name, cond, extra) {
   else { failed++; console.log('FAIL  ' + name + (extra ? '   (' + extra + ')' : '')); }
 }
 
-// 一直按「继续」，直到离开 story 模式
+// 一直按「继续」，直到离开 story / walk（走位段直接把角色挪到终点）
 function playThrough(maxFrames) {
   let n = 0;
-  const limit = maxFrames || 20000;
-  while (Game.mode === 'story' && n < limit) {
+  const limit = maxFrames || 40000;
+  while ((Game.mode === 'story' || Game.mode === 'walk') && n < limit) {
+    if (Game.mode === 'walk') {
+      Game.player.x = Game.walk.untilX;
+      vm.runInContext('update(1/60)', sandbox);
+      Input.tick();
+      n++;
+      continue;
+    }
     Cutscene.forceAdvance = true;
     Cutscene.update(1 / 60);
     Input.tick();

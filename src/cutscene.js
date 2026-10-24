@@ -157,6 +157,10 @@ const Cutscene = (function () {
       case 'scene':
         S.bg = c.bg || 'night';
         break;
+      case 'walk':
+        // 交给玩家操控走一段，走到 untilX 后回演出
+        startWalk({ untilX: c.untilX, next: c.next });
+        return;
       case 'intro':
         // 新角色登场：竖幅「称号 + 名字」，丝滑滑入，按键后再丝滑滑出
         S.intro = { id: c.id };

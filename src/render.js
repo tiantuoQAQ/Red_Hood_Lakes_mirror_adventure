@@ -18,12 +18,14 @@ function render(ctx) {
   }
 
   drawBackground(ctx);
-  if (Game.player && Game.boss) {
-    drawWarnings(ctx);
-    drawBeams(ctx);
-    drawBoss(ctx);
-    drawBullets(ctx);
-    drawShots(ctx);
+  if (Game.player) {
+    if (Game.boss) {
+      drawWarnings(ctx);
+      drawBeams(ctx);
+      drawBoss(ctx);
+      drawBullets(ctx);
+      drawShots(ctx);
+    }
     drawPlayer(ctx);
   }
   drawParticles(ctx);
@@ -43,6 +45,9 @@ function render(ctx) {
 
   drawScreenEffects(ctx);
   if (Game.player && Game.boss) drawHUD(ctx);
+  if (Game.mode === 'walk') {
+    label(ctx, '→ 向前走', W - 40, H - 24, 16, 'rgba(255,255,255,0.42)', 'right', 400);
+  }
   drawBanner(ctx);
   drawOverlay(ctx);
 }
