@@ -975,6 +975,20 @@ function drawWalkNpc(ctx) {
     ctx.fill();
     ctx.restore();
     label(ctx, '镜子', x, y - mh - 26, 16, 'rgba(0,0,0,0.5)', 'center', 500);
+  } else if (kind === 'mabel') {
+    // 梅贝尔：直接立绘站桩（她本来就是「站在空地上等你的那个人」）
+    const img = getObjImg('npc_mabel', 'art/portrait/mabel.png');
+    const nh = 220;
+    if (img) {
+      const nw = img.naturalWidth * (nh / img.naturalHeight);
+      ctx.drawImage(img, x - nw / 2, y - nh, nw, nh);
+    } else {
+      ctx.save();
+      ctx.fillStyle = 'rgba(20,20,20,0.85)';
+      ctx.fillRect(x - 26, y - 150, 52, 150);
+      ctx.restore();
+    }
+    label(ctx, '梅贝尔', x, y - nh - 14, 16, 'rgba(0,0,0,0.55)', 'center', 500);
   } else {
     // 诺登占位：亮红身体 + 两只长耳（等立绘/分件到位后替换）
     ctx.save();

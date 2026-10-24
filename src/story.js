@@ -344,7 +344,50 @@ const STORY = {
       { t: 'say', who: 'rek', show: true, text: '我回来了。' },
       { t: 'say', who: '', text: '空地上站着一个人。' },
       { t: 'say', who: '', text: '她没有见过她。' },
-      { t: 'card', line1: '主线 · 终', line2: '镜面碎成了千万片，每一片里都有她', frames: 190 },
+      {
+        t: 'walk',
+        playerX: 780,
+        cam: true,
+        target: { kind: 'mabel', x: 1180, label: '梅贝尔' },
+        next: 'mabel_talk'
+      }
+    ]
+  },
+
+  // ---------------------------------------------------------------- 梅贝尔 · 打破第四面墙
+  mabel_talk: {
+    cmds: [
+      { t: 'say', who: 'mabel', expr: 'eyes_closed', show: true, text: '哼哼～' },
+      { t: 'say', who: '', text: '（她自顾自地哼着小曲，像在等什么人。）' },
+      { t: 'say', who: 'mabel', expr: 'look_back', show: true, text: '哎呀呀，看来我们的女主角回来了？' },
+      { t: 'say', who: 'rek', expr: 'wary', show: true, text: '……' },
+      { t: 'say', who: 'mabel', expr: 'eyes_open', show: true, text: '别用那种眼神看着我啦。' },
+      { t: 'say', who: 'mabel', expr: 'eyes_open', show: true, text: '一个贫瘠的少女，有什么值得让人警惕的。' },
+      { t: 'say', who: 'mabel', expr: 'eyes_open', show: true, text: '我叫梅贝尔，空虚的少女。' },
+      { t: 'say', who: 'mabel', expr: 'eyes_open', show: true, text: '在这个故事里，没有属于我的戏份……' },
+      { t: 'say', who: 'mabel', expr: 'eyes_closed', show: true, text: '这段故事真的很枯燥呢，不是吗？' },
+      { t: 'say', who: 'rek', expr: 'wary', show: true, text: '……你想表达些什么。' },
+      { t: 'say', who: 'mabel', expr: 'eyes_open', show: true, text: '嘛嘛，毕竟是作者一个人搓出来的嘛。' },
+      { t: 'say', who: 'mabel', expr: 'eyes_open', show: true, text: '内容肯定和本少女一样贫瘠。' },
+
+      { t: 'say', who: 'mabel', expr: 'eyes_closed', show: true, text: '不过——恭喜你，见证了这个故事。' },
+      { t: 'say', who: 'mabel', expr: 'eyes_open', show: true, text: '你知道走到这里意味着什么吗？' },
+      { t: 'say', who: 'mabel', expr: 'eyes_open', show: true, text: '意味着你没有在半路关掉它。' },
+      { t: 'say', who: 'mabel', expr: 'look_back', show: true, text: '大部分人，看到第一面镜子就走了哦。' },
+
+      { t: 'say', who: 'mabel', expr: 'look_back', show: true, text: '所以，替本少女谢谢那个写故事的人吧。' },
+      { t: 'say', who: 'mabel', expr: 'look_back', show: true, text: '他写得确实很贫瘠——但他写完了。' },
+      { t: 'say', who: 'rek', expr: 'eyes_closed', show: true, text: '……你也是他写的？' },
+      { t: 'say', who: 'mabel', expr: 'eyes_closed', show: true, text: '谁知道呢。' },
+      { t: 'say', who: 'mabel', expr: 'eyes_closed', show: true, text: '说不定，我只是留在这里的一句旁白。' },
+
+      { t: 'say', who: 'mabel', expr: 'eyes_open', show: true, text: '好了，回到你的森林去吧，女主角。' },
+      { t: 'say', who: 'mabel', expr: 'look_back', show: true, text: '毕竟你的故事已经演完了。' },
+      { t: 'say', who: 'mabel', expr: 'look_back', show: true, text: '而我的故事，连第一页都还没有。' },
+
+      { t: 'say', who: 'mabel', expr: 'eyes_closed', show: true, text: '我们一定还会再见的。' },
+      { t: 'say', who: '', text: '她转过身，像从来没出现过一样。' },
+      { t: 'card', line1: '主线 · 终', line2: '镜面碎成了千万片，每一片里都有她', frames: 200 },
       { t: 'end', kind: 'win' }
     ]
   }

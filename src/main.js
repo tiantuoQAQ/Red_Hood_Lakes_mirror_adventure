@@ -238,6 +238,15 @@ requestAnimationFrame(frameLoop);
     for (let i = 0; i < ff; i++) { update(STEP); Input.tick(); }
     return;
   }
+  // 调试：?mabelscene=1 直接进「走向梅贝尔」的走位段
+  if (params.get('mabelscene') === '1') {
+    Game.mode = 'walk';
+    startWalk({ cam: true, target: { kind: 'mabel', x: 1180, label: '梅贝尔' }, next: 'mabel_talk' });
+    if (Game.player) Game.player.x = 1000;
+    const mff = parseInt(params.get('ff') || '0', 10);
+    for (let i = 0; i < mff; i++) { update(STEP); Input.tick(); }
+    return;
+  }
   // 调试：?throne=1 直接进王座走位段
   if (params.get('throne') === '1') {
     startWalk({

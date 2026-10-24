@@ -220,6 +220,7 @@ const Cutscene = (function () {
         break;
       case 'walk':
         // 交给玩家操控走一段，走到 untilX（或靠近 target 按 W）后回演出
+        if (c.playerX != null && Game.player) Game.player.x = c.playerX;
         startWalk({
           untilX: c.untilX,
           next: c.next,
