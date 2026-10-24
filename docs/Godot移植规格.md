@@ -361,3 +361,81 @@ art/char/mabel_idle.png      ← 走位段站着的梅贝尔
 
 **最后**：网页版的数值都是调过的（每个数字旁边都有注释说明为什么），移植时**先照抄、再调**。
 如果 Godot 版和网页版手感不一致，以网页版为准，回头再讨论改数值。
+
+---
+
+## 14. 网页端「设置」都有什么（Godot 里对应做出来）
+
+### 14.1 鼠标不只用来瞄准
+
+| 鼠标键 | 作用 |
+| --- | --- |
+| **鼠标左键** | 射击（按住连发） |
+| **鼠标右键** | **冲刺**（和 Shift / K 等效） |
+| 鼠标移动 | 改变射击方向（世界坐标） |
+
+- 网页端**屏蔽了右键菜单**（`contextmenu` preventDefault），Godot 里同样要吃掉右键事件
+- 窗口失焦时清空所有按键状态，避免“角色自己一直往左跑”——Godot 用 `NOTIFICATION_APPLICATION_FOCUS_OUT` 同样处理
+
+### 14.2 网页端全部键盘动作
+
+```
+左/右    A D / ← →
+上/下    W S / ↑ ↓
+跳跃     Space
+冲刺     Shift(左右) / K / 鼠标右键
+射击     J / Z / 鼠标左键
+技能     L / X
+开始     Enter
+暂停     P
+重开     R
+静音     M
+跳过     Tab
+判定框(F1) / 调参面板(F2)
+```
+
+**注意**：`W` 同时是「上」和「走位段交互键」；`Shift` 和**鼠标右键**都能冲刺；`Tab` 是跳过剧情。
+
+### 14.3 实时调参面板（F2）
+
+网页端按 **F2** 弹出一个 HTML 滑块面板，可以在**运行时**改这些参数并立刻生效（调手感专用）：
+
+```
+player.speed          player.accel          player.friction
+player.jumpVel        player.hitR            player.inputBuffer
+player.dashFrames     player.dashIFrames     player.dashCd
+player.dashRampFrames player.dashOutFrames   player.dashOutKeep
+player.ballSpeed      player.ballLaunchFrames player.ballDrain
+player.grazeR         player.grazeChainWindow player.grazeChainCourageStep
+player.grazeChainMaxMult player.grazeDashRefund player.couragePerHit
+player.hurtIFrames    player.fireInterval
+bullets.speedScale    boss.hp
+sprite.hairDx/Dy  sprite.capeDx/Dy  sprite.headDx/Dy
+```
+
+Godot 版建议做一个同等的调试场景（`CanvasLayer` + 一堆 `HSlider`），**别省**——
+移植阶段几乎所有时间都花在“对着网页版调数值”上，没有实时滑块会非常痛苦。
+
+### 14.4 调试用 URL 参数（Godot 里可以做成命令行/调试场景）
+
+| 参数 | 作用 |
+| --- | --- |
+| `?story=0` | 跳过剧情，直接进标题/战斗 |
+| `?chapter=mirror_meet` | 从指定章节开始 |
+| `?auto=1&boss=crimson` | 直接进战斗（`boss=crimson` / `marysue`） |
+| `?shots=1` | 往场上塞几发我方子弹（看弹道） |
+| `?ball=1` | 玩家直接进入球形态（看无敌球） |
+| `?cutinf=crimson` | 直接看必杀演出 |
+| `?walk=1` / `?mabelscene=1` / `?nordenscene=1` / `?throne=1` | 走位段相关 |
+| `?intro=norden` | 直接看登场竖幅（`norden`/`mabel`/`rek_crimson`/`marysue`） |
+| `?ff=N` | 启动时快进 N 帧（截图用） |
+| `?theme=night` | 切背景主题 |
+| `?mtest=crimson` | 检查 BGM 能否加载 |
+
+### 14.5 其它网页端行为（容易被忽略）
+
+- **固定步长**：`1/60` 秒，卡顿用累加器丢弃（最多补 6 帧），不会因为掉帧变慢动作
+- **输入是“帧号”制**：按下时记录当前帧号，`pressed` 判定“最近 N 帧内按下过”，这就是输入缓冲的基础
+- **鼠标坐标要加镜头偏移**才能得到世界坐标
+- **窗口 resize**：画布按 1280×720 等比缩放居中
+
