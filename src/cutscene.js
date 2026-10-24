@@ -450,7 +450,8 @@ const Cutscene = (function () {
     const bob = Math.sin((Game.frame + (o.phase || 0) * 37) * 0.035) * 2;
 
     ctx.save();
-    ctx.globalAlpha = alpha;
+    // 叠加在外层 alpha 上（非说话者会先被压暗，这里不能覆盖掉）
+    ctx.globalAlpha = ctx.globalAlpha * alpha;
     ctx.translate(cx + fromX * (1 - k), cy + bob);
 
     if (art) {
@@ -611,16 +612,32 @@ const Cutscene = (function () {
     void tailToX;
   }
 
+  // 说话者背后的一团柔光：不靠"提亮立绘"，改用背光区分
+  function focusGlow(ctx, x, y, r) {
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, 'rgba(255,255,255,0.11)');
+    g.addColorStop(0.55, 'rgba(255,255,255,0.045)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   // 双人对话构图：蕾克永远在左，对方在右；说话的一方亮，另一方压暗
   function drawSpeakerPortrait(ctx) {
     const heroExpr = S.heroExpr || '';
     const other = S.lastOther;          // { who, expr }
     const speaker = S.speaker || 'rek';
 
+    // 说话者背光
+    if (speaker === 'rek') focusGlow(ctx, W * 0.26, H * 0.5, 300);
+    else focusGlow(ctx, W * 0.74, H * 0.5, 300);
+
     if (heroExpr !== null && heroExpr !== undefined) {
       const dim = speaker !== 'rek';
       ctx.save();
-      ctx.globalAlpha = dim ? 0.55 : 1;
+      ctx.globalAlpha = dim ? 0.60 : 1;
       portrait(ctx, 'rek', W * 0.26, H * 0.52, 380, 540,
                { expr: heroExpr, inFrames: 1, phase: 3 });
       ctx.restore();
@@ -630,7 +647,7 @@ const Cutscene = (function () {
       const dim = speaker === 'rek';
       const bump = S.text && S.text.bump ? Math.sin(Game.frame * 2.4) * 5 : 0;
       ctx.save();
-      ctx.globalAlpha = dim ? 0.55 : 1;
+      ctx.globalAlpha = dim ? 0.60 : 1;
       portrait(ctx, other.who, W * 0.74, H * 0.52 + bump, 380, 540,
                { expr: other.expr, inFrames: 1, flip: true, phase: 3 });
       ctx.restore();
