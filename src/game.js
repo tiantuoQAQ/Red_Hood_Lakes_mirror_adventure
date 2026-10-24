@@ -13,6 +13,7 @@ const Game = {
   currentBossId: 'marysue',
   walk: null,         // 走位段：{ untilX, next, target }
   theme: 'normal',    // 背景主题：normal | mirror（进入镜中世界后切换）
+  cam: { x: 0 },      // 横向镜头（世界坐标 → 屏幕坐标偏移）
   bullets: [],
   shots: [],
   particles: [],
@@ -99,6 +100,7 @@ function resetGame(bossId) {
   Game.particles.length = 0;
   Game.player = makePlayer();
   Game.boss = makeBoss(Game.currentBossId);
+  Game.cam = { x: 0 };
   Game.banner = '';
   Game.bannerT = 0;
   Game.shake = 0;
@@ -160,6 +162,24 @@ function update(dt) {
   updateBeams(dt);
   updateParticles(dt);
   updateDmgTexts(dt);
+  updateCamera(dt);
+}
+
+// ---------------------------------------------------------------- 镜头
+// 目标：玩家在屏幕中间；平滑跟随；到地图边缘时被夹住（玩家随之靠边）。
+function updateCamera(dt) {
+  if (!Game.cam) Game.cam = { x: 0 };
+  if (Game.mode === 'walk') { Game.cam.x = 0; return; }
+  const p = Game.player;
+  if (!p) return;
+
+  const maxX = Math.max(0, WORLD_W - W);
+  const target = Math.max(0, Math.min(maxX, p.x - W / 2));
+
+  // 帧率无关的指数平滑：每帧保留约 14% 的差距
+  const k = 1 - Math.pow(0.0001, dt);
+  Game.cam.x += (target - Game.cam.x) * k;
+  Game.cam.x = Math.max(0, Math.min(maxX, Game.cam.x));
 }
 
 // ---------------------------------------------------------------- 走位段
@@ -179,6 +199,7 @@ function startWalk(opts) {
   Game.player = makePlayer();
   Game.player.x = ARENA.left + 60;
   Game.player.y = GROUND_Y - P.visualR;
+  if (Game.cam) Game.cam.x = 0;
   Game.walk = {
     untilX: (opts && opts.untilX) || (ARENA.right - 140),
     next: (opts && opts.next) || null,
@@ -202,6 +223,7 @@ function leaveWalk(next) {
 
 function updateWalk(dt) {
   const p = Game.player;
+  if (Game.cam) Game.cam.x = 0;
   updatePlayer(dt);
 
   // 越界钳制（走位段不许走出画面）
@@ -556,7 +578,7 @@ function updateShots(dt) {
     const s = Game.shots[i];
     s.x += s.vx * dt;
     s.y += s.vy * dt;
-    if (s.x < -60 || s.x > W + 60 || s.y < -60 || s.y > H + 60) {
+    if (s.x < ARENA.left - 160 || s.x > ARENA.right + 160 || s.y < -60 || s.y > H + 60) {
       Game.shots.splice(i, 1);
       continue;
     }
@@ -600,7 +622,8 @@ function updateBullets(dt) {
     b.y += b.vy * dt;
     b.life--;
 
-    if (b.life <= 0 || b.x < -90 || b.x > W + 90 || b.y < -90 || b.y > H + 90) {
+    if (b.life <= 0 || b.x < ARENA.left - 220 || b.x > ARENA.right + 220 ||
+        b.y < -90 || b.y > H + 90) {
       Game.bullets.splice(i, 1);
       continue;
     }

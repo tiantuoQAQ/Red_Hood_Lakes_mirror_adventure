@@ -171,6 +171,11 @@ requestAnimationFrame(frameLoop);
   if (params.get('theme')) Game.theme = params.get('theme');
   if (params.get('auto') === '1') {
     resetGame(params.get('boss') || undefined);
+    const px = params.get('px');
+    if (px && Game.player && Game.cam) {
+      Game.player.x = parseFloat(px);
+      Game.cam.x = Math.max(0, Math.min(WORLD_W - W, Game.player.x - W / 2));
+    }
     const ff = parseInt(params.get('ff') || '0', 10);
     for (let i = 0; i < ff; i++) {
       update(STEP);

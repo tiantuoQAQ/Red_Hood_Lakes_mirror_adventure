@@ -6,8 +6,10 @@ const H = 720;
 const GROUND_Y = 574;   // 地面线：不要贴屏幕底端，下方留出一段给倒影/UI
 const STEP = 1 / 60;
 
-const ARENA = { left: 48, right: 1232, top: 48, bottom: GROUND_Y };
-const MIRROR_X = W / 2; // 镜面轴：所有镜像弹幕以此为对称轴
+// 世界比屏幕宽：镜头跟随玩家横向滚动
+const WORLD_W = 2400;
+const ARENA = { left: 48, right: WORLD_W - 48, top: 48, bottom: GROUND_Y };
+const MIRROR_X = WORLD_W / 2; // 镜面轴：所有镜像弹幕以此为对称轴
 
 // ---- 三色相 + 灰阶（唯一允许的调色板）-----------------------------------
 // #FF0000  hue ≈ 0°      我方：蕾克、射击、擦弹、勇气
@@ -69,7 +71,7 @@ const CFG = {
   },
   boss: {
     hp: 420,
-    x: 980,
+    x: WORLD_W - 320,
     y: 226,
     r: 44,
     bobAmp: 46,

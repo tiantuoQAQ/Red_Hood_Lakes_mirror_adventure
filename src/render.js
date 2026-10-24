@@ -17,10 +17,19 @@ function render(ctx) {
     ctx.translate(Math.sin(t) * s * 0.75, Math.cos(t * 1.37) * s * 0.55);
   }
 
+  const camX = (Game.cam && Game.cam.x) || 0;
+
   if (Game.mode === 'walk' && Game.walk && Game.walk.bg === 'void') {
     drawVoidBackground(ctx);
   } else {
-    drawBackground(ctx);
+    drawBackground(ctx, camX);   // 屏幕空间：底色 + 背景图（带视差）
+  }
+
+  // 世界空间：这里画的东西会跟着镜头横向滚动
+  ctx.save();
+  ctx.translate(-camX, 0);
+  if (!(Game.mode === 'walk' && Game.walk && Game.walk.bg === 'void')) {
+    drawWorldDeco(ctx);
   }
   if (Game.player) {
     if (Game.boss) {
@@ -39,6 +48,7 @@ function render(ctx) {
   }
   drawParticles(ctx);
   drawDmgTexts(ctx);
+  ctx.restore();
   ctx.restore();
 
   // 濒死演出：把画面去饱和（灰阶属于允许色板），再叠受伤渐晕
@@ -79,25 +89,25 @@ function drawMirrorGround(ctx) {
   g.addColorStop(0, 'rgba(18,18,18,0.96)');
   g.addColorStop(1, 'rgba(6,6,6,0.99)');
   ctx.fillStyle = g;
-  ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+  ctx.fillRect(ARENA.left - 40, GROUND_Y, WORLD_W + 80, H - GROUND_Y);
 
   // 地面高光线：把「地面」和「倒影区」分开
   ctx.fillStyle = 'rgba(255,255,255,0.30)';
-  ctx.fillRect(0, GROUND_Y, W, 1.5);
+  ctx.fillRect(ARENA.left - 40, GROUND_Y, WORLD_W + 80, 1.5);
 
   // 一条淡淡的镜面反光，暗示这不是普通地面
   const rg = ctx.createLinearGradient(0, GROUND_Y, 0, H);
   rg.addColorStop(0, 'rgba(255,255,255,0.10)');
   rg.addColorStop(1, 'rgba(255,255,255,0)');
   ctx.fillStyle = rg;
-  ctx.fillRect(0, GROUND_Y + 2, W, H - GROUND_Y);
+  ctx.fillRect(ARENA.left - 40, GROUND_Y + 2, WORLD_W + 80, H - GROUND_Y);
 }
 
 // 倒影：把角色沿地面线翻转、压暗，只在地面区域里显示
 function drawReflections(ctx) {
   ctx.save();
   ctx.beginPath();
-  ctx.rect(0, GROUND_Y, W, H - GROUND_Y);
+  ctx.rect(ARENA.left - 40, GROUND_Y, WORLD_W + 80, H - GROUND_Y);
   ctx.clip();
 
   ctx.globalAlpha = 0.26;
@@ -110,15 +120,18 @@ function drawReflections(ctx) {
   ctx.restore();
 }
 
-function drawBackground(ctx) {
+function drawBackground(ctx, camX) {
+  const cam = camX || 0;
+
   if (Game.theme === 'mirror') {
     const img = getBgImg('mirror', 'art/bg/mirror.jpg');
     if (img) {
-      const s = Math.max(W / img.naturalWidth, H / img.naturalHeight);
+      // 背景要比屏幕宽，才留得出视差余量；视差量被夹住，保证始终铺满
+      const s = Math.max((W * 1.35) / img.naturalWidth, (H * 1.02) / img.naturalHeight);
       const dw = img.naturalWidth * s;
       const dh = img.naturalHeight * s;
-      // 轻微视差：玩家往右走，背景往左挪一点，画面不板
-      const par = Game.player ? (Game.player.x - MIRROR_X) * 0.03 : 0;
+      const maxPar = (dw - W) / 2;
+      const par = Math.max(-maxPar, Math.min(maxPar, cam * 0.25));
       ctx.drawImage(img, (W - dw) / 2 - par, (H - dh) / 2, dw, dh);
       // 压暗：白底背景上绿色弹幕/红色主角会看不清，先压成深灰
       ctx.fillStyle = 'rgba(0,0,0,0.52)';
@@ -132,8 +145,10 @@ function drawBackground(ctx) {
   g.addColorStop(1, COLORS.bg1);
   ctx.fillStyle = g;
   ctx.fillRect(-40, -40, W + 80, H + 80);
+}
 
-  // 网格
+// 世界空间的装饰：网格、镜面轴、地面。这些东西跟着镜头一起滚动。
+function drawWorldDeco(ctx) {
   ctx.strokeStyle = 'rgba(255,255,255,0.032)';
   ctx.lineWidth = 1;
   ctx.beginPath();
@@ -158,13 +173,13 @@ function drawBackground(ctx) {
   ctx.stroke();
   ctx.restore();
 
-  // 地面
+  // 地面（铺满整个世界）
   ctx.fillStyle = COLORS.bg2;
-  ctx.fillRect(-40, GROUND_Y, W + 80, H - GROUND_Y + 40);
+  ctx.fillRect(ARENA.left - 40, GROUND_Y, WORLD_W + 80, H - GROUND_Y + 40);
   ctx.fillStyle = hexToRgba(COLORS.env, 0.30);
-  ctx.fillRect(0, GROUND_Y, W, 2);
+  ctx.fillRect(ARENA.left - 40, GROUND_Y, WORLD_W + 80, 2);
   ctx.fillStyle = 'rgba(255,255,255,0.05)';
-  ctx.fillRect(0, GROUND_Y + 2, W, 1);
+  ctx.fillRect(ARENA.left - 40, GROUND_Y + 2, WORLD_W + 80, 1);
 }
 
 // ------------------------------------------------------------- BOSS
