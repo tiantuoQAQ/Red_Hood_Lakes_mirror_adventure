@@ -165,7 +165,7 @@ Boss 血量掉到**最后一个阶段**时冻结战场，在画面中央插入�
 
 | 文件 | 用在 |
 | --- | --- |
-| udio/crimson_bgm.mp4 | 猩红魔姬战（黑之裁判） |
+| udio/crimson_bgm.mp4 | 猩红魔姬战（黑之裁判 · 金属翻弹版，黑骑士琳达梅尔） |
 | udio/marysue_bgm.mp4 | 玛丽苏战（BlackSouls2 - 玛丽·安） |
 
 - 播放入口：src/audio.js 的 Music.play('crimson'|'marysue') / Music.stop(fade)
