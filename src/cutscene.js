@@ -253,6 +253,20 @@ const Cutscene = (function () {
           else Music.play(c.name);
         }
         break;
+      case 'mirrorfx':
+        // 镜之碎片：主题「镜」的视觉母题（玛丽苏被击败、梅贝尔升华等节点）
+        if (typeof MirrorFx !== 'undefined') {
+          MirrorFx.start({
+            dur: c.dur || 110,
+            count: c.count || 26,
+            power: c.power || 1,
+            x: c.x, y: c.y
+          });
+        }
+        if (c.shake) {
+          S.shake = { t: 12, amp: c.shake };
+        }
+        break;
       case 'grant':
         Game.skills = Game.skills || {};
         Game.skills[c.skill] = true;
@@ -333,6 +347,7 @@ const Cutscene = (function () {
   // ------------------------------------------------------------ 更新
 
   function update(dt) {
+    if (typeof MirrorFx !== 'undefined') MirrorFx.update();
     const adv = wantsAdvance(Cutscene.forceAdvance);
     Cutscene.forceAdvance = false;
 
@@ -998,6 +1013,9 @@ const Cutscene = (function () {
     }
 
     ctx.restore();
+
+    // 镜之碎片（主题「镜」）：盖在角色之上、UI 之下
+    if (typeof MirrorFx !== 'undefined') MirrorFx.draw(ctx);
 
     label(ctx, 'Enter / 空格 继续    Tab 跳过', W - 30, H - 16, 13,
           'rgba(255,255,255,0.35)', 'right', 400);

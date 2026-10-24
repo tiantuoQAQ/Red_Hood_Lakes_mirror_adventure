@@ -302,6 +302,7 @@ const STORY = {
   // ---------------------------------------------------------------- 玛丽苏战败 · 诺登收场
   marysue_defeat: {
     cmds: [
+      { t: 'mirrorfx', dur: 120, count: 34, power: 1.25, shake: 10 },
       { t: 'say', who: 'marysue', expr: 'shock', show: true, text: '这不可能……！' },
       { t: 'say', who: 'marysue', expr: 'shock', show: true, text: '我怎么会……输给一个样本……' },
       { t: 'say', who: 'rek', expr: 'ready', show: true, text: '到此为止了。' },
@@ -316,6 +317,7 @@ const STORY = {
       { t: 'say', who: 'marysue', expr: 'smug', show: true, text: '给我等着！' },
       { t: 'say', who: 'marysue', expr: 'smug', show: true, text: '我们没完，白之女王——' },
 
+      { t: 'mirrorfx', dur: 90, count: 22, power: 0.9 },
       { t: 'flash', seq: [{ c: 'green', f: 6 }, { c: 'white', f: 4 }, { c: 'black', f: 12 }] },
       { t: 'say', who: '', text: '绿色的光炸开，又迅速熄灭。' },
 
@@ -373,6 +375,7 @@ const STORY = {
       { t: 'say', who: 'mabel', expr: 'eyes_closed', show: true, text: '不过——恭喜你，见证了这个故事。' },
       { t: 'say', who: 'mabel', expr: 'eyes_open', show: true, text: '你知道走到这里意味着什么吗？' },
       { t: 'say', who: 'mabel', expr: 'eyes_open', show: true, text: '意味着你没有在半路关掉它。' },
+      { t: 'mirrorfx', dur: 70, count: 14, power: 0.6 },
       { t: 'say', who: 'mabel', expr: 'look_back', show: true, text: '大部分人，看到第一面镜子就走了哦。' },
 
       { t: 'say', who: 'mabel', expr: 'look_back', show: true, text: '所以，替本少女谢谢那个写故事的人吧。' },
@@ -385,6 +388,7 @@ const STORY = {
       { t: 'say', who: 'mabel', expr: 'look_back', show: true, text: '毕竟你的故事已经演完了。' },
       { t: 'say', who: 'mabel', expr: 'look_back', show: true, text: '而我的故事，连第一页都还没有。' },
 
+      { t: 'mirrorfx', dur: 150, count: 42, power: 1.45, shake: 8 },
       { t: 'say', who: 'mabel', expr: 'eyes_closed', show: true, text: '我们一定还会再见的。' },
       { t: 'say', who: '', text: '她转过身，像从来没出现过一样。' },
       { t: 'card', line1: '主线 · 终', line2: '镜面碎成了千万片，每一片里都有她', frames: 200 },

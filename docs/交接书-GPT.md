@@ -176,6 +176,30 @@ Boss 血量掉到**最后一个阶段**时冻结战场，在画面中央插入�
 - 调试：?mtest=crimson 直接试播
 - 缺音量条：目前固定 0.55，想加设置项可接 Music.toggleMute() / Sfx.toggleMute()
 
+### 3.2.3 镜之碎片特效（主题「镜」）
+
+主题是「镜」，所以在两个情绪高点加了**碎裂镜面**演出：白色裂纹从一点放射 + 半透明镜片飞散。
+
+- 文件：`src/mirrorfx.js`，暴露 `MirrorFx.start({dur,count,power,x,y})` / `update()` / `draw(ctx)` / `reset()`
+- 剧情命令：`{ t:'mirrorfx', dur, count, power, shake, x, y }`
+  - `dur` 持续帧数、`count` 碎片数量、`power` 尺寸与速度倍率、`shake` 附带屏幕震动
+- 绘制层级：在角色立绘**之上**、对话框与 UI **之下**（`cutscene.js` 的 `draw()` 里调用）
+
+**当前用在 4 个位置（`src/story.js`）**
+
+| 章节 | 时机 | 参数 |
+| --- | --- | --- |
+| `marysue_defeat` | 玛丽苏被击败、喊「这不可能……！」之前 | `dur:120, count:34, power:1.25, shake:10` |
+| `marysue_defeat` | 她放完狠话、绿光逃走那一刻 | `dur:90, count:22, power:0.9` |
+| `mabel_talk` | 梅贝尔说「大部分人，看到第一面镜子就走了哦」 | `dur:70, count:14, power:0.6` |
+| `mabel_talk` | 升华收尾、她说「我们一定还会再见的」 | `dur:150, count:42, power:1.45, shake:8` |
+
+**调参**：`power` 控制碎片大小与速度；想更「重」把 `count` 提到 60+、`power` 1.8；
+想更「轻」用 `count` 12~16、`power` 0.5。裂纹条数写死在 `start()` 里（9~13 条）。
+
+**可扩展**：也能给「进入镜中世界」的转场用（`enter_mirror` 目前是纯黑场），
+或在 Boss 最后一阶段 cutin 之后补一次碎裂。
+
 ### 3.3 渲染
 - 世界宽 `WORLD_W = 2400`，屏幕 1280×720，地面 `GROUND_Y = 574`
 - 镜头平滑跟随 `1 - Math.pow(0.0001, dt)`，Boss 出场时会把双方框进画面
