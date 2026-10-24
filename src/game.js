@@ -11,7 +11,8 @@ const Game = {
   skills: {},         // 剧情解锁的技能，例如 { red_tragedy: true }
   afterBattle: null,  // 打完这场接哪个剧情章节；空则回结算
   currentBossId: 'marysue',
-  walk: null,         // 走位段：{ untilX, next }
+  walk: null,         // 走位段：{ untilX, next, target }
+  theme: 'normal',    // 背景主题：normal | mirror（进入镜中世界后切换）
   bullets: [],
   shots: [],
   particles: [],

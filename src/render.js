@@ -56,7 +56,35 @@ function render(ctx) {
 
 // ------------------------------------------------------------- 背景
 
+// 镜中世界的背景图：黑白、倒立的森林。加载不到就退回渐变。
+const BG_IMG = {};
+function getBgImg(key, path) {
+  if (!BG_IMG[key]) {
+    if (typeof Image === 'undefined') return null;
+    BG_IMG[key] = new Image();
+    BG_IMG[key].src = path;
+  }
+  const img = BG_IMG[key];
+  return (img.complete && img.naturalWidth > 0) ? img : null;
+}
+
 function drawBackground(ctx) {
+  if (Game.theme === 'mirror') {
+    const img = getBgImg('mirror', 'art/bg/mirror.jpg');
+    if (img) {
+      const s = Math.max(W / img.naturalWidth, H / img.naturalHeight);
+      const dw = img.naturalWidth * s;
+      const dh = img.naturalHeight * s;
+      // 轻微视差：玩家往右走，背景往左挪一点，画面不板
+      const par = Game.player ? (Game.player.x - MIRROR_X) * 0.03 : 0;
+      ctx.drawImage(img, (W - dw) / 2 - par, (H - dh) / 2, dw, dh);
+      // 压暗：白底背景上绿色弹幕/红色主角会看不清，先压成深灰
+      ctx.fillStyle = 'rgba(0,0,0,0.52)';
+      ctx.fillRect(-40, -40, W + 80, H + 80);
+      return;
+    }
+  }
+
   const g = ctx.createLinearGradient(0, 0, 0, H);
   g.addColorStop(0, COLORS.bg0);
   g.addColorStop(1, COLORS.bg1);

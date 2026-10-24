@@ -203,6 +203,8 @@ const Cutscene = (function () {
         break;
       case 'scene':
         S.bg = c.bg || 'night';
+        // 场景主题同步给战斗渲染：进了镜中世界，战斗背景也换成黑白森林
+        Game.theme = (S.bg === 'mirror') ? 'mirror' : 'normal';
         break;
       case 'walk':
         // 交给玩家操控走一段，走到 untilX（或靠近 npc 按 W）后回演出

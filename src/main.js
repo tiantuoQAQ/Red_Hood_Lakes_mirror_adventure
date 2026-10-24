@@ -168,6 +168,7 @@ requestAnimationFrame(frameLoop);
 // ?story=0 回标题画面；默认直接从序章开始播
 (function boot() {
   const params = new URLSearchParams(location.search);
+  if (params.get('theme')) Game.theme = params.get('theme');
   if (params.get('auto') === '1') {
     resetGame();
     const ff = parseInt(params.get('ff') || '0', 10);
