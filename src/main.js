@@ -19,6 +19,16 @@ function fitCanvas() {
 fitCanvas();
 window.addEventListener('resize', fitCanvas);
 
+// 鼠标位置 → 画布坐标（射击朝鼠标，不再自动瞄准 BOSS）
+const MOUSE = { x: W / 2, y: H / 2, active: false };
+canvas.addEventListener('mousemove', function (e) {
+  const r = canvas.getBoundingClientRect();
+  MOUSE.x = (e.clientX - r.left) / Math.max(1, r.width) * W;
+  MOUSE.y = (e.clientY - r.top) / Math.max(1, r.height) * H;
+  MOUSE.active = true;
+  Game.mouse = MOUSE;
+});
+
 // 浏览器要求音频在用户交互之后才能启动
 window.addEventListener('keydown', function () { Sfx.unlock(); });
 window.addEventListener('pointerdown', function () { Sfx.unlock(); });
@@ -180,6 +190,13 @@ requestAnimationFrame(frameLoop);
     for (let i = 0; i < ff; i++) {
       update(STEP);
       Input.tick();
+    }
+    // 调试：?shots=1 手动塞几发我方子弹，方便截图看弹道表现
+    if (params.get('shots') === '1' && Game.player) {
+      const p = Game.player;
+      for (let i = 0; i < 4; i++) {
+        Game.shots.push({ x: p.x + 60 + i * 90, y: p.y - 30 - i * 12, vx: 600, vy: -120, r: 6, dmg: 3 });
+      }
     }
     return;
   }

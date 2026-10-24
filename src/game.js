@@ -431,13 +431,18 @@ function updatePlayer(dt) {
     if (p.trail[i].life <= 0) p.trail.splice(i, 1);
   }
 
-  // ---- 射击：自动瞄准 BOSS ----
+  // ---- 射击：朝鼠标方向（鼠标没动过时朝面朝方向），不再自动瞄准 ----
   // 走位段没有目标，直接不进入这一段
   if (Game.mode === 'walk') return;
   if (Input.held('fire') && p.fireT <= 0) {
     p.fireT = P.fireInterval;
-    const b = Game.boss;
-    const a = aimAngle(p.x, p.y, b.x, b.y);
+    let a;
+    if (Game.mouse && Game.mouse.active) {
+      const wx = Game.mouse.x + (Game.cam ? Game.cam.x : 0);
+      a = Math.atan2(Game.mouse.y - p.y, wx - p.x);
+    } else {
+      a = p.facing > 0 ? 0 : Math.PI;
+    }
     Game.shots.push({
       x: p.x,
       y: p.y,

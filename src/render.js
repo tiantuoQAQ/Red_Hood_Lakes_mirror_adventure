@@ -333,34 +333,97 @@ function drawBeams(ctx) {
   }
 }
 
+// 预渲染的发光贴图：每颗子弹都现算径向渐变太贵，缓存成小图再 drawImage
+const GLOW_CACHE = {};
+function glowSprite(color) {
+  if (GLOW_CACHE[color]) return GLOW_CACHE[color];
+  if (typeof document === 'undefined') return null;
+  const size = 128;
+  const c = document.createElement('canvas');
+  c.width = size;
+  c.height = size;
+  const g = c.getContext('2d');
+  const half = size / 2;
+  const grad = g.createRadialGradient(half, half, 0, half, half, half);
+  grad.addColorStop(0, 'rgba(255,255,255,0.95)');
+  grad.addColorStop(0.18, hexToRgba(color, 0.85));
+  grad.addColorStop(0.45, hexToRgba(color, 0.30));
+  grad.addColorStop(1, hexToRgba(color, 0));
+  g.fillStyle = grad;
+  g.fillRect(0, 0, size, size);
+  GLOW_CACHE[color] = c;
+  return c;
+}
+
+// 一颗弹：外光晕 + 旋转星形 + 白芯
+function drawBulletStar(ctx, x, y, r, color, rot, glowScale) {
+  const gs = glowScale || 3.0;
+  const sprite = glowSprite(color);
+  if (sprite) {
+    const s = r * gs * 2;
+    ctx.drawImage(sprite, x - s / 2, y - s / 2, s, s);
+  }
+  const pulse = 1 + Math.sin(Game.frame * 0.18 + x * 0.01) * 0.06;
+  starPath(ctx, x, y, r * 1.45 * pulse, 5, 0.44, rot);
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+  ctx.lineWidth = 1.1;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(x, y, r * 0.38, 0, TAU);
+  ctx.fillStyle = 'rgba(255,255,255,0.98)';
+  ctx.fill();
+
+  // 十字星芒：细长的四道光线，参考图里那种「会闪的星星」
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rot * 0.5);
+  const len = r * 2.4 * pulse;
+  ctx.strokeStyle = hexToRgba(color, 0.55);
+  ctx.lineWidth = Math.max(1, r * 0.18);
+  ctx.beginPath();
+  ctx.moveTo(-len, 0);
+  ctx.lineTo(len, 0);
+  ctx.moveTo(0, -len);
+  ctx.lineTo(0, len);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+  ctx.lineWidth = Math.max(0.8, r * 0.09);
+  ctx.beginPath();
+  ctx.moveTo(-len * 0.6, 0);
+  ctx.lineTo(len * 0.6, 0);
+  ctx.moveTo(0, -len * 0.6);
+  ctx.lineTo(0, len * 0.6);
+  ctx.stroke();
+  ctx.restore();
+}
+
 function drawBullets(ctx) {
   const list = Game.bullets;
   const spin = Game.frame * 0.05;
   for (let i = 0; i < list.length; i++) {
     const b = list[i];
-    glowCircle(ctx, b.x, b.y, b.r * 1.2, COLORS.hazard, 2.4, 0.14);
-    starPath(ctx, b.x, b.y, b.r * 1.5, 5, 0.46, spin);
-    ctx.fillStyle = COLORS.hazard;
-    ctx.fill();
-    // 白色细描边：绿色弹幕压在红色玩家上时，抗锯齿会混出橙色。
-    // 用 1px 灰阶描边把它们隔开，这是「不同色相不得直接相邻」的执行办法。
-    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
+    drawBulletStar(ctx, b.x, b.y, b.r, COLORS.hazard, spin + i * 0.15, 3.2);
 
-    // 追踪弹多一圈旋转环，让玩家一眼分辨「这个会转弯」
+    // 追踪弹：多一圈旋转环 + 拖尾，让玩家一眼分辨「这个会转弯」
     if (b.kind === 'homing') {
-      ctx.strokeStyle = hexToRgba(COLORS.hazard, 0.9);
-      ctx.lineWidth = 1.6;
+      ctx.save();
+      ctx.strokeStyle = hexToRgba(COLORS.hazard, 0.75);
+      ctx.lineWidth = 1.4;
       ctx.beginPath();
-      ctx.arc(b.x, b.y, b.r * 2.2, Game.frame * 0.18, Game.frame * 0.18 + 2.2);
+      ctx.arc(b.x, b.y, b.r * 2.4, Game.frame * 0.18, Game.frame * 0.18 + 2.2);
       ctx.stroke();
+      // 拖尾
+      const sp = Math.hypot(b.vx, b.vy) || 1;
+      ctx.strokeStyle = hexToRgba(COLORS.hazard, 0.35);
+      ctx.lineWidth = b.r * 0.5;
+      ctx.beginPath();
+      ctx.moveTo(b.x, b.y);
+      ctx.lineTo(b.x - (b.vx / sp) * b.r * 3.4, b.y - (b.vy / sp) * b.r * 3.4);
+      ctx.stroke();
+      ctx.restore();
     }
-
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, b.r * 0.42, 0, TAU);
-    ctx.fillStyle = 'rgba(255,255,255,0.95)';
-    ctx.fill();
   }
 }
 
@@ -368,7 +431,18 @@ function drawShots(ctx) {
   const list = Game.shots;
   for (let i = 0; i < list.length; i++) {
     const s = list[i];
-    glowCircle(ctx, s.x, s.y, s.r, COLORS.player, 2.6, 0.95);
+    // 红色拖尾（我方子弹：红 = 我）
+    const sp = Math.hypot(s.vx, s.vy) || 1;
+    ctx.save();
+    ctx.strokeStyle = hexToRgba(COLORS.player, 0.35);
+    ctx.lineWidth = s.r * 0.9;
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y);
+    ctx.lineTo(s.x - (s.vx / sp) * s.r * 4.5, s.y - (s.vy / sp) * s.r * 4.5);
+    ctx.stroke();
+    ctx.restore();
+
+    drawBulletStar(ctx, s.x, s.y, s.r, COLORS.player, Game.frame * 0.12, 2.6);
   }
 }
 
