@@ -595,20 +595,25 @@ function drawHUD(ctx) {
   // 名字
   label(ctx, b.name || 'BOSS', W - 60, by - 12, 15, COLORS.ink, 'right', 700);
 
-  // 条底 + 血
+  // 条底 + 血：一根条 = 一个阶段，进新阶段自动补满再掉
+  const top = phases[b.phase].at;
+  const bot = (b.phase + 1 < phases.length) ? phases[b.phase + 1].at : 0;
+  let seg = (b.hp / b.maxHp - bot) / Math.max(0.0001, top - bot);
+  seg = Math.max(0, Math.min(1, seg));
+
   ctx.fillStyle = 'rgba(255,255,255,0.10)';
   ctx.fillRect(bx, by, bw, 8);
-  bar(ctx, bx, by, bw, 8, b.hp / b.maxHp, COLORS.hazard);
+  bar(ctx, bx, by, bw, 8, seg, COLORS.hazard);
 
-  // 阶段刻度
-  for (let i = 1; i < phases.length; i++) {
-    const x = bx + bw * phases[i].at;
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.fillRect(x - 1, by - 1, 2, 10);
+  // 阶段分隔小点（下面有 PHASE 文字，这里只做一个进度感）
+  for (let i = 0; i < phases.length; i++) {
+    const px = W - 60 - (phases.length - 1 - i) * 12;
+    ctx.fillStyle = i <= b.phase ? hexToRgba(COLORS.hazard, 0.9) : 'rgba(255,255,255,0.18)';
+    ctx.fillRect(px - 4, by + 16, 6, 3);
   }
 
   // 阶段文字
-  mono(ctx, 'PHASE ' + (b.phase + 1) + ' / ' + phases.length, W - 60, by + 26, 11, COLORS.dim, 'right');
+  mono(ctx, 'PHASE ' + (b.phase + 1) + ' / ' + phases.length, W - 60, by + 38, 11, COLORS.dim, 'right');
 
   // 右侧小菱形（BOSS 标记）
   drawDiamond(ctx, W - 40, by + 4, 7, COLORS.hazard, true);
