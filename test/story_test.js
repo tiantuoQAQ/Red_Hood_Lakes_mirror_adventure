@@ -23,13 +23,19 @@ const files = [
   'src/cutscene.js'
 ];
 
+const handlers = { keydown: [], keyup: [], blur: [] };
 const sandbox = {
   console: console,
   Math: Math,
   Object: Object,
   Array: Array,
   JSON: JSON,
-  window: { addEventListener: function () {} },
+  window: {
+    addEventListener: function (type, fn) {
+      if (!handlers[type]) handlers[type] = [];
+      handlers[type].push(fn);
+    }
+  },
   setTimeout: setTimeout
 };
 sandbox.globalThis = sandbox;
@@ -37,6 +43,13 @@ vm.createContext(sandbox);
 files.forEach(function (f) {
   vm.runInContext(fs.readFileSync(path.join(root, f), 'utf8'), sandbox, { filename: f });
 });
+
+function pressKey(code) {
+  handlers.keydown.forEach(function (fn) { fn({ code: code, repeat: false, preventDefault: function () {} }); });
+}
+function releaseKey(code) {
+  handlers.keyup.forEach(function (fn) { fn({ code: code }); });
+}
 
 const Game = vm.runInContext('Game', sandbox);
 const Cutscene = vm.runInContext('Cutscene', sandbox);
@@ -55,9 +68,16 @@ function playThrough(maxFrames) {
   const limit = maxFrames || 40000;
   while ((Game.mode === 'story' || Game.mode === 'walk') && n < limit) {
     if (Game.mode === 'walk') {
-      Game.player.x = Game.walk.untilX;
+      if (Game.walk.npc) {
+        // 走到 NPC 旁边按 W
+        Game.player.x = (Game.walk.npcX || 0) - 10;
+        pressKey('KeyW');
+      } else {
+        Game.player.x = Game.walk.untilX;
+      }
       vm.runInContext('update(1/60)', sandbox);
       Input.tick();
+      releaseKey('KeyW');
       n++;
       continue;
     }

@@ -52,6 +52,9 @@ const Cutscene = (function () {
     card: null,
     intro: null,          // 角色登场介绍：{ id }
     bossIntro: null,      // 战斗前的放大特写：{ id }
+    cg: null,             // CG 大图：{ art, label, t }
+    flash: null,          // 闪白/闪黑：{ seq, i, f }
+    portrait: null,       // 对话时右侧的说话者立绘：{ who, expr }
     leaving: false,       // 正在播「丝滑退出」
     leaveT: 0,
     framesLeft: 0,
@@ -76,6 +79,18 @@ const Cutscene = (function () {
 
   // ------------------------------------------------------------ 立绘
 
+  // 表情差分：有 art/portrait/<id>_<expr>.png 就用它，没有就继续用基础立绘 / 占位块
+  // 约定的 expr：eyes_closed（闭眼） / eyes_open（睁眼） / ready（备战） / shock（震惊） / shadow（黑影）
+  const EXPR_LABEL = {
+    '': '', eyes_closed: '闭眼', eyes_open: '睁眼', ready: '备战', shock: '震惊', shadow: '黑影'
+  };
+
+  function artPathOf(c, expr) {
+    if (!c.art) return null;
+    if (!expr) return c.art;
+    return c.art.replace(/\.png$/, '_' + expr + '.png');
+  }
+
   const PORTRAITS = {};
   function getArt(path) {
     if (!path || typeof Image === 'undefined') return null;
@@ -97,6 +112,8 @@ const Cutscene = (function () {
     S.card = null;
     S.intro = null;
     S.bossIntro = null;
+    S.cg = null;
+    S.flash = null;
     S.leaving = false;
     S.leaveT = 0;
     S.framesLeft = 0;
@@ -135,7 +152,27 @@ const Cutscene = (function () {
         S.framesLeft = c.frames || 160;
         break;
       case 'say':
-        S.text = { mode: 'say', who: c.who || '', text: c.text || '', shown: 0, acc: 0, pause: 0, t: 0 };
+        S.text = {
+          mode: 'say', who: c.who || '', text: c.text || '', shown: 0, acc: 0, pause: 0, t: 0,
+          expr: c.expr || '', style: c.style || '', shake: !!c.shake, bump: !!c.bump
+        };
+        // show:true 时右侧画出说话者的立绘（表情跟着 expr 走）
+        if (c.show) S.portrait = { who: c.who, expr: c.expr || '' };
+        break;
+      case 'pose':
+        // 只切表情，不说话
+        S.portrait = { who: c.who, expr: c.expr || '' };
+        S.framesLeft = c.frames || 30;
+        break;
+      case 'cg':
+        S.cg = { art: c.art || null, label: c.label || 'CG', t: 0 };
+        S.framesLeft = c.frames || 120;
+        break;
+      case 'flash':
+        S.flash = {
+          seq: c.seq || [{ c: 'white', f: 6 }, { c: 'black', f: 9 }, { c: 'white', f: 6 }],
+          i: 0, f: 0
+        };
         break;
       case 'bubble':
         S.text = { mode: 'bubble', who: c.who || '', text: c.text || '', shown: 0, acc: 0, pause: 0, t: 0 };
@@ -158,8 +195,8 @@ const Cutscene = (function () {
         S.bg = c.bg || 'night';
         break;
       case 'walk':
-        // 交给玩家操控走一段，走到 untilX 后回演出
-        startWalk({ untilX: c.untilX, next: c.next });
+        // 交给玩家操控走一段，走到 untilX（或靠近 npc 按 W）后回演出
+        startWalk({ untilX: c.untilX, next: c.next, npc: c.npc, npcX: c.npcX });
         return;
       case 'intro':
         // 新角色登场：竖幅「称号 + 名字」，丝滑滑入，按键后再丝滑滑出
@@ -239,6 +276,8 @@ const Cutscene = (function () {
     S.card = null;
     S.intro = null;
     S.bossIntro = null;
+    S.cg = null;
+    S.flash = null;
     step();
   }
 
@@ -259,6 +298,18 @@ const Cutscene = (function () {
 
     S.frame = (S.frame || 0) + 1;
     S.t++;
+    if (S.cg) S.cg.t++;
+
+    // 闪屏序列：白 → 黑 → 白，播完自动往下走
+    if (S.flash) {
+      S.flash.f++;
+      if (S.flash.f >= S.flash.seq[S.flash.i].f) {
+        S.flash.f = 0;
+        S.flash.i++;
+        if (S.flash.i >= S.flash.seq.length) { S.flash = null; step(); }
+      }
+      return;
+    }
     if (S.card) S.card.t++;
 
     // 黑场：缓动过渡，不是线性
@@ -293,7 +344,7 @@ const Cutscene = (function () {
       S.framesLeft--;
       if (S.framesLeft === 0) {
         const cc = current();
-        if (cc && (cc.t === 'card' || cc.t === 'intro' || cc.t === 'bossIntro')) requestLeave();
+        if (cc && (cc.t === 'card' || cc.t === 'intro' || cc.t === 'bossIntro' || cc.t === 'pose')) requestLeave();
         else if (cc && cc.t === 'wait') step();
       }
       return;
@@ -349,7 +400,7 @@ const Cutscene = (function () {
   function portrait(ctx, id, cx, cy, w, h, opt) {
     const o = opt || {};
     const c = charOf(id);
-    const art = getArt(c.art);
+    const art = getArt(artPathOf(c, o.expr));
 
     const k = easeOutCubic(prog(S.t, o.inFrames || PORTRAIT_IN));
     const fromX = o.fromX || 0;
@@ -373,8 +424,9 @@ const Cutscene = (function () {
       ctx.strokeStyle = hexToRgba(c.color, 0.45);
       ctx.lineWidth = 3;
       ctx.stroke();
-      label(ctx, c.name, 0, 10, Math.min(46, h * 0.22), c.color, 'center', 700);
-      label(ctx, '立绘占位', 0, 46, 16, 'rgba(255,255,255,0.3)', 'center', 400);
+      const ex = EXPR_LABEL[o.expr || ''] || o.expr || '';
+      label(ctx, c.name + (ex ? ' · ' + ex : ''), 0, 10, Math.min(42, h * 0.2), c.color, 'center', 700);
+      label(ctx, '立绘占位', 0, 44, 15, 'rgba(255,255,255,0.3)', 'center', 400);
     }
     ctx.restore();
   }
@@ -518,6 +570,14 @@ const Cutscene = (function () {
     void tailToX;
   }
 
+  // 说话者立绘（右侧）。表情差分靠 expr 换图：没有 <id>_<expr>.png 时退回基础立绘/占位块。
+  function drawSpeakerPortrait(ctx) {
+    if (!S.portrait) return;
+    const bump = S.text && S.text.bump ? Math.sin(Game.frame * 2.4) * 5 : 0;
+    portrait(ctx, S.portrait.who, W * 0.73, H * 0.50 + bump, 330, 470,
+             { expr: S.portrait.expr, inFrames: 1, flip: true, phase: 3 });
+  }
+
   function drawSay(ctx) {
     const k = easeOutCubic(prog(S.text.t, BOX_IN));
     const boxH = 156;
@@ -547,22 +607,30 @@ const Cutscene = (function () {
       ctx.fillRect(x + 2, y + 2, w - 4, 3);
     }
 
-    // 名字签
+    // 名字签（表情差分标在名字后面，方便之后接立绘）
     if (S.text.who) {
-      roundRectPath(ctx, x + 24, y - 20, 140, 40, 10);
+      const c = charOf(S.text.who);
+      const ex = EXPR_LABEL[S.text.expr || ''] || S.text.expr || '';
+      const tag = c.name + (ex ? ' · ' + ex : '');
+      ctx.font = '22px "Segoe UI", "Microsoft YaHei", system-ui, sans-serif';
+      const tagW = Math.max(140, ctx.measureText(tag).width + 36);
+      roundRectPath(ctx, x + 24, y - 20, tagW, 40, 10);
       ctx.fillStyle = 'rgba(8,8,10,0.96)';
       ctx.fill();
       ctx.strokeStyle = hexToRgba(colorOf(S.text.who), 0.9);
       ctx.lineWidth = 2;
       ctx.stroke();
-      label(ctx, charOf(S.text.who).name, x + 94, y + 7, 22, colorOf(S.text.who), 'center', 700);
+      label(ctx, tag, x + 24 + tagW / 2, y + 7, 22, colorOf(S.text.who), 'center', 700);
     }
 
-    // 正文
+    // 正文：红色台词 + 抖动
+    const red = S.text.style === 'red';
+    const shake = S.text.shake ? Math.sin(Game.frame * 1.9) * 2.2 : 0;
     ctx.font = '24px "Segoe UI", "Microsoft YaHei", system-ui, sans-serif';
     const lines = wrapText(ctx, typedText(), w - 80);
     for (let i = 0; i < lines.length; i++) {
-      label(ctx, lines[i], x + 40, y + 54 + i * 38, 24, '#f2f2f2', 'left', 400);
+      label(ctx, lines[i], x + 40 + shake, y + 54 + i * 38, 24,
+            red ? COLORS.player : '#f2f2f2', 'left', red ? 700 : 400);
     }
     ctx.restore();
 
@@ -730,6 +798,61 @@ const Cutscene = (function () {
     if (textDone()) nextArrow(ctx, x + w - 34, y + h - 30);
   }
 
+  // CG 大图：有 art/cg/*.png 就整张铺满，没有就画占位（红法环）
+  function drawCG(ctx) {
+    const k = easeOutCubic(prog(S.cg.t, 14));
+    const g = getArt(S.cg.art);
+
+    ctx.save();
+    ctx.globalAlpha = k;
+
+    if (g) {
+      const s = Math.max(W / g.naturalWidth, H / g.naturalHeight);
+      const dw = g.naturalWidth * s;
+      const dh = g.naturalHeight * s;
+      ctx.drawImage(g, (W - dw) / 2, (H - dh) / 2, dw, dh);
+    } else {
+      ctx.fillStyle = '#050505';
+      ctx.fillRect(0, 0, W, H);
+
+      // 占位：一圈红色法环
+      const cx = W / 2;
+      const cy = H / 2;
+      ctx.strokeStyle = hexToRgba(COLORS.player, 0.55);
+      ctx.lineWidth = 3;
+      for (let r = 120; r <= 260; r += 46) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      // 环上刻度
+      for (let i = 0; i < 24; i++) {
+        const a = (i / 24) * Math.PI * 2 + Game.frame * 0.004;
+        const r0 = 250;
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0);
+        ctx.lineTo(cx + Math.cos(a) * (r0 + 26), cy + Math.sin(a) * (r0 + 26));
+        ctx.stroke();
+      }
+      // 中心一点白
+      ctx.beginPath();
+      ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.fill();
+
+      label(ctx, 'CG 占位 · ' + S.cg.label, W / 2, H - 36, 16, 'rgba(255,255,255,0.45)', 'center', 400);
+    }
+    ctx.restore();
+  }
+
+  function drawFlash(ctx) {
+    if (!S.flash) return;
+    const seg = S.flash.seq[S.flash.i];
+    const col = seg.c === 'white' ? '255,255,255' : '0,0,0';
+    ctx.fillStyle = 'rgba(' + col + ',1)';
+    ctx.fillRect(0, 0, W, H);
+  }
+
   function draw(ctx) {
     if (Game.mode !== 'story') return;
     drawBackground(ctx);
@@ -741,8 +864,10 @@ const Cutscene = (function () {
     ctx.translate(0, outK * 10);
 
     if (S.card) drawCard(ctx);
+    if (S.cg) drawCG(ctx);
     if (S.intro) drawIntro(ctx);
     if (S.bossIntro) drawBossIntro(ctx);
+    drawSpeakerPortrait(ctx);
     if (S.text) {
       if (S.text.mode === 'bubble') drawBubble(ctx);
       else if (S.text.mode === 'duel') drawDuel(ctx);
@@ -759,6 +884,9 @@ const Cutscene = (function () {
       ctx.fillStyle = 'rgba(0,0,0,' + S.black.toFixed(3) + ')';
       ctx.fillRect(0, 0, W, H);
     }
+
+    // 闪屏盖在所有东西上面（包括黑场）
+    drawFlash(ctx);
   }
 
   return {

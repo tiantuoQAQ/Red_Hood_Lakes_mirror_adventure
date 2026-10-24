@@ -17,7 +17,11 @@ function render(ctx) {
     ctx.translate(Math.sin(t) * s * 0.75, Math.cos(t * 1.37) * s * 0.55);
   }
 
-  drawBackground(ctx);
+  if (Game.mode === 'walk' && Game.walk && Game.walk.bg === 'void') {
+    drawVoidBackground(ctx);
+  } else {
+    drawBackground(ctx);
+  }
   if (Game.player) {
     if (Game.boss) {
       drawWarnings(ctx);
@@ -45,9 +49,7 @@ function render(ctx) {
 
   drawScreenEffects(ctx);
   if (Game.player && Game.boss) drawHUD(ctx);
-  if (Game.mode === 'walk') {
-    label(ctx, '→ 向前走', W - 40, H - 24, 16, 'rgba(255,255,255,0.42)', 'right', 400);
-  }
+  if (Game.mode === 'walk') drawWalkNpc(ctx);
   drawBanner(ctx);
   drawOverlay(ctx);
 }
@@ -416,6 +418,48 @@ function drawScreenEffects(ctx) {
     g.addColorStop(1, 'rgba(0,0,0,' + (a * 0.72).toFixed(3) + ')');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
+  }
+}
+
+// ------------------------------------------------------------- 走位段
+
+// 空白世界：剧情醒来后用的场景，只有地面
+function drawVoidBackground(ctx) {
+  ctx.fillStyle = '#ececec';
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(0,0,0,0.06)';
+  ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+  ctx.fillStyle = 'rgba(0,0,0,0.20)';
+  ctx.fillRect(0, GROUND_Y, W, 2);
+}
+
+function drawWalkNpc(ctx) {
+  const w = Game.walk;
+  if (!w) return;
+
+  if (!w.npc) {
+    label(ctx, '→ 向前走', W - 40, H - 24, 16, 'rgba(255,255,255,0.42)', 'right', 400);
+    return;
+  }
+
+  const x = w.npcX || (w.untilX + 80);
+  const y = GROUND_Y;
+
+  // 诺登占位：亮红身体 + 两只长耳（等立绘/分件到位后替换）
+  ctx.save();
+  ctx.fillStyle = hexToRgba(COLORS.player, 0.9);
+  ctx.fillRect(x - 20, y - 96, 40, 96);
+  ctx.fillRect(x - 18, y - 158, 8, 62);
+  ctx.fillRect(x + 10, y - 158, 8, 62);
+  ctx.restore();
+
+  label(ctx, '诺登', x, y - 176, 16, 'rgba(0,0,0,0.55)', 'center', 500);
+
+  const near = Game.player && Math.abs(Game.player.x - x) < 120;
+  if (near) {
+    label(ctx, '按 W 交互', x, y - 206, 18, '#111111', 'center', 700);
+  } else {
+    label(ctx, '→ 靠近她', W - 40, H - 24, 16, 'rgba(0,0,0,0.35)', 'right', 400);
   }
 }
 

@@ -181,8 +181,21 @@ function startWalk(opts) {
   Game.walk = {
     untilX: (opts && opts.untilX) || (ARENA.right - 140),
     next: (opts && opts.next) || null,
+    npc: (opts && opts.npc) || null,
+    npcX: (opts && opts.npcX) || 0,
+    bg: (opts && opts.bg) || 'normal',
     doneT: 0
   };
+}
+
+function leaveWalk(next) {
+  Game.walk = null;
+  if (next && typeof Cutscene !== 'undefined') {
+    Game.mode = 'story';
+    Cutscene.start(next);
+  } else {
+    Game.mode = 'title';
+  }
 }
 
 function updateWalk(dt) {
@@ -193,16 +206,19 @@ function updateWalk(dt) {
   if (p.x < ARENA.left + CFG.player.visualR) p.x = ARENA.left + CFG.player.visualR;
   if (p.x > ARENA.right - CFG.player.visualR) p.x = ARENA.right - CFG.player.visualR;
 
-  if (Game.walk && p.x >= Game.walk.untilX) {
-    const next = Game.walk.next;
-    Game.walk = null;
-    if (next && typeof Cutscene !== 'undefined') {
-      Game.mode = 'story';
-      Cutscene.start(next);
-    } else {
-      Game.mode = 'title';
+  const w = Game.walk;
+  if (!w) return;
+
+  // 有人物要交互：靠近 + 按 W 才继续
+  if (w.npc) {
+    const npcX = w.npcX || (w.untilX + 80);
+    if (Math.abs(p.x - npcX) < 120 && Input.pressed('up')) {
+      leaveWalk(w.next);
     }
+    return;
   }
+
+  if (p.x >= w.untilX) leaveWalk(w.next);
 }
 
 function updatePlayer(dt) {

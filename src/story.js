@@ -57,18 +57,45 @@ const STORY = {
     ]
   },
 
-  // ---------------------------------------------------------------- 黑影 · 中陷阱
-  // 文案待填：黑影不露脸，全程用「它」指代；这里只写死节奏。
+  // ---------------------------------------------------------------- 黑影 · 遭遇
+  // 玛丽苏此时是「黑影」状态，不露脸，用 shadow 表情差分占位（art/portrait/marysue_shadow.png）。
+  // 蕾克的表情差分：eyes_closed / eyes_open / ready / shock，对应
+  //   art/portrait/rek_eyes_closed.png 等；没有图时代码自动退回基础立绘或占位块。
   ambush: {
     cmds: [
-      { t: 'say', who: '', text: '【待填】路的尽头站着一个人影。看不清脸。' },
-      { t: 'say', who: '', text: '【待填】它不动，也不说话。' },
-      { t: 'say', who: '蕾克', text: '我是不会死的。' },
-      { t: 'say', who: '蕾克', text: '在砍下你的头颅之前。' },
-      { t: 'say', who: '', text: '【待填】脚下亮起一圈纹路。' },
-      { t: 'say', who: '蕾克', text: '【待填】……什么时候。' },
-      { t: 'fade', to: 'black', frames: 50 },
-      { t: 'say', who: '', text: '她倒下去的时候，森林很安静。' },
+      { t: 'say', who: 'marysue', expr: 'shadow', show: true, text: '库嘻嘻…沉浸在人家赐予你的美好中，迎来属于自己的结局不好吗？为什么这么急于跳脱人家的童话呢～' },
+
+      { t: 'say', who: 'rek', show: true, text: '真让人感到恶心…' },
+      { t: 'say', who: 'rek', expr: 'eyes_closed', show: true, text: '你的所谓创作中，主角最后等到的只有悲惨结局。' },
+      { t: 'say', who: 'rek', expr: 'eyes_open', show: true, text: '我，不认可这样的结局。' },
+      { t: 'say', who: 'rek', style: 'red', shake: true, show: true, text: '玛丽苏…在砍下你的头颅之前，我是不会死的。' },
+
+      { t: 'pose', who: 'rek', expr: 'ready', frames: 40 },
+
+      { t: 'say', who: 'marysue', show: true, text: '哎呀呀，人家好怕啊～' },
+      { t: 'say', who: 'marysue', expr: 'eyes_closed', show: true, text: '你真觉得…' },
+      { t: 'say', who: 'marysue', expr: 'eyes_open', show: true, text: '你能碰到我吗？' },
+
+      { t: 'say', who: '', text: '「啪嗒。」' },
+      { t: 'say', who: 'rek', expr: 'shock', show: true, bump: true, text: '！？' },
+
+      // CG：玛丽苏身后浮现法环陷阱（art/cg/trap.png；没有图就画占位法环）
+      { t: 'cg', art: 'art/cg/trap.png', label: '法环陷阱', frames: 130 },
+
+      // 一白、一黑、一白
+      { t: 'flash', seq: [{ c: 'white', f: 7 }, { c: 'black', f: 10 }, { c: 'white', f: 7 }, { c: 'black', f: 14 }] },
+
+      // 醒来：一片空白，只有地面和诺登；玩家自己走过去，靠近按 W 交互
+      { t: 'walk', bg: 'void', npc: 'norden', npcX: 980, next: 'wake_talk' }
+    ]
+  },
+
+  // ---------------------------------------------------------------- 醒来 · 诺登
+  // 文案待填：玩家按 W 交互之后才进来。
+  wake_talk: {
+    cmds: [
+      { t: 'say', who: 'norden', show: true, text: '【待填】你醒了。' },
+      { t: 'say', who: 'norden', show: true, text: '【待填】是我把你捡回来的。' },
       { t: 'next', chapter: 'wake' }
     ]
   },
