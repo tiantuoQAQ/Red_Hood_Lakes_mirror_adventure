@@ -1,5 +1,11 @@
 # 《镜》(MIRROR) 项目交接书
 
+> ## ⚠️ 做 Godot 端的人先看这个
+> **`docs/Godot移植规格.md`** —— 手感/输入/球形态/鼠标瞄准/弹幕/美术资源路径全在里面，
+> 另附对照截图 `art_preview/visual_reference.png`（8 张：标题 / 走位 / 王座 / 对话 / 战斗+我方弹幕 / 球形态 / 必杀 / BOSS 面板）。
+> 网页版是唯一基准：先跑起来（`python -m http.server 8000`），再开始写 Godot。
+
+
 > 交付对象：接手的 GPT（下一任代码/剧情负责人）
 > 项目根目录：`E:\UserDATAxtmr\Documents\DSH\mirror-jam`
 > 交接时间：2026-10-24

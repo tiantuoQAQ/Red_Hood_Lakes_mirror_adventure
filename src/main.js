@@ -198,9 +198,23 @@ requestAnimationFrame(frameLoop);
     // 调试：?shots=1 手动塞几发我方子弹，方便截图看弹道表现
     if (params.get('shots') === '1' && Game.player) {
       const p = Game.player;
-      for (let i = 0; i < 4; i++) {
-        Game.shots.push({ x: p.x + 60 + i * 90, y: p.y - 30 - i * 12, vx: 600, vy: -120, r: 6, dmg: 3 });
+      for (let i = 0; i < 6; i++) {
+        const a = -0.55 + i * 0.12;
+        Game.shots.push({
+          x: p.x + Math.cos(a) * (70 + i * 26),
+          y: p.y + Math.sin(a) * (70 + i * 26),
+          vx: Math.cos(a) * 900, vy: Math.sin(a) * 900, r: 5, dmg: 3
+        });
       }
+    }
+    // 调试：?ball=1 让玩家直接进入球形态（截图用）
+    if (params.get('ball') === '1' && Game.player) {
+      const p = Game.player;
+      p.ball = true;
+      p.y = 380;
+      p.vy = -60;
+      p.ballLaunch = 0;
+      p.stamina = 78;
     }
     return;
   }
