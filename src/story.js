@@ -215,7 +215,7 @@ const STORY = {
       { t: 'say', who: 'marysue', expr: 'smug', show: true, text: '真是难看呢。' },
       { t: 'say', who: 'rek_crimson', show: true, text: '玛丽苏大人……' },
       { t: 'say', who: 'marysue', expr: 'fake', show: true, text: '人家给你的舞台，可不是让你这样收场的哦。' },
-      { t: 'say', who: 'marysue', expr: 'scheming', show: true, text: '没用的孩子，是要被换掉的。' },
+      { t: 'say', who: 'marysue', expr: 'star', show: true, text: '没用的孩子，是要被换掉的。' },
 
       { t: 'say', who: 'rek', expr: 'ready', show: true, text: '住手。' },
       { t: 'say', who: 'marysue', expr: 'tease', show: true, text: '为什么？' },
