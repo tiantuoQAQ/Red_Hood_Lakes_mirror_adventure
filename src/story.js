@@ -186,6 +186,10 @@ const STORY = {
       { t: 'title', who: 'rek_crimson', title: '猩红魔姬 · 雷帝', frames: 150 },
       { t: 'pose', who: 'rek_crimson', expr: 'stand', frames: 45 },
       { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '玛丽苏大人最得意的作品。' },
+      { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '在这之前，没有人愿意救我。' },
+      { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '只有玛丽苏大人。' },
+      { t: 'say', who: 'rek', expr: 'wary', show: true, text: '……被救，和被造出来，是两回事。' },
+      { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '你胡说什么。' },
       { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '背弃血亲与友人，以此换得力量之人。' },
       { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '而你，小红帽蕾克——' },
       { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '不过是她随手丢下的一个失败样本。' },
@@ -202,40 +206,64 @@ const STORY = {
     ]
   },
 
-  // ---------------------------------------------------------------- 魔姬战败 · 玛丽苏登场 · 传承
+  // ---------------------------------------------------------------- 魔姬战败 · 真相 · 传承
   crimson_fall: {
     cmds: [
-      { t: 'fade', to: 'black', frames: 45 },
-      { t: 'fade', to: 'clear', frames: 45 },
+      { t: 'say', who: 'rek_crimson', expr: 'defeated', show: true, text: '怎么可能！……你的力量，怎么会这么强？' },
+      { t: 'say', who: 'rek', expr: 'ready', show: true, text: '你被玛丽苏蛊惑了，误入歧途。' },
+      { t: 'say', who: 'rek', expr: 'ready', show: true, text: '为何到了这般地步，还不醒悟？' },
 
-      { t: 'say', who: '', text: '红色的身体跪在地上，像一盏快要熄灭的灯。' },
+      { t: 'say', who: 'rek_crimson', expr: 'defeated', show: true, text: '不可能！' },
+      { t: 'say', who: 'rek_crimson', expr: 'defeated', show: true, text: '在我被亲人背叛的时候，是玛丽苏大人赐予了我力量——' },
+      { t: 'say', who: 'rek_crimson', expr: 'defeated', show: true, text: '足以摧毁一切的力量！' },
 
+      { t: 'say', who: 'rek', expr: 'ready', show: true, text: '你的所有经历——背叛、无助，甚至这次失败——' },
+      { t: 'say', who: 'rek', expr: 'ready', show: true, text: '早就被玛丽苏预定好了。' },
+      { t: 'say', who: 'rek', expr: 'ready', show: true, text: '你的一生，只是她满足恶趣味的一环。' },
+
+      { t: 'say', who: 'rek_crimson', expr: 'defeated', show: true, text: '怎么可能！玛丽苏大——' },
+
+      { t: 'say', who: '', text: '——小雷帝，蕾克说的都是真的哦～' },
+      { t: 'say', who: 'rek', expr: 'shock', show: true, text: '！？' },
+      { t: 'say', who: 'rek_crimson', expr: 'shock', show: true, text: '！？' },
+
+      { t: 'say', who: '', text: '脚下的地面亮起一圈绿色的法阵。' },
+      { t: 'flash', seq: [{ c: 'white', f: 5 }, { c: 'black', f: 8 }] },
       { t: 'intro', id: 'marysue' },
-      { t: 'say', who: 'marysue', expr: 'mock', show: true, text: '哎呀呀……' },
+
+      { t: 'say', who: 'marysue', show: true, text: '是我哦。' },
+      { t: 'say', who: 'marysue', show: true, text: '让父母丢下你的，是我。' },
+      { t: 'say', who: 'marysue', show: true, text: '那些欺负你的“朋友”，也是人家安排的。' },
+      { t: 'say', who: 'marysue', expr: 'smug', show: true, text: '你哭着求人救你的时候，人家刚好路过——' },
+      { t: 'say', who: 'marysue', expr: 'smug', show: true, text: '多完美的剧本呀。' },
+
+      { t: 'say', who: 'rek_crimson', expr: 'defeated', show: true, text: '你！！！……咳咳！' },
+
+      { t: 'say', who: 'marysue', expr: 'fake', show: true, text: '哎呀呀……' },
       { t: 'say', who: 'marysue', expr: 'mock', show: true, text: '真是难看呢。' },
-      { t: 'say', who: 'rek_crimson', show: true, text: '玛丽苏大人……' },
       { t: 'say', who: 'marysue', expr: 'fake', show: true, text: '人家给你的舞台，可不是让你这样收场的哦。' },
       { t: 'say', who: 'marysue', expr: 'star', show: true, text: '没用的孩子，是要被换掉的。' },
 
-      { t: 'say', who: 'rek', expr: 'ready', show: true, text: '住手。' },
-      { t: 'say', who: 'marysue', expr: 'tease', show: true, text: '为什么？' },
-      { t: 'say', who: 'marysue', expr: 'tease', show: true, text: '她只是个替身而已呀。' },
-      { t: 'say', who: 'marysue', expr: 'fake', show: true, text: '你该谢谢人家才对——人家替你，保管了她这么久。' },
+      // 醒悟
+      { t: 'say', who: '', text: '玛丽苏抬起手，绿色的东西在她掌心聚成一根针。' },
+      { t: 'say', who: 'rek_crimson', expr: 'defeated', show: true, text: '……原来如此。' },
+      { t: 'say', who: 'rek_crimson', expr: 'defeated', show: true, text: '我这一生，连恨都是别人给的。' },
 
-      { t: 'say', who: '', text: '玛丽苏抬起了手。' },
-      { t: 'say', who: 'rek_crimson', show: true, text: '姐姐。' },
-      { t: 'say', who: 'rek_crimson', show: true, text: '……对不起。' },
-      { t: 'say', who: 'rek_crimson', show: true, text: '那个东西……你拿走吧。' },
+      { t: 'say', who: 'rek', expr: 'ready', show: true, text: '雷帝！' },
+      { t: 'say', who: 'rek_crimson', expr: 'eyes_closed', show: true, text: '姐姐。' },
+      { t: 'say', who: 'rek_crimson', expr: 'eyes_closed', show: true, text: '这次，换我自己选一次。' },
+      { t: 'say', who: 'rek_crimson', expr: 'eyes_closed', show: true, text: '把我的力量拿去吧——它本来就不该属于我。' },
 
       { t: 'pose', who: 'rek', expr: 'ready', frames: 40 },
-      { t: 'say', who: '', text: '红色顺着裂隙流进来。很烫，像有人把手按在胸口。' },
+      { t: 'say', who: '', text: '红色的东西从她胸口流出来。很烫，像有人把手按在胸口。' },
       { t: 'grant', skill: 'red_tragedy', banner: '红之惨剧' },
       { t: 'card', line1: '红之惨剧', line2: '夺回被夺走的一切', frames: 150 },
 
       { t: 'say', who: 'rek', expr: 'eyes_open', show: true, text: '……我接住了。' },
-      { t: 'say', who: 'marysue', show: true, text: '……真恶心。' },
-      { t: 'say', who: 'marysue', show: true, text: '那你呢？' },
-      { t: 'say', who: 'marysue', expr: 'creepy', show: true, text: '你要拿什么，来替她？' },
+
+      { t: 'say', who: 'marysue', expr: 'smug', show: true, text: '真是感人呢。' },
+      { t: 'say', who: 'marysue', expr: 'smug', show: true, text: '可惜，你们加在一起，也不够看哦。' },
+      { t: 'say', who: 'marysue', expr: 'mock', show: true, text: '来吧——让这场童话，有个像样的结尾。' },
 
       { t: 'next', chapter: 'final' }
     ]
