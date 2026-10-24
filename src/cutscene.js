@@ -85,7 +85,8 @@ const Cutscene = (function () {
   // 约定的 expr：eyes_closed（闭眼） / eyes_open（睁眼） / ready（备战） / shock（震惊） / shadow（黑影）
   const EXPR_LABEL = {
     '': '', eyes_closed: '闭眼', eyes_open: '睁眼', ready: '备战', shock: '震惊', shadow: '黑影',
-    seated_closed: '坐·闭眼', seated_open: '坐·睁眼', stand_ready: '备战', stand: '起身'
+    seated_closed: '坐·闭眼', seated_open: '坐·睁眼', stand_ready: '备战', stand: '起身',
+    look_back: '回眸'
   };
 
   function artPathOf(c, expr) {
