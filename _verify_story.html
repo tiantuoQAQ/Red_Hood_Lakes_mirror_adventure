@@ -28,6 +28,10 @@
 <div class="cap">⑧ CG 占位（法环陷阱）</div>
 <canvas id="c9" width="1280" height="720"></canvas>
 <div class="cap">⑨ 空白世界 · 走位 + 按 W 交互</div>
+<canvas id="c10" width="1280" height="720"></canvas>
+<div class="cap">⑩ 称号竖幅 title</div>
+<canvas id="c11" width="1280" height="720"></canvas>
+<div class="cap">⑪ 镜子 · 走位交互</div>
 
 <script src="src/config.js"></script>
 <script src="src/input.js"></script>
@@ -112,6 +116,19 @@
     startWalk({ bg: 'void', npc: 'norden', npcX: 980, next: 'wake_talk' });
     Game.player.x = 900;
     render(document.getElementById('c9').getContext('2d'));
+
+    // ⑩ 称号竖幅
+    Game.mode = 'story';
+    S.t = 60;
+    S.title = { who: 'norden', title: '白之女王 · 观察者', t: 0 };
+    S.portrait = null;
+    Cutscene.draw(document.getElementById('c10').getContext('2d'));
+
+    // ⑪ 镜子走位
+    S.title = null;
+    startWalk({ bg: 'void', target: { kind: 'mirror', x: 1040 }, next: 'enter_mirror' });
+    Game.player.x = 960;
+    render(document.getElementById('c11').getContext('2d'));
   }
 
   try { drawAll(); } catch (e) { document.title = 'ERR: ' + e.message; }

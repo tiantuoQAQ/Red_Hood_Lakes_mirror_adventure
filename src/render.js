@@ -437,29 +437,54 @@ function drawWalkNpc(ctx) {
   const w = Game.walk;
   if (!w) return;
 
-  if (!w.npc) {
+  if (!w.target) {
     label(ctx, '→ 向前走', W - 40, H - 24, 16, 'rgba(255,255,255,0.42)', 'right', 400);
     return;
   }
 
-  const x = w.npcX || (w.untilX + 80);
+  const x = w.target.x || 0;
   const y = GROUND_Y;
+  const kind = w.target.kind || '';
 
-  // 诺登占位：亮红身体 + 两只长耳（等立绘/分件到位后替换）
-  ctx.save();
-  ctx.fillStyle = hexToRgba(COLORS.player, 0.9);
-  ctx.fillRect(x - 20, y - 96, 40, 96);
-  ctx.fillRect(x - 18, y - 158, 8, 62);
-  ctx.fillRect(x + 10, y - 158, 8, 62);
-  ctx.restore();
-
-  label(ctx, '诺登', x, y - 176, 16, 'rgba(0,0,0,0.55)', 'center', 500);
+  if (kind === 'mirror') {
+    // 镜子占位：竖椭圆镜框 + 反光；等 art/obj/mirror.png 到位再换
+    ctx.save();
+    const mw = 74;
+    const mh = 210;
+    ctx.beginPath();
+    ctx.ellipse(x, y - mh / 2 - 10, mw / 2, mh / 2, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.10)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.65)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    // 镜面反光
+    const g = ctx.createLinearGradient(x - mw / 2, y - mh - 10, x + mw / 2, y - 10);
+    g.addColorStop(0, 'rgba(255,255,255,0.05)');
+    g.addColorStop(0.5, 'rgba(255,255,255,0.22)');
+    g.addColorStop(1, 'rgba(255,255,255,0.02)');
+    ctx.beginPath();
+    ctx.ellipse(x, y - mh / 2 - 10, mw / 2 - 4, mh / 2 - 4, 0, 0, Math.PI * 2);
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.restore();
+    label(ctx, '镜子', x, y - mh - 26, 16, 'rgba(0,0,0,0.5)', 'center', 500);
+  } else {
+    // 诺登占位：亮红身体 + 两只长耳（等立绘/分件到位后替换）
+    ctx.save();
+    ctx.fillStyle = hexToRgba(COLORS.player, 0.9);
+    ctx.fillRect(x - 20, y - 96, 40, 96);
+    ctx.fillRect(x - 18, y - 158, 8, 62);
+    ctx.fillRect(x + 10, y - 158, 8, 62);
+    ctx.restore();
+    label(ctx, '诺登', x, y - 176, 16, 'rgba(0,0,0,0.55)', 'center', 500);
+  }
 
   const near = Game.player && Math.abs(Game.player.x - x) < 120;
   if (near) {
-    label(ctx, '按 W 交互', x, y - 206, 18, '#111111', 'center', 700);
+    label(ctx, '按 W 交互', x, y - 236, 18, '#111111', 'center', 700);
   } else {
-    label(ctx, '→ 靠近她', W - 40, H - 24, 16, 'rgba(0,0,0,0.35)', 'right', 400);
+    label(ctx, '→ 靠近它', W - 40, H - 24, 16, 'rgba(0,0,0,0.35)', 'right', 400);
   }
 }
 

@@ -91,63 +91,62 @@ const STORY = {
       { t: 'flash', seq: [{ c: 'white', f: 7 }, { c: 'black', f: 10 }, { c: 'white', f: 7 }, { c: 'black', f: 14 }] },
 
       // 醒来：一片空白，只有地面和诺登；玩家自己走过去，靠近按 W 交互
-      { t: 'walk', bg: 'void', npc: 'norden', npcX: 980, next: 'wake_talk' }
+      { t: 'walk', bg: 'void', target: { kind: 'norden', x: 980 }, next: 'wake_talk' }
     ]
   },
 
   // ---------------------------------------------------------------- 醒来 · 诺登（按 W 之后）
+  // 诺登用敬语，自称「观察者」；蕾克全程警惕。
   wake_talk: {
     cmds: [
-      { t: 'intro', id: 'norden' },
-
-      { t: 'say', who: 'norden', show: true, text: '你醒了。' },
+      { t: 'say', who: 'norden', show: true, text: '贵安，蕾克小姐。' },
       { t: 'say', who: 'rek', show: true, text: '……' },
-      { t: 'say', who: 'norden', show: true, text: '你倒在林道上。是我把你捡回来的。' },
-      { t: 'say', who: 'rek', show: true, text: '这里是哪儿。' },
-      { t: 'say', who: 'norden', show: true, text: '一个什么都没有的地方。和你倒下时看见的一样吧。' },
 
-      { t: 'say', who: 'rek', show: true, text: '诺登。' },
-      { t: 'say', who: 'norden', show: true, text: '嗯。' },
-      { t: 'say', who: 'rek', show: true, text: '我输了。一次都没碰到她。' },
+      { t: 'say', who: 'norden', show: true, text: '请允许我自我介绍。' },
+      { t: 'say', who: 'norden', show: true, text: '我是「白之兔」诺登。' },
+      { t: 'say', who: 'norden', show: true, text: '现在的情况有些复杂。您只需要知道一件事——' },
+      { t: 'say', who: 'norden', show: true, text: '我是站在格林大人这一边的。' },
+
+      { t: 'say', who: 'rek', show: true, text: '……我不能相信你。' },
+      { t: 'say', who: 'rek', show: true, text: '你的意图是——' },
+      { t: 'say', who: 'norden', show: true, text: '这不重要。' },
+      { t: 'say', who: 'norden', show: true, text: '我所做的一切，都是为了格林大人。' },
+      { t: 'say', who: 'norden', show: true, text: '您被玛丽苏偷袭了。是我，从她手上把您救下来的。' },
+      { t: 'say', who: 'rek', show: true, text: '……' },
+
+      { t: 'say', who: 'norden', show: true, text: '我们都想阻止玛丽苏的狂妄之举。' },
+      { t: 'say', who: 'norden', show: true, text: '既然如此，我们暂时互相帮助——不好吗？' },
+
+      { t: 'say', who: 'norden', expr: 'eyes_closed', show: true, text: '玛丽苏现在正在「镜中世界」，筹划她自己的计划。' },
+      { t: 'say', who: 'norden', expr: 'eyes_open', show: true, text: '您要做的，就是前往「镜中世界」，然后击败她。' },
+
+      { t: 'say', who: 'rek', show: true, text: '……你为什么不自己去。' },
+      { t: 'say', who: 'norden', show: true, text: '因为我是「观察者」。' },
+      { t: 'title', who: 'norden', title: '白之女王 · 观察者', frames: 150 },
+      { t: 'say', who: 'norden', show: true, text: '直接与玛丽苏爆发冲突，后果不可估量。' },
+      { t: 'say', who: 'norden', show: true, text: '所以这件事，只能由您来完成。为了格林大人。' },
+
+      { t: 'say', who: 'rek', show: true, text: '……我好像，没有别的选择。' },
+      { t: 'say', who: 'norden', show: true, text: '感谢您的理解。' },
+      { t: 'say', who: 'norden', show: true, text: '现在，请触摸那边的镜子吧。' },
+      { t: 'say', who: 'norden', show: true, text: '它会带您进入镜中世界。' },
+      { t: 'say', who: 'norden', show: true, text: '……那个世界，非常混乱。' },
+      { t: 'wait', frames: 30 },
       { t: 'say', who: 'norden', show: true, text: '……' },
-      { t: 'say', who: 'norden', show: true, text: '那不是你的错。' },
-      { t: 'say', who: 'rek', show: true, text: '我知道。是她的错。' },
+      { t: 'say', who: 'norden', show: true, text: '祝您好运。' },
 
-      { t: 'say', who: 'norden', show: true, text: '你总是这样。' },
-      { t: 'say', who: 'rek', show: true, text: '哪样。' },
-      { t: 'say', who: 'norden', show: true, text: '把所有事都算在自己头上，再一个人去还。' },
-      { t: 'say', who: 'rek', show: true, text: '……那本来就该我还。' },
-
-      { t: 'next', chapter: 'wake' }
+      // 说完才出现镜子：玩家自己走过去，按 W 交互
+      { t: 'walk', bg: 'void', target: { kind: 'mirror', x: 1040 }, next: 'enter_mirror' }
     ]
   },
 
-  // ---------------------------------------------------------------- 诺登说明 · 去镜中世界
-  wake: {
+  // ---------------------------------------------------------------- 走进镜子
+  enter_mirror: {
     cmds: [
-      { t: 'say', who: 'norden', show: true, text: '你要找的人，不在这个世界了。' },
-      { t: 'say', who: 'rek', show: true, text: '她去哪了。' },
-      { t: 'say', who: 'norden', show: true, text: '「镜中世界」。' },
-      { t: 'say', who: 'rek', show: true, text: '镜子。' },
-      { t: 'say', who: 'norden', show: true, text: '她把门开在了自己身上。所以你能站在这儿——你已经半个身子在镜子里了。' },
-
-      { t: 'say', who: 'rek', show: true, text: '……' },
-      { t: 'say', who: 'norden', show: true, text: '那里的一切都是反的。方向、颜色、还有她给你的东西。' },
-      { t: 'say', who: 'rek', show: true, text: '反的。' },
-      { t: 'say', who: 'norden', show: true, text: '在那里，你会看见另一个你。' },
-      { t: 'say', who: 'rek', show: true, text: '另一个我。' },
-      { t: 'say', who: 'norden', show: true, text: '她会用你的脸，说你想听的话。她只想让你停下来。' },
-
-      { t: 'say', who: 'rek', show: true, text: '那我就不停。' },
-      { t: 'say', who: 'norden', show: true, text: '……' },
-      { t: 'say', who: 'norden', show: true, text: '你还是这样。' },
-
-      { t: 'say', who: 'rek', show: true, text: '我走了。' },
-      { t: 'say', who: 'norden', show: true, text: '蕾克。' },
-      { t: 'say', who: 'norden', show: true, text: '这次，别一个人扛着。' },
-      { t: 'say', who: 'rek', show: true, text: '……嗯。' },
-
-      { t: 'fade', to: 'black', frames: 45 },
+      { t: 'fade', to: 'black', frames: 55 },
+      { t: 'say', who: '', text: '她伸出手。' },
+      { t: 'say', who: '', text: '镜面像水一样，把她的手吞了下去。' },
+      { t: 'flash', seq: [{ c: 'white', f: 8 }, { c: 'black', f: 14 }] },
       { t: 'next', chapter: 'mirror' }
     ]
   },

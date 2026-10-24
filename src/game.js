@@ -181,8 +181,9 @@ function startWalk(opts) {
   Game.walk = {
     untilX: (opts && opts.untilX) || (ARENA.right - 140),
     next: (opts && opts.next) || null,
-    npc: (opts && opts.npc) || null,
-    npcX: (opts && opts.npcX) || 0,
+    // target: 可交互对象 { kind:'norden'|'mirror'|..., x, label }
+    target: (opts && opts.target) ||
+            (opts && opts.npc ? { kind: opts.npc, x: opts.npcX || 0, label: opts.npc } : null),
     bg: (opts && opts.bg) || 'normal',
     doneT: 0
   };
@@ -209,10 +210,10 @@ function updateWalk(dt) {
   const w = Game.walk;
   if (!w) return;
 
-  // 有人物要交互：靠近 + 按 W 才继续
-  if (w.npc) {
-    const npcX = w.npcX || (w.untilX + 80);
-    if (Math.abs(p.x - npcX) < 120 && Input.pressed('up')) {
+  // 有可交互对象：靠近 + 按 W 才继续
+  if (w.target) {
+    const tx = w.target.x || 0;
+    if (Math.abs(p.x - tx) < 120 && Input.pressed('up')) {
       leaveWalk(w.next);
     }
     return;

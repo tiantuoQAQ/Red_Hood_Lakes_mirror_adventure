@@ -68,12 +68,13 @@ function playThrough(maxFrames) {
   const limit = maxFrames || 40000;
   while ((Game.mode === 'story' || Game.mode === 'walk') && n < limit) {
     if (Game.mode === 'walk') {
-      if (Game.walk.npc) {
-        // 走到 NPC 旁边按 W
-        Game.player.x = (Game.walk.npcX || 0) - 10;
+      const w = Game.walk;
+      if (w && w.target) {
+        // 走到可交互对象旁边按 W
+        Game.player.x = w.target.x - 10;
         pressKey('KeyW');
       } else {
-        Game.player.x = Game.walk.untilX;
+        Game.player.x = w.untilX;
       }
       vm.runInContext('update(1/60)', sandbox);
       Input.tick();

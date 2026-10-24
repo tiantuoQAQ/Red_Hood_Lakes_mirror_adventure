@@ -58,6 +58,7 @@ const Cutscene = (function () {
     shake: null,          // 画面震动：{ t, amp }
     leaving: false,       // 正在播「丝滑退出」
     leaveT: 0,
+    title: null,          // 称号竖幅：{ who, title, t }
     framesLeft: 0,
     battleNext: null,
     finished: false,
@@ -116,6 +117,7 @@ const Cutscene = (function () {
     S.cg = null;
     S.flash = null;
     S.shake = null;
+    S.title = null;
     S.leaving = false;
     S.leaveT = 0;
     S.framesLeft = 0;
@@ -166,6 +168,11 @@ const Cutscene = (function () {
         // 只切表情，不说话
         S.portrait = { who: c.who, expr: c.expr || '' };
         S.framesLeft = c.frames || 30;
+        break;
+      case 'title':
+        // 称号竖幅：出现 → 停留 → 滑出（比如「白之女王 · 观察者」）
+        S.title = { who: c.who || '', title: c.title || '', t: 0 };
+        S.framesLeft = c.frames || 150;
         break;
       case 'cg':
         S.cg = { art: c.art || null, label: c.label || 'CG', t: 0 };
@@ -282,6 +289,7 @@ const Cutscene = (function () {
     S.cg = null;
     S.flash = null;
     S.shake = null;
+    S.title = null;
     step();
   }
 
@@ -349,7 +357,7 @@ const Cutscene = (function () {
       S.framesLeft--;
       if (S.framesLeft === 0) {
         const cc = current();
-        if (cc && (cc.t === 'card' || cc.t === 'intro' || cc.t === 'bossIntro' || cc.t === 'pose')) requestLeave();
+        if (cc && (cc.t === 'card' || cc.t === 'intro' || cc.t === 'bossIntro' || cc.t === 'pose' || cc.t === 'title')) requestLeave();
         else if (cc && cc.t === 'wait') step();
       }
       return;
@@ -858,6 +866,33 @@ const Cutscene = (function () {
     ctx.fillRect(0, 0, W, H);
   }
 
+  // 称号竖幅：只显示称号（例如「白之女王 · 观察者」），出现后停留再滑出
+  function drawTitleBanner(ctx) {
+    if (!S.title) return;
+    const inK = easeOutCubic(prog(S.t, 16));
+    const outK = S.leaving ? easeInOutQuad(prog(S.leaveT, LEAVE_OUT)) : 0;
+    const slide = (1 - inK) * 200 + outK * 200;
+    const alpha = inK * (1 - outK);
+
+    const bw = 92;
+    const bx = W - 60 - bw + slide;
+    const by = 80;
+    const bh = Math.max(150, 70 + (S.title.title || '').length * 44);
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    roundRectPath(ctx, bx, by, bw, bh, 10);
+    ctx.fillStyle = 'rgba(8,8,10,0.86)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    vtext(ctx, S.title.title || '', bx + bw / 2, by + 34, 26, '#f0f0f0', 700);
+    ctx.restore();
+  }
+
   function draw(ctx) {
     if (Game.mode !== 'story') return;
     drawBackground(ctx);
@@ -878,6 +913,7 @@ const Cutscene = (function () {
     if (S.card) drawCard(ctx);
     if (S.cg) drawCG(ctx);
     if (S.intro) drawIntro(ctx);
+    if (S.title) drawTitleBanner(ctx);
     if (S.bossIntro) drawBossIntro(ctx);
     drawSpeakerPortrait(ctx);
     if (S.text) {
