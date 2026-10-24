@@ -207,8 +207,17 @@ const Cutscene = (function () {
         Game.theme = (S.bg === 'mirror') ? 'mirror' : 'normal';
         break;
       case 'walk':
-        // 交给玩家操控走一段，走到 untilX（或靠近 npc 按 W）后回演出
-        startWalk({ untilX: c.untilX, next: c.next, npc: c.npc, npcX: c.npcX });
+        // 交给玩家操控走一段，走到 untilX（或靠近 target 按 W）后回演出
+        startWalk({
+          untilX: c.untilX,
+          next: c.next,
+          target: c.target,
+          npc: c.npc,
+          npcX: c.npcX,
+          bg: c.bg,
+          cam: c.cam,
+          props: c.props
+        });
         return;
       case 'intro':
         // 新角色登场：竖幅「称号 + 名字」，丝滑滑入，按键后再丝滑滑出
@@ -256,14 +265,19 @@ const Cutscene = (function () {
 
   function textDone() { return !S.text || S.text.shown >= S.text.text.length; }
 
-  function skip() {
-    if (!S.cmds) return;
+  function skip(depth) {
+    const d = depth || 0;
+    if (!S.cmds || d > 30) return;
+    // 本章剩下的指令里找战斗
     for (let i = S.idx; i < S.cmds.length; i++) {
       if (S.cmds[i].t === 'battle') { S.idx = i - 1; step(); return; }
     }
+    // 找不到就跳到下一章继续找（可能隔着走位段）
     for (let i = S.idx; i < S.cmds.length; i++) {
-      if (S.cmds[i].t === 'next') { start(S.cmds[i].chapter); return; }
-      if (S.cmds[i].t === 'end') { S.finished = true; Game.mode = 'win'; return; }
+      const c = S.cmds[i];
+      if (c.t === 'next') { start(c.chapter); if (Game.mode === 'story') skip(d + 1); return; }
+      if (c.t === 'walk' && c.next) { start(c.next); if (Game.mode === 'story') skip(d + 1); return; }
+      if (c.t === 'end') { S.finished = true; Game.mode = 'win'; return; }
     }
     Game.mode = 'title';
   }

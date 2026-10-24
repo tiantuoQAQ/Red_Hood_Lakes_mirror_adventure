@@ -39,6 +39,7 @@ function render(ctx) {
       drawBullets(ctx);
       drawShots(ctx);
     }
+    if (Game.mode === 'walk') drawWalkProps(ctx);
     drawPlayer(ctx);
   }
   // 镜中世界：先画地面，再把角色倒影叠在地面上
@@ -624,6 +625,62 @@ function drawVoidBackground(ctx) {
   ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
   ctx.fillStyle = 'rgba(0,0,0,0.20)';
   ctx.fillRect(0, GROUND_Y, W, 2);
+}
+
+// 走位段里的场景道具（目前只有王座）
+function drawWalkProps(ctx) {
+  const w = Game.walk;
+  if (!w || !w.props || !w.props.length) return;
+
+  for (let i = 0; i < w.props.length; i++) {
+    const p = w.props[i];
+    if (p.kind !== 'throne') continue;
+
+    const x = p.x;
+    const y = GROUND_Y;
+    ctx.save();
+
+    // 台座
+    ctx.fillStyle = 'rgba(14,14,16,0.96)';
+    ctx.fillRect(x - 96, y - 26, 192, 26);
+    ctx.fillStyle = 'rgba(255,255,255,0.10)';
+    ctx.fillRect(x - 96, y - 26, 192, 2);
+
+    // 靠背与扶手
+    ctx.fillStyle = 'rgba(14,14,16,0.96)';
+    ctx.fillRect(x - 84, y - 200, 168, 174);
+    ctx.fillRect(x - 104, y - 128, 26, 102);
+    ctx.fillRect(x + 78, y - 128, 26, 102);
+
+    // 描边
+    ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x - 84, y - 200, 168, 174);
+
+    // 坐着的人（占位：暗红剪影 + 头）
+    if (p.char) {
+      ctx.fillStyle = 'rgba(176,0,0,0.95)';
+      ctx.fillRect(x - 34, y - 150, 68, 110);       // 身体
+      ctx.beginPath();
+      ctx.arc(x, y - 168, 30, 0, Math.PI * 2);      // 头
+      ctx.fill();
+      // 兽耳（提示这是蕾克剪影）
+      ctx.beginPath();
+      ctx.moveTo(x - 26, y - 190);
+      ctx.lineTo(x - 8, y - 214);
+      ctx.lineTo(x + 2, y - 188);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(x + 26, y - 190);
+      ctx.lineTo(x + 8, y - 214);
+      ctx.lineTo(x - 2, y - 188);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
 }
 
 function drawWalkNpc(ctx) {

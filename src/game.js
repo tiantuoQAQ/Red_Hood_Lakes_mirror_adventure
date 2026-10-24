@@ -169,7 +169,8 @@ function update(dt) {
 // 目标：玩家在屏幕中间；平滑跟随；到地图边缘时被夹住（玩家随之靠边）。
 function updateCamera(dt) {
   if (!Game.cam) Game.cam = { x: 0 };
-  if (Game.mode === 'walk') { Game.cam.x = 0; return; }
+  // 走位段默认锁镜头，除非显式开了 cam
+  if (Game.mode === 'walk' && !(Game.walk && Game.walk.cam)) { Game.cam.x = 0; return; }
   const p = Game.player;
   if (!p) return;
 
@@ -218,8 +219,11 @@ function startWalk(opts) {
     target: (opts && opts.target) ||
             (opts && opts.npc ? { kind: opts.npc, x: opts.npcX || 0, label: opts.npc } : null),
     bg: (opts && opts.bg) || 'normal',
+    cam: !!(opts && opts.cam),          // 走位段是否也跟随镜头
+    props: (opts && opts.props) || [],  // 场景道具（王座等）
     doneT: 0
   };
+  if (opts && opts.bg === 'mirror') Game.theme = 'mirror';
 }
 
 function leaveWalk(next) {
@@ -234,8 +238,9 @@ function leaveWalk(next) {
 
 function updateWalk(dt) {
   const p = Game.player;
-  if (Game.cam) Game.cam.x = 0;
   updatePlayer(dt);
+  if (Game.walk && Game.walk.cam) updateCamera(dt);
+  else if (Game.cam) Game.cam.x = 0;
 
   // 越界钳制（走位段不许走出画面）
   if (p.x < ARENA.left + CFG.player.visualR) p.x = ARENA.left + CFG.player.visualR;

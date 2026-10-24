@@ -162,28 +162,38 @@ const STORY = {
       { t: 'say', who: '', text: '树是倒着长的——根在天上，枝叶垂进地面。' },
       { t: 'say', who: '', text: '这片森林干净得像从来没有人来过。' },
       { t: 'say', who: 'rek', expr: 'wary', show: true, text: '……这里什么都没有。' },
-      { t: 'say', who: '', text: '除了路中间站着的那个人。' },
+      { t: 'say', who: '', text: '除了路尽头那张王座。' },
 
-      { t: 'intro', id: 'rek_crimson' },
-      { t: 'say', who: 'rek', expr: 'wary', show: true, text: '……你是谁。' },
-      { t: 'say', who: 'rek_crimson', show: true, text: '姐姐。' },
-      { t: 'say', who: 'rek', expr: 'shock', show: true, text: '你不是我。' },
-      { t: 'say', who: 'rek_crimson', show: true, text: '我是你呀。' },
-      { t: 'say', who: 'rek_crimson', show: true, text: '是被留下来的那一个。' },
+      // 玩家自己走过去，靠近王座自动触发下一段
+      {
+        t: 'walk', bg: 'mirror', cam: true, untilX: 1180,
+        props: [{ kind: 'throne', x: 1620, char: 'rek_crimson' }],
+        next: 'mirror_meet'
+      }
+    ]
+  },
 
-      { t: 'duel', left: '蕾克', right: '猩红魔姬', text: '魔姬：你把我一个人，丢在这里。' },
-      { t: 'say', who: 'rek', expr: 'eyes_closed', show: true, text: '……' },
-      { t: 'say', who: 'rek_crimson', show: true, text: '没关系。我不怪你。' },
-      { t: 'say', who: 'rek_crimson', show: true, text: '玛丽苏大人说，只要待在这里，我什么都不用怕。' },
-      { t: 'say', who: 'rek_crimson', show: true, text: '她给了我一个故事。故事里，你没有走。' },
+  // ---------------------------------------------------------------- 王座 · 蕾帝
+  mirror_meet: {
+    cmds: [
+      { t: 'say', who: 'rek_crimson', expr: 'seated_closed', show: true, text: '……' },
+      { t: 'say', who: 'rek', expr: 'shock', show: true, text: '！？' },
+      { t: 'say', who: 'rek', show: true, text: '（她怎么……和我长得一模一样。）' },
+      { t: 'say', who: 'rek_crimson', expr: 'seated_open', show: true, text: '哟，终于来了？' },
+      { t: 'say', who: 'rek', show: true, text: '……' },
 
-      { t: 'say', who: 'rek', expr: 'eyes_open', show: true, text: '那是假的。' },
-      { t: 'say', who: 'rek_crimson', show: true, text: '假的也很好呀。' },
-      { t: 'say', who: 'rek_crimson', show: true, text: '姐姐，留下来吧。在这里，你不用再死一次。' },
+      { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '吾乃猩红魔姬·雷帝。' },
+      { t: 'title', who: 'rek_crimson', title: '猩红魔姬 · 雷帝', frames: 150 },
+      { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '玛丽苏大人最得意的作品。' },
+      { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '背弃血亲与友人，以此换得力量之人。' },
+      { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '而你，小红帽蕾克——' },
+      { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '不过是她随手丢下的一个失败样本。' },
+      { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '玛丽苏大人命吾在此，将你击溃。' },
 
-      { t: 'say', who: 'rek', expr: 'eyes_closed', show: true, text: '……我不会留下。' },
-      { t: 'say', who: 'rek_crimson', show: true, text: '那就——' },
-      { t: 'say', who: 'rek_crimson', show: true, text: '让我把你留下来。' },
+      { t: 'say', who: 'rek', expr: 'wary', show: true, text: '……失败样本。' },
+      { t: 'say', who: 'rek', expr: 'eyes_open', show: true, text: '那就让这个样本，看看你有多成功。' },
+
+      { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '此即，汝葬身之地。' },
 
       { t: 'bossIntro', id: 'rek_crimson', frames: 170 },
       { t: 'battle', boss: 'crimson', after: 'crimson_fall' }

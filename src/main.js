@@ -213,6 +213,18 @@ requestAnimationFrame(frameLoop);
     for (let i = 0; i < ff; i++) { update(STEP); Input.tick(); }
     return;
   }
+  // 调试：?throne=1 直接进王座走位段
+  if (params.get('throne') === '1') {
+    startWalk({
+      bg: 'mirror', cam: true, untilX: 1180, next: 'mirror_meet',
+      props: [{ kind: 'throne', x: 1620, char: 'rek_crimson' }]
+    });
+    const tpx = params.get('px');
+    if (tpx && Game.player) Game.player.x = parseFloat(tpx);
+    const ff = parseInt(params.get('ff') || '0', 10);
+    for (let i = 0; i < ff; i++) { update(STEP); Input.tick(); }
+    return;
+  }
   Cutscene.start('prologue');
 })();
 
