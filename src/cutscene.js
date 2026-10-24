@@ -786,7 +786,8 @@ const Cutscene = (function () {
     }
   }
 
-  // 新角色登场：右侧竖幅「名字 + 称号」，滑入 / 滑出
+  // 新角色登场：右侧装饰竖幅「名字 + 称号」，滑入 / 滑出
+  // 结构：顶部家徽（菱形 + 尖翼）+ 双描边幅面 + 两侧回纹 + 底部缎带尾 + 竖排文字
   function drawIntro(ctx) {
     const c = charOf(S.intro.id);
     const inK = easeOutCubic(prog(S.t, 16));
@@ -794,27 +795,96 @@ const Cutscene = (function () {
     const slide = (1 - inK) * 190 + outK * 190;
     const alpha = inK * (1 - outK);
 
-    const bw = 100;
-    const bx = W - 52 - bw + slide;
-    const by = 64;
+    const bw = 108;
+    const bx = W - 56 - bw + slide;
+    const by = 96;
     const bodyLen = Math.max(c.name.length, (c.title || '').length);
-    const bh = Math.max(140, 74 + bodyLen * 42);
+    const bh = Math.max(150, 88 + bodyLen * 42);
+    const cx = bx + bw / 2;
 
     ctx.save();
     ctx.globalAlpha = alpha;
 
-    // 竖幅底
-    roundRectPath(ctx, bx, by, bw, bh, 10);
-    ctx.fillStyle = 'rgba(8,8,10,0.86)';
+    // 顶部家徽：菱形 + 两侧尖翼
+    const crestY = by - 26;
+    ctx.fillStyle = hexToRgba(c.color, 0.95);
+    ctx.beginPath();
+    ctx.moveTo(cx, crestY - 15);
+    ctx.lineTo(cx + 12, crestY);
+    ctx.lineTo(cx, crestY + 15);
+    ctx.lineTo(cx - 12, crestY);
+    ctx.closePath();
     ctx.fill();
-    ctx.strokeStyle = hexToRgba(c.color, 0.9);
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
     ctx.lineWidth = 2;
     ctx.stroke();
+    for (let sgn = -1; sgn <= 1; sgn += 2) {
+      ctx.beginPath();
+      ctx.moveTo(cx + sgn * 13, crestY);
+      ctx.lineTo(cx + sgn * 38, crestY - 8);
+      ctx.lineTo(cx + sgn * 31, crestY);
+      ctx.lineTo(cx + sgn * 38, crestY + 8);
+      ctx.closePath();
+      ctx.fillStyle = hexToRgba(c.color, 0.5);
+      ctx.fill();
+    }
 
-    // 名字（竖排，主色）
-    vtext(ctx, c.name, bx + bw / 2, by + 34, 32, c.color, 700);
-    // 称号（竖排，左侧，淡一点）
-    if (c.title) vtext(ctx, c.title, bx - 26, by + 26, 19, c.titleColor || 'rgba(255,255,255,0.85)', 600);
+    // 幅面：竖向渐变 + 外粗边（角色色）+ 内细边（白）
+    const g = ctx.createLinearGradient(bx, by, bx, by + bh);
+    g.addColorStop(0, 'rgba(20,20,24,0.95)');
+    g.addColorStop(0.5, 'rgba(8,8,10,0.92)');
+    g.addColorStop(1, 'rgba(24,24,28,0.95)');
+    roundRectPath(ctx, bx, by, bw, bh, 12);
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.strokeStyle = hexToRgba(c.color, 0.95);
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    roundRectPath(ctx, bx + 6, by + 6, bw - 12, bh - 12, 9);
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // 两侧回纹（小 L 形刻线）
+    ctx.fillStyle = hexToRgba(c.color, 0.45);
+    for (let y = by + 24; y < by + bh - 26; y += 26) {
+      ctx.fillRect(bx + 12, y, 9, 3);
+      ctx.fillRect(bx + 12, y, 3, 9);
+      ctx.fillRect(bx + bw - 21, y, 9, 3);
+      ctx.fillRect(bx + bw - 15, y, 3, 9);
+    }
+
+    // 底部缎带尾
+    const tailY = by + bh;
+    ctx.fillStyle = hexToRgba(c.color, 0.9);
+    ctx.beginPath();
+    ctx.moveTo(bx + 8, tailY - 1);
+    ctx.lineTo(cx - 3, tailY + 26);
+    ctx.lineTo(cx - 3, tailY - 1);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(bx + bw - 8, tailY - 1);
+    ctx.lineTo(cx + 3, tailY + 26);
+    ctx.lineTo(cx + 3, tailY - 1);
+    ctx.closePath();
+    ctx.fill();
+
+    // 名字（竖排，主色，带光晕）
+    ctx.save();
+    ctx.shadowColor = hexToRgba(c.color, 0.9);
+    ctx.shadowBlur = 16;
+    vtext(ctx, c.name, cx - 10, by + 42, 34, c.color, 700);
+    ctx.restore();
+
+    // 名字下的分隔线
+    ctx.fillStyle = hexToRgba(c.color, 0.55);
+    ctx.fillRect(cx - 26, by + 54 + c.name.length * 42, 52, 2);
+
+    // 称号（左侧竖排）
+    if (c.title) {
+      vtext(ctx, c.title, bx - 30, by + 30, 20, c.titleColor || 'rgba(255,255,255,0.9)', 600);
+    }
 
     ctx.restore();
   }
