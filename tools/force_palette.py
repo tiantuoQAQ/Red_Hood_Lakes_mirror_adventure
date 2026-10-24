@@ -76,10 +76,9 @@ def force(src, dst):
                 px[x, y] = to_gray(r, g, b) + (a,)
                 grays += 1
             else:
-                target = nearest_hue(deg)
-                rr, gg, bb = colorsys.hls_to_rgb(target / 360.0, ll, ss)
-                px[x, y] = (int(rr * 255 + 0.5), int(gg * 255 + 0.5), int(bb * 255 + 0.5), a)
-                snapped += 1
+                # 高彩度但色相不对：不要"拧到最近色相"（会把肤色拧成红色），统一去色
+                px[x, y] = to_gray(r, g, b) + (a,)
+                grays += 1
 
     im.save(dst)
     print('压色完成: {} -> {}  去色 {} px / 归位 {} px'.format(src, dst, grays, snapped))

@@ -41,11 +41,11 @@ def unify(src, dst, gray_steps=GRAY_STEPS):
 
             # 红/青：按**彩度**判断，不用 HLS 饱和度（接近白色时 HLS 饱和度会虚高，
             # 浅粉色腮红会被误判成高饱和红色）
-            near_red = deg <= 40 or deg >= 320
-            near_cyan = abs(deg - CYAN_HUE) <= 40
-            near_green = abs(deg - GREEN_HUE) <= 40
+            near_red = deg <= 14 or deg >= 346
+            near_cyan = abs(deg - CYAN_HUE) <= 45
+            near_green = abs(deg - GREEN_HUE) <= 55
 
-            if near_red and chroma >= 0.20:
+            if near_red and chroma >= 0.25:
                 rr, gg, bb = colorsys.hls_to_rgb(0.0, ll, ss)
                 px[x, y] = (int(rr * 255 + 0.5), int(gg * 255 + 0.5), int(bb * 255 + 0.5), a)
                 locked += 1
