@@ -174,7 +174,18 @@ function updateCamera(dt) {
   if (!p) return;
 
   const maxX = Math.max(0, WORLD_W - W);
-  const target = Math.max(0, Math.min(maxX, p.x - W / 2));
+  let target = p.x - W / 2;
+
+  // 有 BOSS 时把构图往中间拉：两个目标都尽量留在画面里（各留 160 边距）
+  if (Game.boss) {
+    const bx = Game.boss.x;
+    const mid = (p.x + bx) / 2 - W / 2;
+    const leftNeed = Math.min(p.x, bx) - 160;      // cam 不能超过它，否则左边出画面的东西露馅
+    const rightNeed = Math.max(p.x, bx) + 160 - W; // cam 不能小于它，否则右边露馅
+    target = Math.max(rightNeed, Math.min(leftNeed, mid));
+  }
+
+  target = Math.max(0, Math.min(maxX, target));
 
   // 帧率无关的指数平滑：每帧保留约 14% 的差距
   const k = 1 - Math.pow(0.0001, dt);
