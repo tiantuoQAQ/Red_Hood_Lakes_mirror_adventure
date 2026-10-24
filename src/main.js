@@ -209,7 +209,9 @@ requestAnimationFrame(frameLoop);
   if (cine) {
     const cid = (cine === 'true' ? 'crimson' : cine);
     resetGame(cid);
-    Game.cutin = { id: cid, t: 30, dur: 9999 };
+    startCutin(cid);
+    Game.cutin.t = 40;
+    Game.cutin.dur = 9999;
     const cff = parseInt(params.get('ff') || '0', 10);
     for (let i = 0; i < cff; i++) { update(STEP); Input.tick(); }
     return;

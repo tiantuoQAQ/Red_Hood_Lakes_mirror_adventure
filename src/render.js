@@ -679,6 +679,43 @@ function drawCutin(ctx) {
     ctx.fillRect(0, 0, W, H);
     ctx.restore();
   }
+
+  // 技名：左下角，斜切、描边、逐字拉开字距（更像格斗游戏的字）
+  if (c.main) {
+    const k = Math.min(1, Math.max(0, (t - 10) / 10));
+    if (k > 0) {
+      const slide = (1 - k) * -70;
+      // 注意：下面会做斜切，斜切会把 x 往左拉 ~0.18*y，这里提前补偿
+      drawCutinName(ctx, c.main, W * 0.145 + slide, H * 0.795, 62, 1, alpha * k, '#FFFFFF', '#000000');
+      if (c.sub) {
+        drawCutinName(ctx, c.sub, W * 0.155 + slide * 1.2, H * 0.875, 24, 1, alpha * k * 0.92, '#FF0000', '#000000');
+      }
+    }
+  }
+}
+
+// 逐字绘制 + 手写字距（canvas 没有 letterSpacing 的稳妥写法）
+function drawCutinName(ctx, text, x, y, size, skew, alpha, fill, stroke) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.transform(1, 0, -0.18 * skew, 1, 0, 0);   // 轻微右倾，像毛笔/招牌字
+  ctx.font = '900 ' + size + 'px "Microsoft YaHei","SimHei","PingFang SC",sans-serif';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = Math.max(4, size * 0.13);
+  ctx.strokeStyle = stroke;
+  ctx.fillStyle = fill;
+
+  const gap = size * 0.10;
+  let cx = x;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch !== ' ') {
+      ctx.strokeText(ch, cx, y);
+      ctx.fillText(ch, cx, y);
+    }
+    cx += ctx.measureText(ch).width + gap;
+  }
+  ctx.restore();
 }
 
 function drawDmgTexts(ctx) {

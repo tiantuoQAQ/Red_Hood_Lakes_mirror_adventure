@@ -156,6 +156,8 @@ Boss 血量掉到**最后一个阶段**时冻结战场，在画面中央插入�
 - 冻结：update() 开头检测 Game.cutin，只推进计时、不更新任何实体
 - 绘制：src/render.js 的 drawCutin()，图片路径固定为 rt/cg/cutin_<bossId>.png
 - 每个 Boss 只放一次（oss.cutinDone）
+- **技名**：src/game.js 顶部的 CUTIN_NAMES 表（红之惨剧 / 断罪；箱庭终演 / 无救赎的童话），
+  由 drawCutinName() 逐字绘制（斜切 + 粗描边 + 手写字距），改名字只改这张表
 - 缺图时画占位提示，不会崩
 
 ### 3.3 渲染
@@ -348,7 +350,7 @@ python tools/match_skin.py <png...> --target 0.70 # 统一肤色灰阶（只动�
    - 落点：`src/audio.js`、`src/game.js` 的 `startBattle`
 
 ### P1 · 内容补完
-3.5 **必杀演出的音效与台词**：现在只有画面，建议配一声碎裂音 + 屏幕上打一行技名（例：「魔炮 · 超新星人花」那种格式）
+3.5 **必杀演出的音效**：画面与技名已就位，还缺一声碎裂/爆音（接到 src/audio.js 的 Sfx.phase() 或新加 Sfx.cutin()）
 
 4. **梅贝尔的菜单对话**（设定已给：虚无少女，结尾出现在森林空地）
    - 新章节 `mabel_talk`，在 `ending` 之后触发

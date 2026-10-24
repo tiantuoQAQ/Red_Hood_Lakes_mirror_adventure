@@ -91,8 +91,15 @@ function makeBoss(id) {
 }
 
 // 必杀演出：进入最后阶段时插入的大特写（渲染在 render.js 的 drawCutin）
+// 必杀技名（显示在演出的左下角）
+const CUTIN_NAMES = {
+  crimson: { main: '红之惨剧', sub: '断  罪' },
+  marysue: { main: '箱庭终演', sub: '无 救 赎 的 童 话' }
+};
+
 function startCutin(bossId) {
-  Game.cutin = { id: bossId, t: 0, dur: 156 };
+  const nm = CUTIN_NAMES[bossId] || { main: '', sub: '' };
+  Game.cutin = { id: bossId, t: 0, dur: 156, main: nm.main, sub: nm.sub };
   Game.shake = 14;
   if (typeof Sfx !== 'undefined' && Sfx.phase) Sfx.phase();
 }
