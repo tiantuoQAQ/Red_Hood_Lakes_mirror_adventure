@@ -1006,7 +1006,7 @@ function drawWalkNpc(ctx) {
     label(ctx, '镜子', x, y - mh - 26, 16, 'rgba(0,0,0,0.5)', 'center', 500);
   } else if (kind === 'mabel') {
     // 地图内待机立绘：优先 art/char/mabel_idle.png，缺图时临时用对话立绘
-    const nh = 300;
+    const nh = 340;
     drawCharIdle(ctx, 'mabel', x, y, nh);
     label(ctx, '梅贝尔', x, y - nh - 14, 16, 'rgba(255,255,255,0.8)', 'center', 500);
   } else {
