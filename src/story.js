@@ -211,8 +211,8 @@ const STORY = {
       { t: 'say', who: '', text: '红色的身体跪在地上，像一盏快要熄灭的灯。' },
 
       { t: 'intro', id: 'marysue' },
-      { t: 'say', who: 'marysue', expr: 'fake', show: true, text: '哎呀呀……' },
-      { t: 'say', who: 'marysue', expr: 'smug', show: true, text: '真是难看呢。' },
+      { t: 'say', who: 'marysue', expr: 'mock', show: true, text: '哎呀呀……' },
+      { t: 'say', who: 'marysue', expr: 'mock', show: true, text: '真是难看呢。' },
       { t: 'say', who: 'rek_crimson', show: true, text: '玛丽苏大人……' },
       { t: 'say', who: 'marysue', expr: 'fake', show: true, text: '人家给你的舞台，可不是让你这样收场的哦。' },
       { t: 'say', who: 'marysue', expr: 'star', show: true, text: '没用的孩子，是要被换掉的。' },
