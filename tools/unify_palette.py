@@ -13,6 +13,7 @@ import sys
 from PIL import Image
 
 CYAN_HUE = 196.2
+GREEN_HUE = 89.4
 GRAY_STEPS = 12
 
 
@@ -42,6 +43,7 @@ def unify(src, dst, gray_steps=GRAY_STEPS):
             # 浅粉色腮红会被误判成高饱和红色）
             near_red = deg <= 40 or deg >= 320
             near_cyan = abs(deg - CYAN_HUE) <= 40
+            near_green = abs(deg - GREEN_HUE) <= 40
 
             if near_red and chroma >= 0.20:
                 rr, gg, bb = colorsys.hls_to_rgb(0.0, ll, ss)
@@ -49,6 +51,10 @@ def unify(src, dst, gray_steps=GRAY_STEPS):
                 locked += 1
             elif near_cyan and chroma >= 0.15:
                 rr, gg, bb = colorsys.hls_to_rgb(CYAN_HUE / 360.0, ll, ss)
+                px[x, y] = (int(rr * 255 + 0.5), int(gg * 255 + 0.5), int(bb * 255 + 0.5), a)
+                locked += 1
+            elif near_green and chroma >= 0.15:
+                rr, gg, bb = colorsys.hls_to_rgb(GREEN_HUE / 360.0, ll, ss)
                 px[x, y] = (int(rr * 255 + 0.5), int(gg * 255 + 0.5), int(bb * 255 + 0.5), a)
                 locked += 1
             else:

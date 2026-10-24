@@ -211,16 +211,16 @@ const STORY = {
       { t: 'say', who: '', text: '红色的身体跪在地上，像一盏快要熄灭的灯。' },
 
       { t: 'intro', id: 'marysue' },
-      { t: 'say', who: 'marysue', show: true, text: '哎呀呀……' },
-      { t: 'say', who: 'marysue', show: true, text: '真是难看呢。' },
+      { t: 'say', who: 'marysue', expr: 'fake', show: true, text: '哎呀呀……' },
+      { t: 'say', who: 'marysue', expr: 'smug', show: true, text: '真是难看呢。' },
       { t: 'say', who: 'rek_crimson', show: true, text: '玛丽苏大人……' },
-      { t: 'say', who: 'marysue', show: true, text: '人家给你的舞台，可不是让你这样收场的哦。' },
-      { t: 'say', who: 'marysue', show: true, text: '没用的孩子，是要被换掉的。' },
+      { t: 'say', who: 'marysue', expr: 'fake', show: true, text: '人家给你的舞台，可不是让你这样收场的哦。' },
+      { t: 'say', who: 'marysue', expr: 'scheming', show: true, text: '没用的孩子，是要被换掉的。' },
 
       { t: 'say', who: 'rek', expr: 'ready', show: true, text: '住手。' },
-      { t: 'say', who: 'marysue', show: true, text: '为什么？' },
-      { t: 'say', who: 'marysue', show: true, text: '她只是个替身而已呀。' },
-      { t: 'say', who: 'marysue', show: true, text: '你该谢谢人家才对——人家替你，保管了她这么久。' },
+      { t: 'say', who: 'marysue', expr: 'tease', show: true, text: '为什么？' },
+      { t: 'say', who: 'marysue', expr: 'tease', show: true, text: '她只是个替身而已呀。' },
+      { t: 'say', who: 'marysue', expr: 'fake', show: true, text: '你该谢谢人家才对——人家替你，保管了她这么久。' },
 
       { t: 'say', who: '', text: '玛丽苏抬起了手。' },
       { t: 'say', who: 'rek_crimson', show: true, text: '姐姐。' },
@@ -235,7 +235,7 @@ const STORY = {
       { t: 'say', who: 'rek', expr: 'eyes_open', show: true, text: '……我接住了。' },
       { t: 'say', who: 'marysue', show: true, text: '……真恶心。' },
       { t: 'say', who: 'marysue', show: true, text: '那你呢？' },
-      { t: 'say', who: 'marysue', show: true, text: '你要拿什么，来替她？' },
+      { t: 'say', who: 'marysue', expr: 'creepy', show: true, text: '你要拿什么，来替她？' },
 
       { t: 'next', chapter: 'final' }
     ]
