@@ -121,7 +121,7 @@ const PHASES = [
 // 每个 BOSS 自带阶段表：at 是血量比例阈值，script 是该阶段的招式循环。
 const BOSSES = {
   crimson: {
-    name: '猩红魔姬 · 雷帝',
+    name: '自负的暴君 猩红魔姬',
     portrait: 'art/portrait/crimson_stand.png',
     barColor: '#FF0000',
     hp: 240,
@@ -134,7 +134,7 @@ const BOSSES = {
     ]
   },
   marysue: {
-    name: '黑童话之母 玛丽苏',
+    name: '扭曲的黑童话作家 玛丽苏',
     portrait: 'art/portrait/marysue.png',
     barColor: '#82FF00',
     hp: 420,

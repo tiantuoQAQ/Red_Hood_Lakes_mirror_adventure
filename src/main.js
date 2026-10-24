@@ -229,6 +229,19 @@ requestAnimationFrame(frameLoop);
     for (let i = 0; i < cff; i++) { update(STEP); Input.tick(); }
     return;
   }
+  // 调试：?intro=norden 直接看登场竖幅（称号按 titleColor 上色）
+  const dbgIntro = params.get('intro');
+  if (dbgIntro && typeof STORY !== 'undefined') {
+    STORY._dbg_intro = { cmds: [
+      { t: 'fade', to: 'clear', frames: 1 },
+      { t: 'intro', id: dbgIntro },
+      { t: 'wait', frames: 9999 }
+    ] };
+    Cutscene.start('_dbg_intro');
+    const iff = parseInt(params.get('ff') || '0', 10);
+    for (let i = 0; i < iff; i++) { Cutscene.update(STEP); }
+    return;
+  }
   // 调试：?chapter=wake 直接从某一章开始；?walk=1 直接进走位段
   const ch = params.get('chapter');
   if (ch) { Cutscene.start(ch); return; }

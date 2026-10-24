@@ -26,12 +26,13 @@ const Cutscene = (function () {
   const CARD_LINE1_IN = 18;
   const CARD_LINE2_IN = 16;
 
+  // titleColor：登场竖幅里「称号」的颜色（三色规范内：白 / 青蓝 / 红 / 黄绿）
   const CHARS = {
-    rek:         { name: '蕾克',   title: '小红帽',        color: '#ff0000', art: 'art/portrait/rek.png' },
-    rek_crimson: { name: '猩红魔姬', title: '另一个她',      color: '#c00000', art: 'art/portrait/crimson.png' },
-    norden:      { name: '诺登',   title: '白之兔',        color: '#ff5050', art: 'art/portrait/norden.png' },
-    marysue:     { name: '玛丽苏',  title: '黑童话之母',      color: '#00baff', art: 'art/portrait/marysue.png' },
-    mabel:       { name: '梅贝尔',  title: '虚空少女',      color: '#cfcfcf', art: 'art/portrait/mabel.png' }
+    rek:         { name: '蕾克',   title: '小红帽',              titleColor: '#ffffff', color: '#ff0000', art: 'art/portrait/rek.png' },
+    rek_crimson: { name: '猩红魔姬', title: '自负的暴君',          titleColor: '#ff0000', color: '#c00000', art: 'art/portrait/crimson.png' },
+    norden:      { name: '诺登',   title: '计时者 白之兔',        titleColor: '#ffffff', color: '#ff5050', art: 'art/portrait/norden.png' },
+    marysue:     { name: '玛丽苏',  title: '扭曲的黑童话作家',     titleColor: '#82ff00', color: '#00baff', art: 'art/portrait/marysue.png' },
+    mabel:       { name: '梅贝尔',  title: '来自虚空的虚无少女',   titleColor: '#00baff', color: '#cfcfcf', art: 'art/portrait/mabel.png' }
   };
 
   const BGS = {
@@ -813,7 +814,7 @@ const Cutscene = (function () {
     // 名字（竖排，主色）
     vtext(ctx, c.name, bx + bw / 2, by + 34, 32, c.color, 700);
     // 称号（竖排，左侧，淡一点）
-    if (c.title) vtext(ctx, c.title, bx - 26, by + 26, 19, 'rgba(255,255,255,0.7)', 500);
+    if (c.title) vtext(ctx, c.title, bx - 26, by + 26, 19, c.titleColor || 'rgba(255,255,255,0.85)', 600);
 
     ctx.restore();
   }
