@@ -250,7 +250,7 @@ const STORY = {
       { t: 'say', who: 'rek_crimson', expr: 'defeated', show: true, text: '我这一生，连恨都是别人给的。' },
 
       { t: 'say', who: 'rek', expr: 'ready', show: true, text: '雷帝！' },
-      { t: 'say', who: 'rek_crimson', expr: 'eyes_closed', show: true, text: '姐姐。' },
+      { t: 'say', who: 'rek_crimson', expr: 'eyes_closed', show: true, text: '蕾克。' },
       { t: 'say', who: 'rek_crimson', expr: 'eyes_closed', show: true, text: '这次，换我自己选一次。' },
       { t: 'say', who: 'rek_crimson', expr: 'eyes_closed', show: true, text: '把我的力量拿去吧——它本来就不该属于我。' },
 
