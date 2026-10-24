@@ -1,0 +1,33 @@
+; Engine configuration file.
+; MIRROR Godot vertical slice
+config_version=5
+
+[application]
+config/name="MIRROR / 镜"
+run/main_scene="res://godot/Main.tscn"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+
+[display]
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/size/window_width_override=1280
+window/size/window_height_override=720
+window/stretch/mode="canvas_items"
+window/handheld/orientation=1
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/default_filters/use_nearest_mipmap_filter=false
+environment/defaults/default_clear_color=Color(0.02, 0.02, 0.03, 1)
+
+[input]
+move_left={"deadzone":0.5,"events":[Object(InputEventKey,"physical_keycode":65), Object(InputEventKey,"physical_keycode":4194311)]}
+move_right={"deadzone":0.5,"events":[Object(InputEventKey,"physical_keycode":68), Object(InputEventKey,"physical_keycode":4194313)]}
+jump={"deadzone":0.5,"events":[Object(InputEventKey,"physical_keycode":32)]}
+dash={"deadzone":0.5,"events":[Object(InputEventKey,"physical_keycode":4194325), Object(InputEventKey,"physical_keycode":75)]}
+shoot={"deadzone":0.5,"events":[Object(InputEventKey,"physical_keycode":74), Object(InputEventKey,"physical_keycode":90)]}
+start={"deadzone":0.5,"events":[Object(InputEventKey,"physical_keycode":4194309), Object(InputEventKey,"physical_keycode":32)]}
+
+[audio]
+driver/enable_input=true
