@@ -119,6 +119,9 @@ const Cutscene = (function () {
     S.flash = null;
     S.shake = null;
     S.title = null;
+    S.heroExpr = '';        // 蕾克常驻左侧，默认常态
+    S.lastOther = null;     // 当前对话对象
+    S.speaker = 'rek';
     S.leaving = false;
     S.leaveT = 0;
     S.framesLeft = 0;
@@ -162,12 +165,20 @@ const Cutscene = (function () {
           expr: c.expr || '', style: c.style || '', shake: !!c.shake, bump: !!c.bump
         };
         if (c.screenshake) S.shake = { t: c.screenshake, amp: c.shakeAmp || 6 };
-        // show:true 时右侧画出说话者的立绘（表情跟着 expr 走）
-        if (c.show) S.portrait = { who: c.who, expr: c.expr || '' };
+        // show:true 时把说话者登记到舞台（蕾克常驻左侧，对方在右侧）
+        if (c.show && c.who) {
+          S.speaker = c.who;
+          if (c.who === 'rek') S.heroExpr = c.expr || '';
+          else S.lastOther = { who: c.who, expr: c.expr || '' };
+        } else if (c.who && !c.show) {
+          S.speaker = c.who;
+        }
         break;
       case 'pose':
         // 只切表情，不说话
-        S.portrait = { who: c.who, expr: c.expr || '' };
+        if (c.who === 'rek') S.heroExpr = c.expr || '';
+        else S.lastOther = { who: c.who, expr: c.expr || '' };
+        S.speaker = c.who;
         S.framesLeft = c.frames || 30;
         break;
       case 'title':
@@ -600,12 +611,30 @@ const Cutscene = (function () {
     void tailToX;
   }
 
-  // 说话者立绘（右侧）。表情差分靠 expr 换图：没有 <id>_<expr>.png 时退回基础立绘/占位块。
+  // 双人对话构图：蕾克永远在左，对方在右；说话的一方亮，另一方压暗
   function drawSpeakerPortrait(ctx) {
-    if (!S.portrait) return;
-    const bump = S.text && S.text.bump ? Math.sin(Game.frame * 2.4) * 5 : 0;
-    portrait(ctx, S.portrait.who, W * 0.74, H * 0.52 + bump, 380, 540,
-             { expr: S.portrait.expr, inFrames: 1, flip: true, phase: 3 });
+    const heroExpr = S.heroExpr || '';
+    const other = S.lastOther;          // { who, expr }
+    const speaker = S.speaker || 'rek';
+
+    if (heroExpr !== null && heroExpr !== undefined) {
+      const dim = speaker !== 'rek';
+      ctx.save();
+      ctx.globalAlpha = dim ? 0.55 : 1;
+      portrait(ctx, 'rek', W * 0.26, H * 0.52, 380, 540,
+               { expr: heroExpr, inFrames: 1, phase: 3 });
+      ctx.restore();
+    }
+
+    if (other) {
+      const dim = speaker === 'rek';
+      const bump = S.text && S.text.bump ? Math.sin(Game.frame * 2.4) * 5 : 0;
+      ctx.save();
+      ctx.globalAlpha = dim ? 0.55 : 1;
+      portrait(ctx, other.who, W * 0.74, H * 0.52 + bump, 380, 540,
+               { expr: other.expr, inFrames: 1, flip: true, phase: 3 });
+      ctx.restore();
+    }
   }
 
   function drawSay(ctx) {
