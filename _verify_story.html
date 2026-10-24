@@ -16,6 +16,10 @@
 <div class="cap">② 场景气泡 bubble</div>
 <canvas id="c3" width="1280" height="720"></canvas>
 <div class="cap">③ 双立绘对峙 duel</div>
+<canvas id="c4" width="1280" height="720"></canvas>
+<div class="cap">④ 新角色登场介绍 intro</div>
+<canvas id="c5" width="1280" height="720"></canvas>
+<div class="cap">⑤ 战斗前特写 bossIntro</div>
 
 <script src="src/config.js"></script>
 <script src="src/input.js"></script>
@@ -58,6 +62,18 @@
     left: '蕾克', right: '玛丽苏'
   };
   Cutscene.draw(document.getElementById('c3').getContext('2d'));
+
+  // ④ 角色登场介绍
+  S.text = null;
+  S.t = 60;
+  S.intro = { id: 'marysue' };
+  Cutscene.draw(document.getElementById('c4').getContext('2d'));
+
+  // ⑤ 战斗前特写
+  S.intro = null;
+  S.t = 100;
+  S.bossIntro = { id: 'rek_crimson' };
+  Cutscene.draw(document.getElementById('c5').getContext('2d'));
 </script>
 </body>
 </html>

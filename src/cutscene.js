@@ -27,11 +27,11 @@ const Cutscene = (function () {
   const CARD_LINE2_IN = 16;
 
   const CHARS = {
-    rek:         { name: '蕾克',   color: '#ff0000', art: 'art/portrait/rek.png' },
-    rek_crimson: { name: '猩红魔姬', color: '#c00000', art: 'art/portrait/crimson.png' },
-    norden:      { name: '诺登',   color: '#ff5050', art: 'art/portrait/norden.png' },
-    marysue:     { name: '玛丽苏',  color: '#00baff', art: 'art/portrait/marysue.png' },
-    mabel:       { name: '梅贝尔',  color: '#cfcfcf', art: 'art/portrait/mabel.png' }
+    rek:         { name: '蕾克',   title: '小红帽',        color: '#ff0000', art: 'art/portrait/rek.png' },
+    rek_crimson: { name: '猩红魔姬', title: '另一个她',      color: '#c00000', art: 'art/portrait/crimson.png' },
+    norden:      { name: '诺登',   title: '白之兔',        color: '#ff5050', art: 'art/portrait/norden.png' },
+    marysue:     { name: '玛丽苏',  title: '幕后黑手',      color: '#00baff', art: 'art/portrait/marysue.png' },
+    mabel:       { name: '梅贝尔',  title: '虚空少女',      color: '#cfcfcf', art: 'art/portrait/mabel.png' }
   };
 
   const BGS = {
@@ -50,6 +50,10 @@ const Cutscene = (function () {
     bg: 'night',
     text: null,
     card: null,
+    intro: null,          // 角色登场介绍：{ id }
+    bossIntro: null,      // 战斗前的放大特写：{ id }
+    leaving: false,       // 正在播「丝滑退出」
+    leaveT: 0,
     framesLeft: 0,
     battleNext: null,
     finished: false,
@@ -91,6 +95,10 @@ const Cutscene = (function () {
     S.t = 0;
     S.text = null;
     S.card = null;
+    S.intro = null;
+    S.bossIntro = null;
+    S.leaving = false;
+    S.leaveT = 0;
     S.framesLeft = 0;
     S.battleNext = null;
     S.finished = false;
@@ -140,6 +148,16 @@ const Cutscene = (function () {
         break;
       case 'scene':
         S.bg = c.bg || 'night';
+        break;
+      case 'intro':
+        // 新角色登场：竖幅「称号 + 名字」，丝滑滑入，按键后再丝滑滑出
+        S.intro = { id: c.id };
+        if (c.frames) S.framesLeft = c.frames;
+        break;
+      case 'bossIntro':
+        // 战斗前特写：镜头推近 + BATTLE START! + 名字
+        S.bossIntro = { id: c.id };
+        S.framesLeft = c.frames || 165;
         break;
       case 'battle':
         startBattle(c.boss || 'marysue', c.after || null);
@@ -194,6 +212,24 @@ const Cutscene = (function () {
     return Input.pressed('start') || Input.pressed('jump') || Input.pressed('fire');
   }
 
+  const LEAVE_OUT = 10;   // 丝滑退出帧数
+
+  function requestLeave() {
+    if (S.leaving) return;
+    S.leaving = true;
+    S.leaveT = 0;
+  }
+
+  function finishLeave() {
+    S.leaving = false;
+    S.leaveT = 0;
+    S.text = null;
+    S.card = null;
+    S.intro = null;
+    S.bossIntro = null;
+    step();
+  }
+
   // ------------------------------------------------------------ 更新
 
   function update(dt) {
@@ -201,6 +237,13 @@ const Cutscene = (function () {
     Cutscene.forceAdvance = false;
 
     if (Input.pressed('skip')) { skip(); return; }
+
+    // 退出动画优先：播完才进入下一条
+    if (S.leaving) {
+      S.leaveT++;
+      if (S.leaveT >= LEAVE_OUT) finishLeave();
+      return;
+    }
 
     S.frame = (S.frame || 0) + 1;
     S.t++;
@@ -237,8 +280,9 @@ const Cutscene = (function () {
     if (S.framesLeft > 0) {
       S.framesLeft--;
       if (S.framesLeft === 0) {
-        if (S.card) { S.card = null; step(); }
-        else if (current() && current().t === 'wait') step();
+        const cc = current();
+        if (cc && (cc.t === 'card' || cc.t === 'intro' || cc.t === 'bossIntro')) requestLeave();
+        else if (cc && cc.t === 'wait') step();
       }
       return;
     }
@@ -255,8 +299,7 @@ const Cutscene = (function () {
     // 防连点：一次推进至少隔 4 帧，避免手滑跳两页
     if (adv && S.frame - S.lastAdvanceFrame > 4) {
       S.lastAdvanceFrame = S.frame;
-      S.text = null;
-      step();
+      requestLeave();
     }
   }
 
@@ -551,16 +594,118 @@ const Cutscene = (function () {
     if (textDone()) nextArrow(ctx, x + boxW - 30, y + 112 - 24);
   }
 
+  // 竖排文字（称号用）
+  function vtext(ctx, text, x, y, size, color, weight) {
+    ctx.font = (weight || 700) + ' ' + size + 'px "Segoe UI", "Microsoft YaHei", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = color;
+    for (let i = 0; i < text.length; i++) {
+      ctx.fillText(text[i], x, y + i * (size + 8));
+    }
+  }
+
+  // 新角色登场：右侧竖幅「名字 + 称号」，滑入 / 滑出
+  function drawIntro(ctx) {
+    const c = charOf(S.intro.id);
+    const inK = easeOutCubic(prog(S.t, 16));
+    const outK = S.leaving ? easeInOutQuad(prog(S.leaveT, LEAVE_OUT)) : 0;
+    const slide = (1 - inK) * 190 + outK * 190;
+    const alpha = inK * (1 - outK);
+
+    const bw = 100;
+    const bx = W - 52 - bw + slide;
+    const by = 64;
+    const bodyLen = Math.max(c.name.length, (c.title || '').length);
+    const bh = Math.max(140, 74 + bodyLen * 42);
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    // 竖幅底
+    roundRectPath(ctx, bx, by, bw, bh, 10);
+    ctx.fillStyle = 'rgba(8,8,10,0.86)';
+    ctx.fill();
+    ctx.strokeStyle = hexToRgba(c.color, 0.9);
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 名字（竖排，主色）
+    vtext(ctx, c.name, bx + bw / 2, by + 34, 32, c.color, 700);
+    // 称号（竖排，左侧，淡一点）
+    if (c.title) vtext(ctx, c.title, bx - 26, by + 26, 19, 'rgba(255,255,255,0.7)', 500);
+
+    ctx.restore();
+  }
+
+  // 战斗前特写：镜头推近 + BATTLE START! + 名字
+  function drawBossIntro(ctx) {
+    const c = charOf(S.bossIntro.id);
+    const t = S.t;
+    const inK = easeOutCubic(prog(t, 18));
+    const zoom = 0.88 + 0.22 * easeOutCubic(prog(t, 70));
+    const outK = S.leaving ? easeInOutQuad(prog(S.leaveT, LEAVE_OUT)) : 0;
+
+    // 立绘推近（略微偏上，给底部文字留位置）
+    ctx.save();
+    ctx.globalAlpha = inK * (1 - outK);
+    ctx.translate(W / 2, H * 0.38);
+    ctx.scale(zoom + outK * 0.1, zoom + outK * 0.1);
+    ctx.translate(-W / 2, -H * 0.38);
+    portrait(ctx, S.bossIntro.id, W / 2, H * 0.38, 360, 520, { inFrames: 1 });
+    ctx.restore();
+
+    // 底部压暗，保证文字可读
+    const gg = ctx.createLinearGradient(0, H * 0.58, 0, H);
+    gg.addColorStop(0, 'rgba(0,0,0,0)');
+    gg.addColorStop(1, 'rgba(0,0,0,0.9)');
+    ctx.fillStyle = gg;
+    ctx.fillRect(0, H * 0.58, W, H * 0.42);
+
+    // BATTLE START!
+    const sK = easeOutBack(prog(t - 12, 14));
+    ctx.save();
+    ctx.globalAlpha = clamp01((t - 12) / 10) * (1 - outK);
+    ctx.translate(W / 2, H * 0.78);
+    ctx.scale(0.86 + 0.14 * sK, 0.86 + 0.14 * sK);
+    ctx.font = '800 64px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth = 12;
+    ctx.strokeStyle = 'rgba(0,0,0,0.9)';
+    ctx.strokeText('BATTLE START!', 0, 0);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('BATTLE START!', 0, 0);
+    ctx.restore();
+
+    // 名字
+    const nK = clamp01((t - 24) / 12) * (1 - outK);
+    ctx.save();
+    ctx.globalAlpha = nK;
+    label(ctx, c.name, W / 2, H * 0.89, 36, c.color, 'center', 700);
+    ctx.restore();
+  }
+
   function draw(ctx) {
     if (Game.mode !== 'story') return;
     drawBackground(ctx);
 
+    const outK = S.leaving ? easeInOutQuad(prog(S.leaveT, LEAVE_OUT)) : 0;
+
+    ctx.save();
+    ctx.globalAlpha = 1 - outK;
+    ctx.translate(0, outK * 10);
+
     if (S.card) drawCard(ctx);
+    if (S.intro) drawIntro(ctx);
+    if (S.bossIntro) drawBossIntro(ctx);
     if (S.text) {
       if (S.text.mode === 'bubble') drawBubble(ctx);
       else if (S.text.mode === 'duel') drawDuel(ctx);
       else drawSay(ctx);
     }
+
+    ctx.restore();
 
     label(ctx, 'Enter / 空格 继续    Tab 跳过', W - 30, H - 16, 13,
           'rgba(255,255,255,0.35)', 'right', 400);

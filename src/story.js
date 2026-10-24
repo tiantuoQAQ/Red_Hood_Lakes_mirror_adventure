@@ -42,6 +42,7 @@ const STORY = {
       { t: 'fade', to: 'clear', frames: 40 },
       { t: 'scene', bg: 'night' },
       { t: 'bubble', who: '蕾克', text: '【待填】……这里是？' },
+      { t: 'intro', id: 'norden' },
       { t: 'duel', left: '蕾克', right: '诺登', text: '【待填】诺登：你醒了。是我把你捡回来的。' },
       { t: 'say', who: '诺登', text: '【待填】玛丽苏已经不在这个世界了。她躲进了「镜中世界」。' },
       { t: 'say', who: '诺登', text: '【待填】……我以为你会问「为什么」。' },
@@ -58,7 +59,9 @@ const STORY = {
       { t: 'fade', to: 'clear', frames: 45 },
       { t: 'say', who: '', text: '镜面之后，是一整片被倒置的世界。' },
       { t: 'say', who: '', text: '而在路的尽头，站着另一个「她」。' },
+      { t: 'intro', id: 'rek_crimson' },
       { t: 'duel', left: '蕾克', right: '猩红魔姬', text: '【待填】魔姬：姐姐，你终于来陪我了。' },
+      { t: 'bossIntro', id: 'rek_crimson', frames: 170 },
       { t: 'battle', boss: 'crimson', after: 'crimson_fall' }
     ]
   },
@@ -68,6 +71,7 @@ const STORY = {
     cmds: [
       { t: 'fade', to: 'black', frames: 45 },
       { t: 'fade', to: 'clear', frames: 45 },
+      { t: 'intro', id: 'marysue' },
       { t: 'say', who: '玛丽苏', text: '【待填】没用的孩子。你已经没有价值了。' },
       { t: 'duel', left: '玛丽苏', right: '猩红魔姬', text: '【待填】魔姬：……不要，别丢下我。' },
       { t: 'say', who: '玛丽苏', text: '【待填】镜子里多的是替代品。' },
@@ -84,6 +88,7 @@ const STORY = {
     cmds: [
       { t: 'scene', bg: 'mirror' },
       { t: 'duel', left: '蕾克', right: '玛丽苏', text: '【待填】玛丽苏：就凭你，也想照亮这面镜子？' },
+      { t: 'bossIntro', id: 'marysue', frames: 180 },
       { t: 'battle', boss: 'marysue', after: 'ending' }
     ]
   },
