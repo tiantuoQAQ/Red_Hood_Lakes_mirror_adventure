@@ -51,7 +51,7 @@ def unify(src, dst, gray_steps=GRAY_STEPS):
                 rr, gg, bb = colorsys.hls_to_rgb(0.0, ll, ss)
                 px[x, y] = (int(rr * 255 + 0.5), int(gg * 255 + 0.5), int(bb * 255 + 0.5), a)
                 locked += 1
-            elif near_green and chroma >= 0.16 and ll <= 0.88:
+            elif near_green and chroma >= 0.20 and ll <= 0.86:
                 rr, gg, bb = colorsys.hls_to_rgb(GREEN_HUE / 360.0, ll, ss)
                 px[x, y] = (int(rr * 255 + 0.5), int(gg * 255 + 0.5), int(bb * 255 + 0.5), a)
                 locked += 1
