@@ -794,18 +794,18 @@ const Cutscene = (function () {
       ctx.lineWidth = 4.5;
       ctx.strokeStyle = color;
       ctx.strokeText(ch, x, cy);
-      // 内白细边（模拟压印高光）
-      ctx.lineWidth = 1.6;
-      ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+      // 内白细边（模拟压印高光，别太亮，否则字会糊）
+      ctx.lineWidth = 1.0;
+      ctx.strokeStyle = 'rgba(255,255,255,0.55)';
       ctx.strokeText(ch, x, cy);
       // 填充
       ctx.fillStyle = color;
       ctx.fillText(ch, x, cy);
-      // 左上偏移的白色高光，做出立体烫印感
+      // 轻微左上高光
       ctx.save();
-      ctx.globalAlpha *= 0.35;
+      ctx.globalAlpha *= 0.16;
       ctx.fillStyle = '#ffffff';
-      ctx.fillText(ch, x - 1.1, cy - 1.1);
+      ctx.fillText(ch, x - 0.9, cy - 0.9);
       ctx.restore();
     }
   }
@@ -832,8 +832,10 @@ const Cutscene = (function () {
     const bw = 108;
     const bx = W - 56 - bw + slide;
     const by = 96;
-    const bodyLen = Math.max(c.name.length, (c.title || '').length);
-    const bh = Math.max(150, 88 + bodyLen * 42);
+    // 高度按两列「实际占位」取大者：名字 42/字、称号 28/字
+    const nameH = c.name.length * 42;
+    const titleH = (c.title || '').length * 28;
+    const bh = Math.max(150, 56 + Math.max(nameH, titleH));
     const cx = bx + bw / 2;
 
     ctx.save();
@@ -904,16 +906,17 @@ const Cutscene = (function () {
     ctx.closePath();
     ctx.fill();
 
-    // 名字（竖排，主色，带光晕）
+    // 名字（竖排，主色，极轻光晕）：在幅面内垂直居中，避免短名字上面空一大截
+    const nameTop = by + Math.max(40, (bh - nameH) / 2 + 10);
     ctx.save();
-    ctx.shadowColor = hexToRgba(c.color, 0.9);
-    ctx.shadowBlur = 16;
-    vtextEmboss(ctx, c.name, cx - 10, by + 42, 34, c.color, 700);
+    ctx.shadowColor = hexToRgba(c.color, 0.45);
+    ctx.shadowBlur = 6;
+    vtextEmboss(ctx, c.name, cx - 10, nameTop, 34, c.color, 700);
     ctx.restore();
 
     // 名字下的分隔线
     ctx.fillStyle = hexToRgba(c.color, 0.55);
-    ctx.fillRect(cx - 26, by + 54 + c.name.length * 42, 52, 2);
+    ctx.fillRect(cx - 26, nameTop + 20 + c.name.length * 42, 52, 2);
 
     // 称号（左侧竖排）
     if (c.title) {
