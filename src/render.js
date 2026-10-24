@@ -944,7 +944,7 @@ function drawWalkProps(ctx) {
 //   缺失时退回对话立绘（art/portrait/<id>.png）临时顶替，不会崩
 const CHAR_IDLE = {};
 // 换图后浏览器可能用旧缓存，带个版本号强制刷新
-const ART_VER = '?v=7';
+const ART_VER = '?v=8';
 function getCharIdle(id) {
   if (!CHAR_IDLE[id]) {
     if (typeof Image === 'undefined') return null;
