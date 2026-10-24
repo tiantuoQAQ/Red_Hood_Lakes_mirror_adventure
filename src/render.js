@@ -706,48 +706,138 @@ function drawCutin(ctx) {
       ctx.restore();
 
       // 注意：下面会做斜切，斜切会把 x 往左拉，这里提前补偿
-      drawCutinName(ctx, c.main, nx, ny, size, 1, alpha * k, '#FFFFFF', '#000000');
+      drawCutinName(ctx, c.main, nx, ny, size, 1, alpha * k, '#FFFFFF', '#000000', true);
       if (c.sub) {
-        drawCutinName(ctx, c.sub, nx + 6, ny + 46, 26, 1, alpha * k * 0.95, '#FFFFFF', '#000000');
+        drawCutinName(ctx, c.sub, nx + 6, ny + 50, 27, 1, alpha * k * 0.95, '#FFFFFF', '#000000', false);
       }
     }
   }
 }
 
-// 逐字绘制 + 手写字距（canvas 没有 letterSpacing 的稳妥写法）
-// 毛笔体：CutinBrush 是打包的华文行楷；加载失败自动回退到系统楷体
-function drawCutinName(ctx, text, x, y, size, skew, alpha, fill, stroke) {
+// 技名字形缓存：把字先画进离屏 canvas，再在离屏上做「飞白」，最后整块贴到主画面
+const NAME_SPRITE = {};
+
+function cutinNameSprite(text, size, fill, stroke) {
+  const key = text + '|' + size + '|' + fill + '|' + stroke;
+  if (NAME_SPRITE[key]) return NAME_SPRITE[key];
+  if (typeof document === 'undefined') return null;
+
+  const font = size + 'px "CutinBrush","STXingkai","KaiTi","STKaiti",serif';
+  const gap = size * 0.045;
+  const pad = Math.ceil(size * 0.45);
+
+  const cv = document.createElement('canvas');
+  const m = cv.getContext('2d');
+  m.font = font;
+  const widths = [];
+  let total = 0;
+  for (let i = 0; i < text.length; i++) {
+    const w = text[i] === ' ' ? size * 0.3 : m.measureText(text[i]).width;
+    widths.push(w);
+    total += w + gap;
+  }
+
+  const baseline = Math.ceil(size * 1.28);
+  cv.width = Math.ceil(total + pad * 2);
+  cv.height = Math.ceil(baseline + size * 0.5);
+  const c = cv.getContext('2d');
+  c.font = font;
+  c.textBaseline = 'alphabetic';
+  c.lineJoin = 'round';
+  c.lineWidth = Math.max(3, size * 0.10);
+  c.strokeStyle = stroke;
+  c.fillStyle = fill;
+
+  let x = pad;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    const w = widths[i];
+    if (ch !== ' ') {
+      // 每字轻微不齐：大小 ±2%、上下 ±2.4px、旋转 ±0.7°
+      const s = (i * 37 + Math.floor(size)) % 7;
+      const sc = 1 + ((s % 3) - 1) * 0.02;
+      const dy = ((s % 5) - 2) * 1.2;
+      const rot = ((s % 3) - 1) * 0.012;
+      c.save();
+      c.translate(x + w / 2, baseline + dy);
+      c.rotate(rot);
+      c.scale(sc, sc);
+      c.strokeText(ch, -w / 2, 0);
+      c.fillText(ch, -w / 2, 0);
+      c.restore();
+    }
+    x += w + gap;
+  }
+
+  // —— 飞白：在字里挖出细长的缺口，模拟枯笔擦过纸面 ——
+  let seed = 20261024;
+  const rnd = () => {
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    return seed / 0x7fffffff;
+  };
+  c.globalCompositeOperation = 'destination-out';
+  const streaks = Math.round(size * 0.34);
+  for (let i = 0; i < streaks; i++) {
+    const yy = rnd() * cv.height;
+    const xx = rnd() * cv.width;
+    const len = size * (0.06 + rnd() * 0.26);
+    c.globalAlpha = 0.18 + rnd() * 0.38;
+    c.lineWidth = 0.6 + rnd() * 1.5;
+    c.strokeStyle = '#000';
+    c.beginPath();
+    c.moveTo(xx, yy);
+    c.lineTo(xx + len, yy - len * 0.12);
+    c.stroke();
+  }
+  // 边缘咬碎：字的外沿再啃掉一些，枯笔感更足
+  for (let i = 0; i < streaks * 0.35; i++) {
+    c.globalAlpha = 0.3 + rnd() * 0.4;
+    c.beginPath();
+    c.arc(rnd() * cv.width, rnd() * cv.height, rnd() * size * 0.022, 0, Math.PI * 2);
+    c.fillStyle = '#000';
+    c.fill();
+  }
+  c.globalCompositeOperation = 'source-over';
+  c.globalAlpha = 1;
+
+  NAME_SPRITE[key] = { cv: cv, pad: pad, baseline: baseline };
+  return NAME_SPRITE[key];
+}
+
+// 落墨：字周围甩出去的黑点与墨渍
+function drawInkSplatter(ctx, x, y, w, size, alpha, seedBase) {
+  let seed = seedBase || 7;
+  const rnd = () => {
+    seed = (seed * 16807 + 11) & 0x7fffffff;
+    return seed / 0x7fffffff;
+  };
   ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.transform(1, 0, -0.14 * skew, 1, 0, 0);   // 轻微右倾，像挥出去的笔势
-  ctx.font = size + 'px "CutinBrush","STXingkai","KaiTi","STKaiti",serif';
-  ctx.textBaseline = 'alphabetic';
-  ctx.lineJoin = 'round';
-  ctx.lineWidth = Math.max(3, size * 0.10);
-  ctx.strokeStyle = stroke;
-  ctx.fillStyle = fill;
+  for (let i = 0; i < 26; i++) {
+    const px = x + rnd() * w;
+    const py = y - size * (0.2 + rnd() * 0.75);
+    const r = 0.7 + rnd() * (rnd() > 0.85 ? 4.2 : 1.6);
+    ctx.fillStyle = rnd() > 0.9 ? 'rgba(255,0,0,0.75)' : 'rgba(0,0,0,0.8)';
+    ctx.beginPath();
+    ctx.arc(px, py, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
 
-  const gap = size * 0.045;
-  let cx = x;
-  const n = text.length;
-  for (let i = 0; i < n; i++) {
-    const ch = text[i];
-    const w = ctx.measureText(ch).width;
-    if (ch !== ' ') {
-      // 每字轻微随机：大小 ±4%、上下 ±3px、旋转 ±2.5°，模仿手写的不齐
-      const seed = (i * 37 + Math.floor(size)) % 7;
-      const sc = 1 + ((seed % 3) - 1) * 0.02;
-      const dy = ((seed % 5) - 2) * 1.2;
-      const rot = ((seed % 3) - 1) * 0.012;
-      ctx.save();
-      ctx.translate(cx + w / 2, y + dy);
-      ctx.rotate(rot);
-      ctx.scale(sc, sc);
-      ctx.strokeText(ch, -w / 2, 0);
-      ctx.fillText(ch, -w / 2, 0);
-      ctx.restore();
-    }
-    cx += w + gap;
+// 贴技名：斜切 + 透明度 + 飞白字形 + 墨点
+function drawCutinName(ctx, text, x, y, size, skew, alpha, fill, stroke, splatter) {
+  const sp = cutinNameSprite(text, size, fill, stroke);
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.transform(1, 0, -0.14 * skew, 1, 0, 0);
+  if (sp) {
+    ctx.drawImage(sp.cv, x - sp.pad, y - sp.baseline);
+    if (splatter) drawInkSplatter(ctx, x - sp.pad, y + size * 0.12, sp.cv.width, size, alpha * 0.85, 91 + text.length * 13);
+  } else {
+    ctx.font = size + 'px "CutinBrush","STXingkai","KaiTi","STKaiti",serif';
+    ctx.fillStyle = fill;
+    ctx.fillText(text, x, y);
   }
   ctx.restore();
 }
