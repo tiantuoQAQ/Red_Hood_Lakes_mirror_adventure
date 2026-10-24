@@ -242,7 +242,7 @@ const STORY = {
       { t: 'say', who: 'marysue', expr: 'fake', show: true, text: '哎呀呀……' },
       { t: 'say', who: 'marysue', expr: 'mock', show: true, text: '真是难看呢。' },
       { t: 'say', who: 'marysue', expr: 'fake', show: true, text: '人家给你的舞台，可不是让你这样收场的哦。' },
-      { t: 'say', who: 'marysue', expr: 'creepy', show: true, text: '没用的孩子，是要被换掉的。' },
+      { t: 'say', who: 'marysue', expr: 'star', show: true, text: '没用的孩子，是要被换掉的。' },
 
       // 醒悟
       { t: 'say', who: '', text: '玛丽苏抬起手，绿色的东西在她掌心聚成一根针。' },
