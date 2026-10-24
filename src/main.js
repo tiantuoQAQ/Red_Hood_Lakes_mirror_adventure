@@ -170,7 +170,7 @@ requestAnimationFrame(frameLoop);
   const params = new URLSearchParams(location.search);
   if (params.get('theme')) Game.theme = params.get('theme');
   if (params.get('auto') === '1') {
-    resetGame();
+    resetGame(params.get('boss') || undefined);
     const ff = parseInt(params.get('ff') || '0', 10);
     for (let i = 0; i < ff; i++) {
       update(STEP);

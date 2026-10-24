@@ -267,6 +267,7 @@ globalThis.__run = function (keydown, keyup, releaseAll, mousedown, mouseup) {
   out.dashRefund = cdBefore - Game.player.dashCd;
 
   // 7. 阶段推进：越过阈值后切阶段并清屏
+  // 默认 BOSS 是玛丽苏（6 阶段），50% 血正好落在第 4 阶段
   resetGame();
   for (let i = 0; i < 200; i++) update(STEP);
   out.bulletsBeforePhase = Game.bullets.length;
@@ -423,7 +424,7 @@ const checks = [
   ['受击不顿帧', out.hurtNoHitstop === true, ''],
   ['中弹后进入无敌', out.invulnAfterHit >= out.invulnExpected, out.invulnAfterHit + ' 帧 / 期望 ≥ ' + out.invulnExpected],
   ['弹幕会生成', out.bulletsBeforePhase > 0, '200 帧时场上 ' + out.bulletsBeforePhase + ' 颗'],
-  ['血量过阈值切换阶段', out.phaseAfterDrop === 1, 'phase=' + out.phaseAfterDrop],
+  ['血量过阈值切换阶段', out.phaseAfterDrop === 3, 'phase=' + out.phaseAfterDrop],
   ['换阶段清屏', out.bulletsClearedOnPhase === 0, ''],
   ['弹幕峰值可控', out.peakUnder1000, '峰值 ' + out.peakBullets + ' 颗，900 帧后剩 ' + out.after900 + ' 颗'],
   ['鼠标左键可射击', out.mouseFireShots > 0, '出膛 ' + out.mouseFireShots + ' 发'],

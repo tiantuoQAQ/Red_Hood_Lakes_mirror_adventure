@@ -484,11 +484,12 @@ function updateBoss(dt) {
   b.y = b.y0 + Math.sin(Game.frame * 0.017 * B.bobSpeed) * B.bobAmp;
   if (b.flash > 0) b.flash--;
 
-  // 阶段判定
+  // 阶段判定（每个 BOSS 有自己的阶段表）
+  const phases = (typeof BOSSES !== 'undefined' && BOSSES[b.id] && BOSSES[b.id].phases) || PHASES;
   const ratio = b.hp / b.maxHp;
   let ph = 0;
-  for (let i = 0; i < PHASES.length; i++) {
-    if (ratio <= PHASES[i].at) ph = i;
+  for (let i = 0; i < phases.length; i++) {
+    if (ratio <= phases[i].at) ph = i;
   }
   if (ph !== b.phase) {
     b.phase = ph;
@@ -505,7 +506,7 @@ function updateBoss(dt) {
 
   if (b.gap > 0) { b.gap--; return; }
 
-  const script = PHASES[b.phase].script;
+  const script = phases[b.phase].script;
   const name = script[b.scriptIdx % script.length];
   const pat = PATTERNS[name];
   if (!pat) { b.gap = 30; return; }

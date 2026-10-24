@@ -587,7 +587,9 @@ function drawHUD(ctx) {
   ctx.fillRect(0, 0, W, 96);
 
   // ---------------- BOSS 血条（右上角） ----------------
-  const phases = (bossDef(b) && bossDef(b).phases) || PHASES;
+  const def = bossDef(b);
+  const phases = (def && def.phases) || PHASES;
+  const hideTotal = !!(def && def.hideTotal);
   const bw = 380;
   const bx = W - 60 - bw;
   const by = 34;
@@ -605,15 +607,20 @@ function drawHUD(ctx) {
   ctx.fillRect(bx, by, bw, 8);
   bar(ctx, bx, by, bw, 8, seg, COLORS.hazard);
 
-  // 阶段分隔小点（下面有 PHASE 文字，这里只做一个进度感）
-  for (let i = 0; i < phases.length; i++) {
-    const px = W - 60 - (phases.length - 1 - i) * 12;
-    ctx.fillStyle = i <= b.phase ? hexToRgba(COLORS.hazard, 0.9) : 'rgba(255,255,255,0.18)';
-    ctx.fillRect(px - 4, by + 16, 6, 3);
+  // 阶段分隔小点（最终 BOSS 不显示总数，所以点也一起藏掉）
+  if (!hideTotal) {
+    for (let i = 0; i < phases.length; i++) {
+      const px = W - 60 - (phases.length - 1 - i) * 12;
+      ctx.fillStyle = i <= b.phase ? hexToRgba(COLORS.hazard, 0.9) : 'rgba(255,255,255,0.18)';
+      ctx.fillRect(px - 4, by + 16, 6, 3);
+    }
   }
 
   // 阶段文字
-  mono(ctx, 'PHASE ' + (b.phase + 1) + ' / ' + phases.length, W - 60, by + 38, 11, COLORS.dim, 'right');
+  const phaseLabel = hideTotal
+    ? 'PHASE ' + (b.phase + 1)
+    : 'PHASE ' + (b.phase + 1) + ' / ' + phases.length;
+  mono(ctx, phaseLabel, W - 60, by + 38, 11, COLORS.dim, 'right');
 
   // 右侧小菱形（BOSS 标记）
   drawDiamond(ctx, W - 40, by + 4, 7, COLORS.hazard, true);

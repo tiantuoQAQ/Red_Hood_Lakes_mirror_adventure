@@ -116,17 +116,31 @@ const PHASES = [
 
 // ---- BOSS 表（剧情两场）--------------------------------------------------
 // 同一个状态机，靠这张表区分「中段魔姬」和「最终玛丽苏」。
-// 招式脚本暂时共用 PHASES，之后各自细化时在这里覆盖 phases。
+// 每个 BOSS 自带阶段表：at 是血量比例阈值，script 是该阶段的招式循环。
 const BOSSES = {
   crimson: {
     name: '猩红魔姬 蕾克',
     hp: 240,
-    phases: PHASES
+    phases: [
+      { at: 1.0, script: ['ring'] },
+      { at: 0.8, script: ['ring', 'mirrorFan'] },
+      { at: 0.6, script: ['mirrorFan', 'lances'] },
+      { at: 0.4, script: ['lances', 'laser'] },
+      { at: 0.2, script: ['laser', 'homing', 'bossDash'] }
+    ]
   },
   marysue: {
     name: '幕后黑手 玛丽苏',
     hp: 420,
-    phases: PHASES
+    hideTotal: true,        // 不告诉玩家一共几阶段
+    phases: [
+      { at: 1.0, script: ['ring'] },
+      { at: 5 / 6, script: ['ring', 'mirrorFan'] },
+      { at: 4 / 6, script: ['mirrorFan', 'lances'] },
+      { at: 3 / 6, script: ['lances', 'laser'] },
+      { at: 2 / 6, script: ['laser', 'homing', 'orbit'] },
+      { at: 1 / 6, script: ['bossDash', 'lances', 'laser', 'orbit'] }
+    ]
   }
 };
 
