@@ -36,23 +36,24 @@
   Cutscene.start('prologue');      // 初始化场景
   S.bg = 'forest';
   S.black = 0;
+  S.t = 60;                        // 让入场动画走完（真实游戏里由 update 推进）
 
   // ① 章节卡
-  S.card = { line1: '悲愤交加的勇者', line2: '踏上了寻回珍视之人的旅途' };
+  S.card = { line1: '悲愤交加的勇者', line2: '踏上了寻回珍视之人的旅途', t: 60 };
   S.text = null;
   Cutscene.draw(document.getElementById('c1').getContext('2d'));
 
   // ② 场景气泡
   S.card = null;
   S.text = {
-    mode: 'bubble', who: '蕾克', shown: 99, chars: 99,
+    mode: 'bubble', who: '蕾克', shown: 99, acc: 0, pause: 0, t: 30,
     text: '这次不会再让你跑掉了。'
   };
   Cutscene.draw(document.getElementById('c2').getContext('2d'));
 
   // ③ 双立绘对峙
   S.text = {
-    mode: 'duel', who: '', shown: 99, chars: 99,
+    mode: 'duel', who: '', shown: 99, acc: 0, pause: 0, t: 30,
     text: '没用的孩子。你已经没有价值了。',
     left: '蕾克', right: '玛丽苏'
   };
