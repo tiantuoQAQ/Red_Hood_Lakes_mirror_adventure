@@ -11,7 +11,7 @@ art/char/<角色id>_idle.png
 | 角色 id | 文件 | 状态 |
 | --- | --- | --- |
 | `mabel` | `mabel_idle.png` | ⏳ 待补（GPT 在跑），现在临时用 `art/portrait/mabel.png` 顶替 |
-| `norden` | `norden_idle.png` | ⏳ 待补，现在退回程序化红色剪影 |
+| `norden` | `norden_idle.png` | ✅ 已补（兔耳补全 + 红瞳版，2026-10-24） |
 
 ## 规格要求
 
