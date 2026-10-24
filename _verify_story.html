@@ -42,38 +42,45 @@
   S.black = 0;
   S.t = 60;                        // 让入场动画走完（真实游戏里由 update 推进）
 
-  // ① 章节卡
-  S.card = { line1: '悲愤交加的勇者', line2: '踏上了寻回珍视之人的旅途', t: 60 };
-  S.text = null;
-  Cutscene.draw(document.getElementById('c1').getContext('2d'));
+  function drawAll() {
+    // ① 章节卡
+    S.card = { line1: '悲愤交加的勇者', line2: '踏上了寻回珍视之人的旅途', t: 60 };
+    S.text = null;
+    S.intro = null;
+    S.bossIntro = null;
+    Cutscene.draw(document.getElementById('c1').getContext('2d'));
 
-  // ② 场景气泡
-  S.card = null;
-  S.text = {
-    mode: 'bubble', who: '蕾克', shown: 99, acc: 0, pause: 0, t: 30,
-    text: '这次不会再让你跑掉了。'
-  };
-  Cutscene.draw(document.getElementById('c2').getContext('2d'));
+    // ② 场景气泡
+    S.card = null;
+    S.text = {
+      mode: 'bubble', who: '蕾克', shown: 99, acc: 0, pause: 0, t: 30,
+      text: '这次不会再让你跑掉了。'
+    };
+    Cutscene.draw(document.getElementById('c2').getContext('2d'));
 
-  // ③ 双立绘对峙
-  S.text = {
-    mode: 'duel', who: '', shown: 99, acc: 0, pause: 0, t: 30,
-    text: '没用的孩子。你已经没有价值了。',
-    left: '蕾克', right: '玛丽苏'
-  };
-  Cutscene.draw(document.getElementById('c3').getContext('2d'));
+    // ③ 双立绘对峙
+    S.text = {
+      mode: 'duel', who: '', shown: 99, acc: 0, pause: 0, t: 30,
+      text: '没用的孩子。你已经没有价值了。',
+      left: '蕾克', right: '玛丽苏'
+    };
+    Cutscene.draw(document.getElementById('c3').getContext('2d'));
 
-  // ④ 角色登场介绍
-  S.text = null;
-  S.t = 60;
-  S.intro = { id: 'marysue' };
-  Cutscene.draw(document.getElementById('c4').getContext('2d'));
+    // ④ 角色登场介绍
+    S.text = null;
+    S.intro = { id: 'marysue' };
+    Cutscene.draw(document.getElementById('c4').getContext('2d'));
 
-  // ⑤ 战斗前特写
-  S.intro = null;
-  S.t = 100;
-  S.bossIntro = { id: 'rek_crimson' };
-  Cutscene.draw(document.getElementById('c5').getContext('2d'));
+    // ⑤ 战斗前特写
+    S.intro = null;
+    S.bossIntro = { id: 'rek_crimson' };
+    Cutscene.draw(document.getElementById('c5').getContext('2d'));
+  }
+
+  drawAll();
+  // 立绘是异步加载的：加载完再重画一遍，否则截到的是占位块
+  setTimeout(drawAll, 600);
+  setTimeout(drawAll, 1200);
 </script>
 </body>
 </html>
