@@ -43,18 +43,20 @@ def unify(src, dst, gray_steps=GRAY_STEPS):
             # 浅粉色腮红会被误判成高饱和红色）
             near_red = deg <= 14 or deg >= 346
             near_cyan = abs(deg - CYAN_HUE) <= 45
-            near_green = abs(deg - GREEN_HUE) <= 55
+            near_green = abs(deg - GREEN_HUE) <= 78
 
+            # 绿要先于青判定：黄绿(89°)与青(196°)之间有重叠带(151-167)，
+            # 重叠区归绿，否则玛丽苏的绿泳衣上会冒出青色斑点
             if near_red and chroma >= 0.25:
                 rr, gg, bb = colorsys.hls_to_rgb(0.0, ll, ss)
                 px[x, y] = (int(rr * 255 + 0.5), int(gg * 255 + 0.5), int(bb * 255 + 0.5), a)
                 locked += 1
-            elif near_cyan and chroma >= 0.15:
-                rr, gg, bb = colorsys.hls_to_rgb(CYAN_HUE / 360.0, ll, ss)
-                px[x, y] = (int(rr * 255 + 0.5), int(gg * 255 + 0.5), int(bb * 255 + 0.5), a)
-                locked += 1
             elif near_green and chroma >= 0.15:
                 rr, gg, bb = colorsys.hls_to_rgb(GREEN_HUE / 360.0, ll, ss)
+                px[x, y] = (int(rr * 255 + 0.5), int(gg * 255 + 0.5), int(bb * 255 + 0.5), a)
+                locked += 1
+            elif near_cyan and chroma >= 0.15:
+                rr, gg, bb = colorsys.hls_to_rgb(CYAN_HUE / 360.0, ll, ss)
                 px[x, y] = (int(rr * 255 + 0.5), int(gg * 255 + 0.5), int(bb * 255 + 0.5), a)
                 locked += 1
             else:
