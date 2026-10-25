@@ -1557,7 +1557,10 @@ func _draw_story() -> void:
 				name_color = CYAN  # #00BAFF
 		draw_line(Vector2(50, 520), Vector2(1230, 520), name_color.lerp(Color(0.6, 0.6, 0.6), 0.2), 2.0)
 		if story_who != "":
-			draw_string(ThemeDB.fallback_font, Vector2(82, 555), _display_name(story_who), HORIZONTAL_ALIGNMENT_LEFT, -1, 22, name_color)
+			# 黑影/未识别的说话者显示「？？？」
+			var shown_name := "？？？" if story_expr == "shadow" else _display_name(story_who)
+			var plate_color := Color(0.75, 0.75, 0.75) if story_expr == "shadow" else name_color
+			draw_string(ThemeDB.fallback_font, Vector2(82, 555), shown_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, plate_color)
 		var shown := story_text.substr(0, int(story_reveal))
 		draw_string(ThemeDB.fallback_font, Vector2(82, 605), shown, HORIZONTAL_ALIGNMENT_LEFT, 1110, 24, WHITE)
 		draw_string(ThemeDB.fallback_font, Vector2(1000, 652), "ENTER / SPACE 继续    TAB 跳过", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, GREY)

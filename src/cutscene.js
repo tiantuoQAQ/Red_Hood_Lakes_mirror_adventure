@@ -728,7 +728,8 @@ const Cutscene = (function () {
     if (S.text.who) {
       const c = charOf(S.text.who);
       const ex = EXPR_LABEL[S.text.expr || ''] || S.text.expr || '';
-      const tag = c.name + (ex ? ' · ' + ex : '');
+      // 黑影 / 尚未识别的说话者：只显示「？？？」
+      const tag = S.text.expr === 'shadow' ? '？？？' : c.name + (ex ? ' · ' + ex : '');
       ctx.font = '22px "Segoe UI", "Microsoft YaHei", system-ui, sans-serif';
       const tagW = Math.max(140, ctx.measureText(tag).width + 36);
       roundRectPath(ctx, x + 24, y - 20, tagW, 40, 10);
