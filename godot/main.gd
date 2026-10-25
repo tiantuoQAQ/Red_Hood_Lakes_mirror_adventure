@@ -1600,12 +1600,71 @@ func _get_portrait_texture(id: String) -> Texture2D:
 	textures[cache_key] = fallback
 	return fallback if fallback is Texture2D else null
 
+# 登场竖幅：家徽 + 双描边 + 回纹 + 缎带尾 + 竖排「名字 / 称号」（与网页版 drawIntro 同款）
+const CHAR_TITLES := {
+	"rek": {"name": "蕾克", "title": "小红帽", "color": Color(1, 0, 0), "tcolor": Color(1, 1, 1)},
+	"rek_crimson": {"name": "猩红魔姬·雷帝", "title": "自负的暴君", "color": Color(1, 0, 0), "tcolor": Color(1, 0, 0)},
+	"norden": {"name": "诺登", "title": "计时者 白之兔", "color": Color(1, 0.31, 0.31), "tcolor": Color(1, 1, 1)},
+	"marysue": {"name": "玛丽苏", "title": "扭曲的黑童话作家", "color": Color(0.51, 1, 0), "tcolor": Color(0.51, 1, 0)},
+	"mabel": {"name": "梅贝尔", "title": "来自虚空的虚无少女", "color": Color(0, 0.73, 1), "tcolor": Color(0, 0.73, 1)}
+}
+
 func _draw_intro(id: String) -> void:
-	var accent := RED if "crimson" in id or "rek" in id else CYAN
-	draw_rect(Rect2(930, 120, 210, 360), Color(0.02, 0.02, 0.02, 0.88))
-	draw_line(Vector2(930, 120), Vector2(930, 480), accent, 5.0)
-	draw_string(ThemeDB.fallback_font, Vector2(980, 230), _display_name(id), HORIZONTAL_ALIGNMENT_LEFT, -1, 32, accent)
-	draw_string(ThemeDB.fallback_font, Vector2(980, 280), "登场", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, GREY)
+	var data: Dictionary = CHAR_TITLES.get(id, {"name": _display_name(id), "title": "", "color": RED, "tcolor": Color(1, 1, 1)})
+	var name_txt: String = data["name"]
+	var title_txt: String = data["title"]
+	var accent: Color = data["color"]
+	var tcolor: Color = data["tcolor"]
+	var bw := 116.0
+	var body_len := maxf(float(name_txt.length()) * 42.0, float(title_txt.length()) * 28.0)
+	var bh := maxf(160.0, 56.0 + body_len)
+	var bx := VIEW.x - 72.0 - bw
+	var by := 96.0
+	var cx := bx + bw * 0.5
+
+	# 顶部家徽：菱形 + 两侧尖翼
+	var crest_y := by - 26.0
+	var dia := PackedVector2Array([Vector2(cx, crest_y - 15), Vector2(cx + 12, crest_y), Vector2(cx, crest_y + 15), Vector2(cx - 12, crest_y)])
+	draw_colored_polygon(dia, accent)
+	for sgn in [-1.0, 1.0]:
+		var wing := PackedVector2Array([Vector2(cx + sgn * 13, crest_y), Vector2(cx + sgn * 38, crest_y - 8), Vector2(cx + sgn * 31, crest_y), Vector2(cx + sgn * 38, crest_y + 8)])
+		draw_colored_polygon(wing, Color(accent, 0.5))
+
+	# 幅面：底 + 外粗边 + 内细边
+	draw_rect(Rect2(bx, by, bw, bh), Color(0.06, 0.06, 0.07, 0.94))
+	draw_rect(Rect2(bx, by, bw, bh), accent, false, 3.0)
+	draw_rect(Rect2(bx + 6, by + 6, bw - 12, bh - 12), Color(1, 1, 1, 0.5), false, 1.0)
+
+	# 两侧回纹
+	var y := by + 24.0
+	while y < by + bh - 26.0:
+		draw_rect(Rect2(bx + 12, y, 9, 3), Color(accent, 0.45))
+		draw_rect(Rect2(bx + 12, y, 3, 9), Color(accent, 0.45))
+		draw_rect(Rect2(bx + bw - 21, y, 9, 3), Color(accent, 0.45))
+		draw_rect(Rect2(bx + bw - 15, y, 3, 9), Color(accent, 0.45))
+		y += 26.0
+
+	# 底部缎带尾
+	var ty := by + bh
+	draw_colored_polygon(PackedVector2Array([Vector2(bx + 8, ty - 1), Vector2(cx - 3, ty + 26), Vector2(cx - 3, ty - 1)]), accent)
+	draw_colored_polygon(PackedVector2Array([Vector2(bx + bw - 8, ty - 1), Vector2(cx + 3, ty + 26), Vector2(cx + 3, ty - 1)]), accent)
+
+	# 竖排名字（烫印：黑边 + 主色 + 白高光）
+	var name_h := float(name_txt.length()) * 42.0
+	var name_top := by + maxf(40.0, (bh - name_h) * 0.5 + 18.0)
+	for i in range(name_txt.length()):
+		var ch := name_txt.substr(i, 1)
+		var pos := Vector2(cx - 10.0, name_top + i * 42.0)
+		draw_string_outline(ThemeDB.fallback_font, pos, ch, HORIZONTAL_ALIGNMENT_CENTER, -1, 34, 8, Color(0, 0, 0, 0.9))
+		draw_string(ThemeDB.fallback_font, pos, ch, HORIZONTAL_ALIGNMENT_CENTER, -1, 34, accent)
+		draw_string(ThemeDB.fallback_font, pos - Vector2(1, 1), ch, HORIZONTAL_ALIGNMENT_CENTER, -1, 34, Color(1, 1, 1, 0.18))
+
+	# 竖排称号（左侧）
+	if title_txt != "":
+		for i in range(title_txt.length()):
+			var ch2 := title_txt.substr(i, 1)
+			draw_string_outline(ThemeDB.fallback_font, Vector2(bx - 34.0, by + 34.0 + i * 28.0), ch2, HORIZONTAL_ALIGNMENT_CENTER, -1, 20, 5, Color(0, 0, 0, 0.85))
+			draw_string(ThemeDB.fallback_font, Vector2(bx - 34.0, by + 34.0 + i * 28.0), ch2, HORIZONTAL_ALIGNMENT_CENTER, -1, 20, tcolor)
 
 func _draw_boss_intro(id: String) -> void:
 	var key := "cutin_crimson" if id == "crimson" or id == "rek_crimson" else "cutin_marysue"
