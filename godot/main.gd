@@ -99,6 +99,7 @@ var boss_phase := 0
 var boss_phase_count := 5
 var boss_attack_timer := 0
 var boss_move_timer := 0
+var ball_trail_frames: Array = []   # 球形态拖尾 8 帧
 var boss_anim: Dictionary = {}   # 魔姬动作帧: idle/move/thrust/slash
 var intro_anim: Dictionary = {}  # 战前开场视频帧: crimson / marysue
 var cutin_active := false
@@ -158,6 +159,7 @@ const ENERGY_PER_GRAZE := 0.28   # 擦弹回复能量
 const ENERGY_PER_HIT := 0.06     # 子弹命中回复能量
 var energy_flash := 0            # 能量满/消耗时的闪动
 var hurt_vignette := 0
+var ball_hint_t := 0.0
 var fx_rings: Array = []         # 冲击环 {pos, r, max, life, color, width}
 var player_dash_frames := 0
 var player_dash_buffer := 0
@@ -231,6 +233,8 @@ func _load_assets() -> void:
 		"rek_dash_02": "res://art/battle/rek/dash_02.png",
 		"rek_dash_03": "res://art/battle/rek/dash_03.png",
 		"mirror": "res://art/bg/mirror.jpg",
+		"bg_forest": "res://art/bg/bg_forest.png",
+		"bg_mirrorworld": "res://art/bg/bg_mirrorworld.png",
 		"mirror_alt": "res://art/bg/mirror_alt.jpg",
 		"throne": "res://art/obj/throne.png",
 		"mirror_stand": "res://art/obj/mirror_stand.png",
@@ -263,6 +267,12 @@ func _load_assets() -> void:
 		if ring_tex:
 			textures[ring_key] = ring_tex
 
+	# 球形态拖尾帧（用户提供素材）
+	ball_trail_frames.clear()
+	for fi in range(8):
+		var btex := _load_texture("res://art/fx/ball_trail/frame_%02d.png" % fi)
+		if btex:
+			ball_trail_frames.append(btex)
 	# 战前开场动画帧（即梦 mp4 抽帧，24 帧）
 	for who in ["crimson", "marysue"]:
 		var iframes: Array = []
@@ -642,6 +652,7 @@ func _start_walk(command: Dictionary, long_map: bool = false) -> void:
 	if last_left != "" or last_right != "":
 		portrait_fade = 1.0
 	_start_map_bgm()
+	ball_hint_t = 6.0
 	# Mirror shards transition (from any mode → walk)
 	if mode != Mode.WALK:
 		_spawn_mirror_shards(20, 0.8)
@@ -1546,7 +1557,15 @@ func _draw() -> void:
 func _draw_background() -> void:
 	draw_rect(Rect2(Vector2.ZERO, VIEW), BLACK)
 	# Battle mode: always use clean mirror.jpg background (not mirror_alt with crack panel)
-	var bg_key := "mirror" if mode == Mode.BATTLE else (story_bg if story_bg == "mirror" else "mirror_alt")
+	var bg_key := "bg_mirrorworld"
+	if mode == Mode.BATTLE:
+		bg_key = "bg_mirrorworld"
+	elif story_bg == "forest":
+		bg_key = "bg_forest"
+	elif story_bg == "void":
+		bg_key = "bg_mirrorworld"
+	else:
+		bg_key = "bg_mirrorworld"
 	var bg_tex: Texture2D = null if (mode != Mode.BATTLE and story_bg == "void") else textures.get(bg_key)
 	if bg_tex:
 		var alpha := 0.42
@@ -1818,6 +1837,11 @@ func _draw_walk() -> void:
 			character_art.draw_npc_breathe(self, kind, pos, height, elapsed, fallback_tex)
 		elif kind == "mirror":
 			_draw_mirror_gate(pos)
+		elif kind == "shadow":
+			# 远处玛丽苏黑影：纯黑剪影 + 微红眼
+			draw_rect(Rect2(pos.x - 26, pos.y - 150, 52, 150), Color(0, 0, 0, 0.92))
+			draw_circle(Vector2(pos.x - 8, pos.y - 138), 3, Color(1, 0, 0, 0.85))
+			draw_circle(Vector2(pos.x + 8, pos.y - 138), 3, Color(1, 0, 0, 0.85))
 	if walk_target.size() > 0:
 		var kind := str(walk_target.get("kind", ""))
 		var p := Vector2(float(walk_target.get("x", 0.0)) - camera_x, GROUND_Y)
@@ -1880,6 +1904,10 @@ func _draw_battle() -> void:
 	_draw_fx_rings()
 	_draw_player_at(player_pos - Vector2(camera_x, 0), WHITE)
 	_draw_particles_world()
+	if ball_hint_t > 0.0:
+		ball_hint_t = maxf(0.0, ball_hint_t - FIXED_DT)
+		var ha := minf(1.0, ball_hint_t / 1.0)
+		draw_string(ThemeDB.fallback_font, Vector2(360, 200), "空中 按住 W + 冲刺 → 球形态（无敌）", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color(1, 1, 1, 0.85 * ha))
 	if hurt_vignette > 0:
 		var hv := float(hurt_vignette) / 18.0
 		draw_rect(Rect2(0, 0, VIEW.x, 14), Color(1, 0, 0, 0.45 * hv))
@@ -2826,3 +2854,52 @@ func _start_map_bgm() -> void:
 func _stop_map_bgm() -> void:
 	if map_bgm_player != null and map_bgm_player.playing:
 		map_bgm_player.stop()
+
+
+# ======================= 地面倒影 + 球形态特效 =======================
+func _draw_player_reflection() -> void:
+	if mode != Mode.WALK and mode != Mode.BATTLE:
+		return
+	if player_ball:
+		return
+	var tex: Texture2D = textures.get("rek_body_move")
+	if tex == null:
+		return
+	var foot := Vector2(player_pos.x - camera_x, GROUND_Y)
+	var h := 70.0
+	var w := h * tex.get_width() / float(tex.get_height())
+	var refl := Color(1, 1, 1, 0.22)
+	draw_set_transform(foot, 0.0, Vector2(1.0, -1.0))
+	draw_texture_rect(tex, Rect2(Vector2(-w * 0.5, 0), Vector2(w, h)), false, refl)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+func _draw_ball_fx() -> void:
+	if not player_ball:
+		return
+	var center := player_pos - Vector2(camera_x, 0)
+	var vel := player_vel
+	var dir := vel.normalized() if vel.length() > 1.0 else Vector2.LEFT
+	# 1) 拖尾丝带（用户素材，8 帧）
+	for i in range(3):
+		if ball_trail_frames.size() == 0:
+			break
+		var idx := int(frame / 3 + i * 3) % ball_trail_frames.size()
+		var ttex: Texture2D = ball_trail_frames[idx]
+		var back := center - dir * (26.0 + float(i) * 22.0)
+		var sz := 74.0 - float(i) * 12.0
+		var a := 0.55 - float(i) * 0.12
+		draw_set_transform(back, dir.angle() + PI * 0.5, Vector2(1, 1))
+		draw_texture_rect(ttex, Rect2(Vector2(-sz * 0.5, -sz * 0.5), Vector2(sz, sz)), false, Color(1, 1, 1, a))
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	# 2) 红色激光淡出（两道）
+	for i in range(2):
+		var side := (1.0 if i == 0 else -1.0) * 14.0
+		var from := center - dir * 18.0 + Vector2(0, side)
+		var to := center - dir * (150.0 + float(i) * 60.0) + Vector2(0, side * 1.6)
+		draw_line(from, to, Color(1, 0, 0, 0.45 - float(i) * 0.16), 4.0 - float(i) * 1.2)
+		draw_line(from, to, Color(1, 1, 1, 0.20 - float(i) * 0.07), 1.5)
+	# 3) 烟雾：缓慢扩散的灰色圆
+	for i in range(4):
+		var ph := fmod(elapsed * 0.9 + float(i) * 0.25, 1.0)
+		var smoke_pos := center - dir * (30.0 + ph * 90.0) + Vector2(0, sin(float(i) * 2.1 + elapsed) * 10.0)
+		draw_circle(smoke_pos, 10.0 + ph * 22.0, Color(0.55, 0.55, 0.55, 0.16 * (1.0 - ph)))

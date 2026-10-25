@@ -7,7 +7,7 @@ const GROUND_Y = 574;   // 地面线：不要贴屏幕底端，下方留出一�
 const STEP = 1 / 60;
 
 // 世界比屏幕宽：镜头跟随玩家横向滚动
-const WORLD_W = 2400;
+const WORLD_W = 4800;
 const ARENA = { left: 48, right: WORLD_W - 48, top: 48, bottom: GROUND_Y };
 const MIRROR_X = WORLD_W / 2; // 镜面轴：所有镜像弹幕以此为对称轴
 

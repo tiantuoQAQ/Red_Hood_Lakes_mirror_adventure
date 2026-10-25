@@ -52,7 +52,7 @@ const STORY = {
 
 
       // ↓ 玩家接管，走到路的尽头
-      { t: 'walk', untilX: 1040, next: 'ambush' }
+      { t: 'walk', untilX: 2600, props: [{ kind: 'shadow', x: 2800 }], next: 'ambush' }
     ]
   },
 

@@ -106,7 +106,13 @@
       },
       {
         "t": "walk",
-        "untilX": 1040,
+        "untilX": 2600,
+        "props": [
+          {
+            "kind": "shadow",
+            "x": 2800
+          }
+        ],
         "next": "ambush"
       }
     ]
