@@ -53,7 +53,7 @@ var story_index := 0
 var story_cmd: Dictionary = {}
 var story_timer := 0.0
 var story_reveal := 0.0
-var story_text_alpha := 0.0   # 台词淡入（0→1，12 帧）
+var story_text_alpha := 0.45   # 台词淡入（0.45→1，10 帧，避免空白帧）
 var story_text := ""
 var story_who := ""
 var story_expr := ""
@@ -574,7 +574,7 @@ func _update_story() -> void:
 			mode = Mode.END
 			return
 	if story_cmd.get("t", "") == "say" or story_cmd.get("t", "") == "duel":
-		story_text_alpha = minf(1.0, story_text_alpha + 1.0 / 12.0)
+		story_text_alpha = minf(1.0, story_text_alpha + 1.0 / 10.0)
 		story_reveal = minf(float(story_text.length()), story_reveal + 1.9)
 		if _just("confirm"):
 			if story_reveal < story_text.length():
@@ -1626,7 +1626,9 @@ func _draw_story() -> void:
 				name_color = WHITE  # #FFFFFF
 			"mabel", "梅贝尔":
 				name_color = CYAN  # #00BAFF
-		draw_line(Vector2(50, 520), Vector2(1230, 520), name_color.lerp(Color(0.6, 0.6, 0.6), 0.2), 2.0)
+		var line_col: Color = name_color.lerp(Color(0.6, 0.6, 0.6), 0.2)
+		line_col.a *= clampf(story_text_alpha * 1.3, 0.0, 1.0)
+		draw_line(Vector2(50, 520 + slide), Vector2(1230, 520 + slide), line_col, 2.0)
 		if story_who != "":
 			# 黑影/未识别的说话者显示「？？？」
 			var shown_name := "？？？" if story_expr == "shadow" else _display_name(story_who)
