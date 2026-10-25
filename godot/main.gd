@@ -2541,7 +2541,7 @@ func _draw_hud() -> void:
 	# ---- 技能图标（血条旁边，标注能量与按键）----
 	var slots: Array = []
 	if skill_red_tragedy:
-		slots.append({"tex": "skill_icon_red", "cost": 2, "key": "L", "name": "红之惨剧"})
+		slots.append({"tex": "skill_icon_red", "cost": 2, "key": "E", "name": "红之惨剧"})
 	slots.append({"tex": "skill_icon_gun", "cost": 2, "key": "C", "name": "枪火击溃"})
 	slots.append({"tex": "skill_icon_hell", "cost": 2, "key": "V", "name": "业火"})
 	var sx0 := 620.0
@@ -2575,7 +2575,7 @@ func _draw_hud() -> void:
 		if desc != "":
 			draw_string(ThemeDB.fallback_font, rect.position + Vector2(0, rect.size.y + 26), desc, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.8, 0.8, 0.8))
 		# 技能名（格下方小字）
-		draw_string(ThemeDB.fallback_font, rect.position + Vector2(0, rect.size.y + 13), str(slot["name"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 12,
+		draw_string(ThemeDB.fallback_font, rect.position + Vector2(0, rect.size.y + 13), str(slot["name"]) + (" (L演示)" if str(slot["tex"]) == "skill_icon_red" else ""), HORIZONTAL_ALIGNMENT_LEFT, -1, 12,
 			Color(1, 0.4, 0.4) if can else GREY)
 	draw_string(ThemeDB.fallback_font, Vector2(880, 675), "冲刺 %s" % ("READY" if player_dash_cd <= 0 else "%02d" % player_dash_cd), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, RED if player_dash_cd <= 0 else GREY)
 	draw_string(ThemeDB.fallback_font, Vector2(1040, 675), "擦弹链 %d" % player_graze_chain, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, WHITE)
