@@ -830,7 +830,7 @@ func _update_walk() -> void:
 	_update_player()
 	_update_ball_fx()
 	_update_shots()
-	if not tutorial_shown and mode == Mode.WALK:
+	if not tutorial_shown and mode == Mode.WALK and story_chapter != "":
 		tutorial_shown = true
 		tutorial_timer = 20.0
 	_update_npc_glow()
@@ -3384,7 +3384,7 @@ func _draw_tutorial() -> void:
 ## 镜子旁的告示牌：木质牌面 + 操作说明（不需要弹窗也能看到）
 func _draw_signboard() -> void:
 	# 只在有交互目标的走位段显示
-	if walk_target.size() == 0:
+	if walk_target.size() == 0 or story_chapter == "":
 		return
 	var tx := float(walk_target.get("x", 0.0))
 	if tx <= 0.0:
