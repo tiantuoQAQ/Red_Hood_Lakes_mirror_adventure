@@ -67,6 +67,7 @@ var story_title_sub := ""
 var story_intro := ""
 var map_bgm_player: AudioStreamPlayer
 var mirror_bgm_player: AudioStreamPlayer
+var norden_bgm_player: AudioStreamPlayer
 var map_bgm_started := false
 var intro_hold := 0.0      # 竖幅在下一句仍停留的秒数
 var seen_speakers: Array = []  # 本章已登场过的角色（首次说话时弹称号）
@@ -218,6 +219,15 @@ func _ready() -> void:
 	mirror_bgm_player.bus = "Master"
 	mirror_bgm_player.volume_db = -12.0
 	add_child(mirror_bgm_player)
+	norden_bgm_player = AudioStreamPlayer.new()
+	norden_bgm_player.bus = "Master"
+	norden_bgm_player.volume_db = -12.0
+	add_child(norden_bgm_player)
+	if ResourceLoader.exists("res://audio/norden_bgm.ogg"):
+		var ns: AudioStream = load("res://audio/norden_bgm.ogg")
+		if ns is AudioStreamOggVorbis:
+			ns.loop = true
+		norden_bgm_player.stream = ns
 	if ResourceLoader.exists("res://audio/mirrorworld_bgm.ogg"):
 		var ms: AudioStream = load("res://audio/mirrorworld_bgm.ogg")
 		if ms is AudioStreamOggVorbis:
@@ -665,7 +675,7 @@ func _start_walk(command: Dictionary, long_map: bool = false) -> void:
 	if last_left != "" or last_right != "":
 		portrait_fade = 1.0
 	if story_bg == "forest":
-		_start_map_bgm()
+		_start_norden_bgm()
 		_stop_mirror_bgm()
 	else:
 		_start_mirror_bgm()
@@ -2939,3 +2949,16 @@ func _start_mirror_bgm() -> void:
 func _stop_mirror_bgm() -> void:
 	if mirror_bgm_player != null and mirror_bgm_player.playing:
 		mirror_bgm_player.stop()
+
+
+## 诺登世界（森林）BGM（循环）
+func _start_norden_bgm() -> void:
+	if norden_bgm_player != null and norden_bgm_player.stream != null:
+		if not norden_bgm_player.playing:
+			norden_bgm_player.play()
+		return
+	_start_map_bgm()
+
+func _stop_norden_bgm() -> void:
+	if norden_bgm_player != null and norden_bgm_player.playing:
+		norden_bgm_player.stop()
