@@ -21,6 +21,7 @@ const CHAPTER_BGM := {
 }
 const BATTLE_LEFT := 1500.0
 const BATTLE_RIGHT := 2760.0
+const BATTLE_HALF := 700.0
 const PHASE_NAMES := {
 	"crimson": ["壹 · 试锋", "贰 · 裂帛", "叁 · 血雨", "肆 · 镜刃", "伍 · 红之惨剧"],
 	"marysue": ["壹 · 箱庭", "贰 · 反语", "叁 · 镜廊", "肆 · 断线", "伍 · 狂言", "陆 · 天地倒悬"]
@@ -153,7 +154,8 @@ var boss_lunge_return := Vector2.ZERO
 var boss_skill_state := ""  # "telegraph", "firing", "cooldown"
 var boss_skill_timer := 0
 var boss_skill_subframe := 0
-var boss_rush_side := 1.0  # Frame counter within current skill phase
+var boss_rush_side := 1.0
+var boss_slide_to := -1.0  # Frame counter within current skill phase
 var bullets: Array = []
 var shots: Array = []
 var warnings: Array = []
@@ -416,6 +418,10 @@ func _physics_process(_delta: float) -> void:
 		paused = not paused
 	if paused and (_just("confirm") or _just("shoot")):
 		paused = false
+	if tutorial_timer > 0.0:
+		tutorial_timer = maxf(0.0, tutorial_timer - FIXED_DT)
+		if _just("confirm") or _just("skip") or _just("shoot"):
+			tutorial_timer = 0.0
 	if _just("restart") and mode != Mode.TITLE:
 		mode = Mode.TITLE
 		paused = false
@@ -1089,7 +1095,7 @@ func _update_player() -> void:
 	if mode == Mode.BATTLE and player_hp <= 0 and death_timer <= 0.0:
 		_start_death()
 	if mode == Mode.BATTLE:
-		player_pos.x = clampf(player_pos.x, BATTLE_LEFT, BATTLE_RIGHT)
+		player_pos.x = clampf(player_pos.x, _battle_left(), _battle_right())
 	else:
 		player_pos.x = clampf(player_pos.x, ARENA_LEFT, ARENA_RIGHT)
 	var was_grounded := player_grounded
@@ -1231,6 +1237,11 @@ func _update_boss() -> void:
 		_spawn_boss_pattern()
 	
 	_boss_move_particles()
+	if boss_slide_to > 0.0:
+		boss_pos.x = move_toward(boss_pos.x, boss_slide_to, 900.0 * FIXED_DT)
+		if absf(boss_pos.x - boss_slide_to) < 4.0:
+			boss_pos.x = boss_slide_to
+			boss_slide_to = -1.0
 	_update_death()
 	_update_boss_extras()
 	_update_fx_rings()
@@ -2065,10 +2076,6 @@ func _draw_battle() -> void:
 	_draw_particles_world()
 	if tragedy_buff_t > 0.0:
 		tragedy_buff_t = maxf(0.0, tragedy_buff_t - FIXED_DT)
-	if tutorial_timer > 0.0:
-		tutorial_timer = maxf(0.0, tutorial_timer - FIXED_DT)
-		if _just("confirm") or _just("skip"):
-			tutorial_timer = 0.0
 	if ball_hint_t > 0.0 and mode == Mode.WALK:
 		ball_hint_t = maxf(0.0, ball_hint_t - FIXED_DT)
 		var ha := minf(1.0, ball_hint_t / 1.0)
@@ -2918,7 +2925,7 @@ func _patterns_marysue() -> void:
 		0:  # 一：绿色激光雨（从天而降的激光柱，间歇）
 			if frame % 45 == 0:
 				for k in range(2):
-					var lx := clampf(player_pos.x + randf_range(-260.0, 260.0), BATTLE_LEFT, BATTLE_RIGHT)
+					var lx := clampf(player_pos.x + randf_range(-260.0, 260.0), _battle_left(), _battle_right())
 					_spawn_beam(lx, 0.9)
 		1:  # 二：横向缓慢追踪激光
 			if frame % 40 == 0:
@@ -2928,7 +2935,7 @@ func _patterns_marysue() -> void:
 					_spawn_bullet(boss_pos, Vector2(cos(d.angle() + off), sin(d.angle() + off)) * 150.0, HAZARD, "laser", 4.5, 0.05)
 		2:  # 三：激光雨 + 光球
 			if frame % 26 == 0:
-				var lx2 := clampf(player_pos.x + randf_range(-320.0, 320.0), BATTLE_LEFT, BATTLE_RIGHT)
+				var lx2 := clampf(player_pos.x + randf_range(-320.0, 320.0), _battle_left(), _battle_right())
 				_spawn_beam(lx2, 0.8)
 			if frame % 60 == 0:
 				for k in range(5):
@@ -2937,7 +2944,7 @@ func _patterns_marysue() -> void:
 		3:  # 四：地图随机激光（持续 2 秒）
 			if frame % 55 == 0:
 				for k in range(3):
-					var rx := randf_range(BATTLE_LEFT + 80.0, BATTLE_RIGHT - 80.0)
+					var rx := randf_range(_battle_left() + 80.0, _battle_right() - 80.0)
 					_spawn_beam(rx, 2.0)
 		4:  # 五：地面冲刺带绿激光 + 绿闪
 			green_flash_t = 1.2
@@ -2945,7 +2952,7 @@ func _patterns_marysue() -> void:
 				boss_skill_state = "firing"
 				boss_skill_timer = 46
 				boss_pos.y = 420.0
-				boss_pos.x = clampf(player_pos.x + randf_range(-220.0, 220.0), BATTLE_LEFT + 120.0, BATTLE_RIGHT - 120.0)
+				boss_pos.x = clampf(player_pos.x + randf_range(-220.0, 220.0), _battle_left() + 120.0, _battle_right() - 120.0)
 				_spawn_bullet(boss_pos, Vector2(-1, 0) * 760.0, HAZARD, "laser", 1.1, 0.0)
 			elif boss_skill_state == "firing":
 				boss_skill_timer -= 1
@@ -2957,7 +2964,7 @@ func _patterns_marysue() -> void:
 				mirror_flip = true
 			if frame % 24 == 0:
 				for k in range(2):
-					var lx3 := clampf(player_pos.x + randf_range(-340.0, 340.0), BATTLE_LEFT, BATTLE_RIGHT)
+					var lx3 := clampf(player_pos.x + randf_range(-340.0, 340.0), _battle_left(), _battle_right())
 					_spawn_beam(lx3, 1.0)
 			if frame % 70 == 0:
 				for k in range(6):
@@ -3530,8 +3537,8 @@ func _draw_death_overlay() -> void:
 
 ## Boss 战边界：边界外烧起来的红色火焰墙 + 靠近提示
 func _draw_battle_bounds_fx() -> void:
-	var left_screen := BATTLE_LEFT - camera_x
-	var right_screen := BATTLE_RIGHT - camera_x
+	var left_screen := _battle_left() - camera_x
+	var right_screen := _battle_right() - camera_x
 	# 区域外压暗（越靠外越黑红）
 	if left_screen > 0.0:
 		draw_rect(Rect2(0, 0, left_screen, VIEW.y), Color(0.18, 0.0, 0.0, 0.55))
@@ -3571,9 +3578,17 @@ func _draw_battle_bounds_fx() -> void:
 	# 靠近边界：屏幕对应侧发红光
 	var near := 150.0
 	var px := player_pos.x - camera_x
-	if px < (BATTLE_LEFT - camera_x) + near:
-		var t := clampf(1.0 - (px - (BATTLE_LEFT - camera_x)) / near, 0.0, 1.0)
+	if px < (_battle_left() - camera_x) + near:
+		var t := clampf(1.0 - (px - (_battle_left() - camera_x)) / near, 0.0, 1.0)
 		draw_rect(Rect2(0, 0, 26, VIEW.y), Color(1, 0, 0, 0.35 * t))
-	elif px > (BATTLE_RIGHT - camera_x) - near:
-		var t2 := clampf(1.0 - ((BATTLE_RIGHT - camera_x) - px) / near, 0.0, 1.0)
+	elif px > (_battle_right() - camera_x) - near:
+		var t2 := clampf(1.0 - ((_battle_right() - camera_x) - px) / near, 0.0, 1.0)
 		draw_rect(Rect2(VIEW.x - 26, 0, 26, VIEW.y), Color(1, 0, 0, 0.35 * t2))
+
+
+## 战场边界跟随 Boss：Boss 左右各 ±700，并限制在地图内
+func _battle_left() -> float:
+	return clampf(boss_pos.x - BATTLE_HALF, 120.0, WORLD_W - 200.0)
+
+func _battle_right() -> float:
+	return clampf(boss_pos.x + BATTLE_HALF, 120.0 + 400.0, WORLD_W - 120.0)
