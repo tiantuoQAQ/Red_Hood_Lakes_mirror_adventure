@@ -66,8 +66,8 @@ func _run() -> void:
 		_expect(_visible_npc_reaches_ground(snapshot), "Norden's visible feet touch the ground")
 	if game.has_method("_npc_rect"):
 		var rect: Rect2 = game.call("_npc_rect", "norden", Vector2(740, 574))
-		# User spec 2026-10-25: Norden 210px (was 300px)
-		_expect(rect.size.y > 200 and rect.size.x / rect.size.y < 0.43, "Norden retains the source silhouette proportions")
+		# User spec 2026-10-25 wave 7: Norden 120px
+		_expect(rect.size.y > 115 and rect.size.x / rect.size.y < 0.43, "Norden retains the source silhouette proportions")
 	else:
 		_expect(false, "NPC rendering exposes the shared ground placement")
 	for id in ["rek_body_move", "rek_body_charge", "rek_head", "rek_dash_01", "rek_dash_02", "rek_dash_03"]:

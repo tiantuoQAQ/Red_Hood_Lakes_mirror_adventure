@@ -2,9 +2,9 @@ extends RefCounted
 
 ## Equal scaling and visible-foot anchors for map NPCs and player art.
 var bounds_cache: Dictionary = {}
-# Player display height in battle: 170px (user spec 2026-10-25)
+# Player display height in battle: 100px (user spec 2026-10-25, wave 7)
 # Scale is computed from this height / natural visible bounds height
-const PLAYER_HEIGHT := 170.0
+const PLAYER_HEIGHT := 100.0
 const PLAYER_FOOT := Vector2(550, 730)  # Anchor point in source texture (768px natural)
 const PLAYER_NECK := Vector2(610, 320)  # Neck pivot in source texture
 const DASH_FRAMES := 20

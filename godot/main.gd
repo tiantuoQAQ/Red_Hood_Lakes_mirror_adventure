@@ -11,14 +11,14 @@ const GROUND_Y := 574.0
 const ARENA_LEFT := 48.0
 const ARENA_RIGHT := WORLD_W - 48.0
 const ARENA_TOP := 48.0
-# Player & Boss battle display heights (user spec 2026-10-25)
-const PLAYER_HEIGHT := 170.0  # Player displayed at 170px in battle
-const BOSS_HEIGHT := 170.0    # Boss matches player height
+# Player & Boss battle display heights (user spec 2026-10-25, wave 7)
+const PLAYER_HEIGHT := 100.0  # Player displayed at 100px in battle
+const BOSS_HEIGHT := 100.0    # Boss matches player height
 # NPC map display heights
-const NPC_NORDEN_HEIGHT := 210.0
-const NPC_MABEL_HEIGHT := 235.0
-# Ring animation: 594px source → 391px display (2.3 × character height)
-const RING_DISPLAY_DIAMETER := 391.0
+const NPC_NORDEN_HEIGHT := 120.0
+const NPC_MABEL_HEIGHT := 135.0
+# Ring animation: 594px source → 230px display (2.3 × character height = 2.3 × 100)
+const RING_DISPLAY_DIAMETER := 230.0
 const RED := Color("#ff0000")
 const HAZARD := Color("#82ff00")
 const CYAN := Color("#00baff")
@@ -1150,13 +1150,22 @@ func _draw_background() -> void:
 	var bg_key := "mirror" if mode == Mode.BATTLE else (story_bg if story_bg == "mirror" else "mirror_alt")
 	var bg_tex: Texture2D = null if (mode != Mode.BATTLE and story_bg == "void") else textures.get(bg_key)
 	if bg_tex:
-		# Darken background during battle: alpha 0.42 → apply additional 0.38 tint for battle (total ~0.16)
 		var alpha := 0.42
 		var tint := Color(1, 1, 1, alpha)
 		if mode == Mode.BATTLE:
-			# Overlay dark tint: reduce brightness by 60% (multiply RGB by 0.4, keep base alpha)
-			tint = Color(0.4, 0.4, 0.4, alpha)
-		draw_texture_rect(bg_tex, Rect2(-camera_x * 0.25, 0, VIEW.x * 1.45, VIEW.y), false, tint)
+			# Battle: use top 60% of mirror.jpg (tree crown area, crop out sword hilt)
+			# Darken with alpha 0.75 black overlay (multiply RGB by 0.25 = 0.4 * base alpha)
+			tint = Color(0.25, 0.25, 0.25, alpha)
+			var src_h := bg_tex.get_height()
+			var crop_h := int(src_h * 0.6)  # Top 60% region
+			var src_rect := Rect2(0, 0, bg_tex.get_width(), crop_h)
+			# Scale to fill view width, keep aspect ratio
+			var scale := VIEW.x * 1.45 / float(bg_tex.get_width())
+			var dst_h := crop_h * scale
+			var dst_rect := Rect2(-camera_x * 0.25, 0, VIEW.x * 1.45, dst_h)
+			draw_texture_rect_region(bg_tex, dst_rect, src_rect, tint)
+		else:
+			draw_texture_rect(bg_tex, Rect2(-camera_x * 0.25, 0, VIEW.x * 1.45, VIEW.y), false, tint)
 	for i in range(15):
 		var y := float(i) * 46.0
 		draw_line(Vector2(0, y), Vector2(VIEW.x, y), Color(1, 1, 1, 0.025), 1.0)
@@ -1418,7 +1427,7 @@ func _draw_projectiles() -> void:
 	for bullet in bullets:
 		var p: Vector2 = bullet["pos"] - Vector2(camera_x, 0)
 		var color: Color = bullet["color"]
-		var radius := 12.0 if bullet["kind"] == "laser" else 8.0
+		var radius := 9.0 if bullet["kind"] == "laser" else 6.0
 		var angle: float = bullet["angle"]
 		var points := PackedVector2Array([Vector2(radius * 2.2, 0), Vector2(0, radius * 0.55), Vector2(-radius * 1.2, 0), Vector2(0, -radius * 0.55)])
 		for i in range(points.size()):
