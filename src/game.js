@@ -70,6 +70,12 @@ function makeBoss(id) {
   const B = CFG.boss;
   const def = (typeof BOSSES !== 'undefined' && id && BOSSES[id]) || null;
   const hp = def ? def.hp : B.hp;
+  
+  // 加载 Boss 美术资源
+  if (typeof BossArt !== 'undefined') {
+    BossArt.load(id || 'marysue');
+  }
+  
   return {
     id: id || 'marysue',
     name: def ? def.name : 'BOSS',
@@ -192,6 +198,11 @@ function update(dt) {
   updateParticles(dt);
   updateDmgTexts(dt);
   updateCamera(dt);
+  
+  // 更新 Boss 法环动画
+  if (Game.boss && typeof BossArt !== 'undefined') {
+    BossArt.updateRing(Game.boss.id);
+  }
 }
 
 // ---------------------------------------------------------------- 镜头

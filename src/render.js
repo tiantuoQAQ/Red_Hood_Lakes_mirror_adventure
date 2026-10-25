@@ -159,6 +159,12 @@ function drawBackground(ctx, camX) {
   g.addColorStop(1, COLORS.bg1);
   ctx.fillStyle = g;
   ctx.fillRect(-40, -40, W + 80, H + 80);
+
+  // 战斗时背景额外压暗
+  if (Game.mode === 'play' && Game.boss) {
+    ctx.fillStyle = 'rgba(0,0,0,0.60)';
+    ctx.fillRect(-40, -40, W + 80, H + 80);
+  }
 }
 
 // 世界空间的装饰：网格、镜面轴、地面。这些东西跟着镜头一起滚动。
@@ -233,32 +239,155 @@ function drawBossHex(ctx, x, y, r, rot, alpha) {
 function drawBoss(ctx) {
   const b = Game.boss;
 
-  // 镜像幽灵：提示「另一边也会开火」
-  drawBossHex(ctx, mirrorX(b.x), b.y, b.r * 0.82, Game.frame * 0.004, 0.16);
+  // 决定 Boss 当前姿态
+  const state = getBossState(b);
+  
+  // 先画法环（在 Boss 身后）
+  drawBossRing(ctx, b);
 
+  // 再画 Boss 立绘
+  drawBossPortrait(ctx, b, state);
+
+  // 镜像幽灵（半透明提示）
+  drawBossMirrorGhost(ctx, b);
+
+  // 命中反馈：闪白 + 冲击环
+  if (b.flash > 0) {
+    drawBossFlash(ctx, b);
+  }
+}
+
+// 根据 Boss 行为确定当前姿态
+function getBossState(b) {
+  if (!b) return 'idle';
+  
+  if (b.id === 'crimson') {
+    // 猩红魔姬状态机：
+    // - scriptT 开头（蓄力/预警）→ idle (02)
+    // - 冲刺中 → dive (01)
+    // - 弹幕发射瞬间 → slash (03) 或 thrust (04)
+    // - 其他 → idle (02)
+    
+    if (b.dashT > 0) return 'dive';
+    
+    // 根据当前招式判断
+    const phases = (typeof BOSSES !== 'undefined' && BOSSES[b.id] && BOSSES[b.id].phases) || PHASES;
+    const script = phases[b.phase] ? phases[b.phase].script : [];
+    const patName = script[b.scriptIdx % script.length];
+    
+    // 攻击瞬间（scriptT 在中段或末段）
+    if (b.scriptT > 0) {
+      const pat = PATTERNS[patName];
+      if (pat && b.scriptT < pat.dur * 0.8) {
+        // 穿刺/激光 → thrust
+        if (patName === 'lances' || patName === 'laser') return 'thrust';
+        // 其他攻击 → slash
+        if (b.scriptT % 30 < 8) return 'slash';  // 攻击瞬间短暂显示
+      }
+    }
+    
+    return 'idle';
+  } else if (b.id === 'marysue') {
+    // 玛丽苏状态机：
+    // - 蓄力阶段 → charge (02)
+    // - 爆发瞬间 → burst (03)
+    // - 其他 → idle (01)
+    
+    if (b.dashT > 0) return 'burst';
+    
+    const phases = (typeof BOSSES !== 'undefined' && BOSSES[b.id] && BOSSES[b.id].phases) || PHASES;
+    const script = phases[b.phase] ? phases[b.phase].script : [];
+    const patName = script[b.scriptIdx % script.length];
+    
+    if (b.scriptT > 0) {
+      const pat = PATTERNS[patName];
+      if (pat) {
+        // 爆发瞬间
+        if (b.scriptT < pat.dur * 0.25) return 'burst';
+        // 蓄力中段
+        if (b.scriptT < pat.dur * 0.7) return 'charge';
+      }
+    }
+    
+    return 'idle';
+  }
+  
+  return 'idle';
+}
+
+// 画法环（在 Boss 身后）
+function drawBossRing(ctx, b) {
+  if (typeof BossArt === 'undefined') return;
+  
+  const ring = BossArt.getRingFrame(b.id);
+  if (!ring) return;
+  
+  // 法环直径 594px（约 Boss 身高 2.3 倍）
+  const ringDiam = 594;
+  
+  ctx.save();
+  ctx.globalAlpha = 1.0;
+  ctx.drawImage(ring, b.x - ringDiam / 2, b.y - ringDiam / 2, ringDiam, ringDiam);
+  ctx.restore();
+}
+
+// 画 Boss 立绘
+function drawBossPortrait(ctx, b, state) {
+  if (typeof BossArt === 'undefined') return;
+  
+  const pose = BossArt.getPose(b.id, state);
+  if (!pose) {
+    // 退回旧的六边形占位
+    const pop = b.flash > 0 ? 1 + b.flash * 0.014 : 1;
+    const r = b.r * pop;
+    const rot = -Game.frame * 0.004;
+    drawBossHex(ctx, b.x, b.y, r, rot, 1);
+    return;
+  }
+  
+  // 目标显示高度：与玩家一致（约 261px）
+  const targetH = 261;
+  const scale = targetH / pose.naturalHeight;
+  const w = pose.naturalWidth * scale;
+  const h = pose.naturalHeight * scale;
+  
+  // 立绘脚底对齐 Boss 位置（y 坐标是中心点，立绘底部对齐该位置下方）
+  const footY = b.y + (h * 0.5);  // Boss.y 是中心，立绘底部向下偏移
+  
+  ctx.save();
+  
+  // 受击闪白：叠在立绘上
+  if (b.flash > 0) {
+    ctx.globalAlpha = Math.min(0.6, b.flash / 4);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(b.x - w / 2, footY - h, w, h);
+    ctx.globalAlpha = 1.0;
+  }
+  
+  ctx.drawImage(pose, b.x - w / 2, footY - h, w, h);
+  ctx.restore();
+}
+
+// 镜像幽灵
+function drawBossMirrorGhost(ctx, b) {
+  // 降低 alpha，不要遮挡法环和立绘
+  drawBossHex(ctx, mirrorX(b.x), b.y, b.r * 0.82, Game.frame * 0.004, 0.08);
+}
+
+// 命中闪白 + 冲击环
+function drawBossFlash(ctx, b) {
+  const a = b.flash / 4;
   const pop = b.flash > 0 ? 1 + b.flash * 0.014 : 1;
   const r = b.r * pop;
-  const rot = -Game.frame * 0.004;
-  drawBossHex(ctx, b.x, b.y, r, rot, 1);
-
-  // 命中反馈全部收在 BOSS 本体上：闪白 + 外扩冲击环，不污染整个屏幕
-  if (b.flash > 0) {
-    const a = b.flash / 4;
-    ctx.save();
-    hexPath(ctx, b.x, b.y, r, rot);
-    ctx.fillStyle = 'rgba(255,255,255,' + (a * 0.55).toFixed(3) + ')';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,' + (a * 0.85).toFixed(3) + ')';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, r + 10 + (1 - a) * 26, 0, TAU);
-    ctx.strokeStyle = 'rgba(255,255,255,' + (a * 0.45).toFixed(3) + ')';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.restore();
-  }
+  
+  ctx.save();
+  // 外扩冲击环
+  ctx.beginPath();
+  ctx.arc(b.x, b.y, r + 10 + (1 - a) * 26, 0, TAU);
+  ctx.strokeStyle = 'rgba(255,255,255,' + (a * 0.45).toFixed(3) + ')';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
 }
 
 // ------------------------------------------------------------- 弹幕
