@@ -98,6 +98,8 @@ var player_stamina := 100.0
 var player_courage := 0.0
 var player_energy := 4
 var player_dash_frames := 0
+var player_dash_buffer := 0
+var player_dash_ramp := 0
 var player_dash_cd := 0
 var player_dash_invuln := 0
 var player_dash_out := 0
@@ -112,6 +114,7 @@ var player_dying := false
 var skill_red_tragedy := false
 
 var textures: Dictionary = {}
+var character_art = preload("res://godot/character_art.gd").new()
 var music_player: AudioStreamPlayer
 var current_music := ""
 
@@ -125,6 +128,12 @@ func _ready() -> void:
 
 func _load_assets() -> void:
 	var paths := {
+		"rek_body_move": "res://art/battle/rek/body_move.png",
+		"rek_body_charge": "res://art/battle/rek/body_charge.png",
+		"rek_head": "res://art/battle/rek/head.png",
+		"rek_dash_01": "res://art/battle/rek/dash_01.png",
+		"rek_dash_02": "res://art/battle/rek/dash_02.png",
+		"rek_dash_03": "res://art/battle/rek/dash_03.png",
 		"mirror": "res://art/bg/mirror.jpg",
 		"mirror_alt": "res://art/bg/mirror_alt.jpg",
 		"throne": "res://art/obj/throne.png",
@@ -141,9 +150,18 @@ func _load_assets() -> void:
 		"cutin_marysue": "res://art/cg/cutin_marysue.png"
 	}
 	for key in paths:
-		var tex = load(paths[key])
+		var tex = _load_texture(paths[key])
 		if tex is Texture2D:
 			textures[key] = tex
+
+func _load_texture(path: String) -> Texture2D:
+	if ResourceLoader.exists(path):
+		var imported = load(path)
+		if imported is Texture2D:
+			return imported
+	# Fresh PNGs can also run before the editor's next import scan.
+	var source := Image.load_from_file(path)
+	return ImageTexture.create_from_image(source) if source else null
 
 func _load_story() -> void:
 	var raw := FileAccess.get_file_as_string("res://docs/story_export.json")
@@ -352,7 +370,7 @@ func _start_duel(command: Dictionary) -> void:
 
 func _set_portrait(who: String, expr: String) -> void:
 	var id := _portrait_id(who, expr)
-	if who == "rek" or who == "蕾克":
+	if _portrait_base(who) == "rek":
 		story_left = id
 		story_left_expr = expr
 	else:
@@ -360,6 +378,12 @@ func _set_portrait(who: String, expr: String) -> void:
 		story_right_expr = expr
 
 func _portrait_id(who: String, expr: String) -> String:
+	var base := _portrait_base(who)
+	if base == "crimson" and expr == "":
+		return "crimson_stand"
+	return base + ("_" + expr if expr != "" else "")
+
+func _portrait_base(who: String) -> String:
 	var base := who
 	if who == "rek_crimson":
 		base = "crimson"
@@ -373,7 +397,11 @@ func _portrait_id(who: String, expr: String) -> String:
 		base = "mabel"
 	if who == "玛丽苏":
 		base = "marysue"
-	return base + ("_" + expr if expr != "" else "")
+	return base
+
+func _portrait_speaking(id: String) -> bool:
+	var base := _portrait_base(story_who)
+	return base != "" and (id == base or id.begins_with(base + "_"))
 
 func _update_story() -> void:
 	if _just("skip"):
@@ -421,11 +449,26 @@ func _finish_walk() -> void:
 
 func _start_walk(command: Dictionary) -> void:
 	mode = Mode.WALK
+	paused = false
 	walk_next = str(command.get("next", ""))
 	walk_until = float(command.get("untilX", -1.0))
 	var player_x = command.get("playerX", 180.0)
 	player_pos = Vector2(float(player_x), GROUND_Y - 20.0)
 	player_vel = Vector2.ZERO
+	player_grounded = true
+	player_ball = false
+	player_dash_frames = 0
+	player_dash_buffer = 0
+	player_dash_ramp = 0
+	player_dash_out = 0
+	player_dash_cd = 0
+	player_jump_buffer = 0
+	player_stamina = 100.0
+	bullets.clear()
+	warnings.clear()
+	shots.clear()
+	trail.clear()
+	particles.clear()
 	walk_target = command.get("target", {})
 	walk_props = command.get("props", [])
 	walk_camera = bool(command.get("cam", false))
@@ -434,11 +477,8 @@ func _start_walk(command: Dictionary) -> void:
 	camera_x = 0.0
 
 func _update_walk() -> void:
-	var axis := float(int(input_state.get("right", false)) - int(input_state.get("left", false)))
-	player_vel.x = move_toward(player_vel.x, axis * 260.0, 2600.0 * FIXED_DT)
-	player_pos.x = clampf(player_pos.x + player_vel.x * FIXED_DT, ARENA_LEFT, ARENA_RIGHT)
-	player_pos.y = GROUND_Y - 20.0
-	player_facing = -1.0 if axis < 0 else (1.0 if axis > 0 else player_facing)
+	_update_player()
+	_update_shots()
 	if walk_camera:
 		camera_x = lerpf(camera_x, clampf(player_pos.x - 360.0, 0.0, WORLD_W - VIEW.x), 0.12)
 	if walk_target.size() > 0:
@@ -477,6 +517,8 @@ func _start_battle(id: String, after: String) -> void:
 	player_courage = 0.0
 	player_energy = 4
 	player_dash_frames = 0
+	player_dash_buffer = 0
+	player_dash_ramp = 0
 	player_dash_cd = 0
 	player_dash_invuln = 0
 	player_dash_out = 0
@@ -572,24 +614,45 @@ func _update_player() -> void:
 			return
 	if dash_pressed and not player_grounded and bool(input_state.get("up", false)) and player_stamina > 20.0:
 		player_ball = true
+		player_dash_frames = 0
+		player_dash_out = 0
+		player_dash_buffer = 0
 		player_stamina = maxf(0.0, player_stamina - BALL_ENTRY_STAMINA_COST)
 		player_vel.x *= 0.4
 		player_vel.y = -450.0
 		player_ball_launch = 5
 		_spawn_burst(player_pos, RED, 14)
 		return
+	if dash_pressed:
+		player_dash_buffer = 8
+	if player_dash_buffer > 0:
+		if player_dash_cd <= 0 and player_dash_frames == 0 and player_dash_out == 0 and player_stamina >= DASH_STAMINA_COST:
+			player_stamina -= DASH_STAMINA_COST
+			player_dash_buffer = 0
+			player_dash_frames = 12
+			player_dash_ramp = 3
+			player_dash_cd = 28
+			player_dash_invuln = 16
+			_spawn_burst(player_pos, RED, 8)
+		else:
+			player_dash_buffer -= 1
 	if player_dash_frames > 0:
 		player_dash_frames -= 1
-		player_dash_invuln = maxi(player_dash_invuln, 16)
-		var ramp := 0.45 + 0.55 * (1.0 - float(player_dash_frames) / 12.0)
+		var ramp := 1.0
+		if player_dash_ramp > 0:
+			var progress := 1.0 - float(player_dash_ramp) / 3.0
+			ramp = 0.45 + 0.55 * (1.0 - pow(1.0 - progress, 2.0))
+			player_dash_ramp -= 1
 		player_vel = Vector2(player_facing * 1020.0 * ramp, 0)
 		player_pos += player_vel * FIXED_DT
 		trail.append({"pos": player_pos, "life": 0.2, "max": 0.2})
 		if trail.size() > 12:
 			trail.pop_front()
+		if player_dash_frames == 0:
+			player_dash_out = 6
 	elif player_dash_out > 0:
 		player_dash_out -= 1
-		player_vel.x *= 0.72
+		player_vel.x = lerpf(player_vel.x, axis * 340.0, 0.28)
 		player_pos += player_vel * FIXED_DT
 	else:
 		if player_grounded and player_jump_buffer > 0:
@@ -604,14 +667,6 @@ func _update_player() -> void:
 		player_pos += player_vel * FIXED_DT
 		if player_grounded:
 			player_stamina = minf(100.0, player_stamina + 26.0 * FIXED_DT)
-		if dash_pressed and player_dash_cd <= 0 and player_stamina >= 7.0:
-			player_stamina = maxf(0.0, player_stamina - DASH_STAMINA_COST)
-			player_dash_frames = 12
-			player_dash_cd = 28
-			player_dash_invuln = 16
-			player_dash_out = 6
-			player_vel = Vector2(player_facing * 1020.0 * 0.45, 0)
-			_spawn_burst(player_pos, RED, 8)
 		if bool(input_state.get("shoot", false)) and player_fire_cd <= 0:
 			_fire_shot()
 	player_pos.x = clampf(player_pos.x, ARENA_LEFT, ARENA_RIGHT)
@@ -721,7 +776,7 @@ func _update_shots() -> void:
 		var pos: Vector2 = shot["pos"]
 		var vel: Vector2 = shot["vel"]
 		var to_boss := boss_pos - pos
-		if to_boss.length() < 280.0 and to_boss.length() > 0.1:
+		if mode == Mode.BATTLE and to_boss.length() < 280.0 and to_boss.length() > 0.1:
 			var desired := to_boss.normalized()
 			var current_angle := vel.angle()
 			var target_angle := desired.angle()
@@ -730,7 +785,7 @@ func _update_shots() -> void:
 			shot["vel"] = vel
 		shot["pos"] = pos + vel * FIXED_DT
 		shot["life"] = float(shot["life"]) - FIXED_DT
-		if shot["pos"].distance_to(boss_pos) < 52.0:
+		if mode == Mode.BATTLE and shot["pos"].distance_to(boss_pos) < 52.0:
 			boss_hp = maxf(0.0, boss_hp - 3.0)
 			boss_hit_flash = 8
 			hitstop = 4
@@ -754,7 +809,7 @@ func _update_bullets() -> void:
 	bullets = bullets.filter(func(b): return float(b.get("life", 0.0)) > 0.0 and b["pos"].x > -140.0 and b["pos"].x < WORLD_W + 140.0 and b["pos"].y > -100.0 and b["pos"].y < VIEW.y + 100.0)
 
 func _check_graze_and_hits() -> void:
-	if player_ball:
+	if mode != Mode.BATTLE or player_ball:
 		return
 	var center := player_pos + Vector2(0, -2)
 	for bullet in bullets:
@@ -922,8 +977,8 @@ func _draw_story() -> void:
 	if story_cg:
 		draw_texture_rect(story_cg, Rect2(0, 70, VIEW.x, 580), false, Color(1, 1, 1, 0.84))
 	if story_cmd.get("t", "") != "card":
-		_draw_portrait(story_left, Vector2(340, 520), 0.62 if story_who == story_left else 0.38, story_who == story_left, false)
-		_draw_portrait(story_right, Vector2(940, 520), 0.62 if story_who == story_right else 0.38, story_who == story_right, true)
+		_draw_portrait(story_left, Vector2(340, 520), 0.62, _portrait_speaking(story_left), false)
+		_draw_portrait(story_right, Vector2(940, 520), 0.62, _portrait_speaking(story_right), true)
 	# A scene can stay black during narration (the prologue reads a letter).
 	# Fade the scenery and portraits before drawing text and continue prompts.
 	if story_fade > 0:
@@ -933,7 +988,10 @@ func _draw_story() -> void:
 		draw_string(ThemeDB.fallback_font, Vector2(390, 310), str(story_card[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 42, WHITE)
 		draw_string(ThemeDB.fallback_font, Vector2(390, 365), str(story_card[1]), HORIZONTAL_ALIGNMENT_LEFT, -1, 22, GREY)
 	if story_intro != "":
-		_draw_intro(story_intro)
+		if story_cmd.get("t", "") == "bossIntro":
+			_draw_boss_intro(story_intro)
+		else:
+			_draw_intro(story_intro)
 	if story_title != "":
 		draw_rect(Rect2(Vector2.ZERO, VIEW), Color(0, 0, 0, 0.35))
 		draw_string(ThemeDB.fallback_font, Vector2(440, 275), story_title, HORIZONTAL_ALIGNMENT_LEFT, -1, 38, RED if "猩红" in story_title else WHITE)
@@ -968,14 +1026,19 @@ func _draw_portrait(id: String, center: Vector2, scale: float, active: bool, fli
 		draw_circle(center + Vector2(0, -size.y * 0.56), size.x * 0.48, Color(CYAN if flipped else RED, 0.08))
 
 func _get_portrait_texture(id: String) -> Texture2D:
+	var cache_key := "portrait_" + id
+	if textures.has(cache_key):
+		return textures[cache_key]
 	var path := "res://art/portrait/" + id + ".png"
 	if FileAccess.file_exists(path):
-		var tex = load(path)
+		var tex = _load_texture(path)
 		if tex is Texture2D:
+			textures[cache_key] = tex
 			return tex
 	var base := id.split("_")[0]
-	path = "res://art/portrait/" + base + ".png"
-	var fallback = load(path)
+	path = "res://art/portrait/" + _portrait_id(base, "") + ".png"
+	var fallback = _load_texture(path) if FileAccess.file_exists(path) else null
+	textures[cache_key] = fallback
 	return fallback if fallback is Texture2D else null
 
 func _draw_intro(id: String) -> void:
@@ -984,6 +1047,16 @@ func _draw_intro(id: String) -> void:
 	draw_line(Vector2(930, 120), Vector2(930, 480), accent, 5.0)
 	draw_string(ThemeDB.fallback_font, Vector2(980, 230), _display_name(id), HORIZONTAL_ALIGNMENT_LEFT, -1, 32, accent)
 	draw_string(ThemeDB.fallback_font, Vector2(980, 280), "登场", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, GREY)
+
+func _draw_boss_intro(id: String) -> void:
+	var key := "cutin_crimson" if id == "crimson" or id == "rek_crimson" else "cutin_marysue"
+	var tex: Texture2D = textures.get(key)
+	if tex:
+		var factor := minf(VIEW.x / tex.get_width(), VIEW.y / tex.get_height())
+		var size := tex.get_size() * factor
+		draw_texture_rect(tex, Rect2((VIEW - size) * 0.5, size), false)
+	draw_string(ThemeDB.fallback_font, Vector2(430, 590), "BATTLE START", HORIZONTAL_ALIGNMENT_LEFT, -1, 42, WHITE)
+	draw_string(ThemeDB.fallback_font, Vector2(470, 640), _display_name(id), HORIZONTAL_ALIGNMENT_LEFT, -1, 28, RED if key == "cutin_crimson" else HAZARD)
 
 func _display_name(id: String) -> String:
 	match id:
@@ -1001,7 +1074,7 @@ func _draw_walk() -> void:
 		var pos := Vector2(float(prop.get("x", 0.0)) - camera_x, GROUND_Y)
 		if kind == "throne" and textures.get("throne"):
 			var tex: Texture2D = textures["throne"]
-			draw_texture_rect(tex, Rect2(pos.x - 170, pos.y - 320, 340, 320), false, WHITE)
+			character_art.draw_ground(self, tex, pos, 320.0)
 		elif kind == "mirror":
 			_draw_mirror_gate(pos)
 	if walk_target.size() > 0:
@@ -1010,12 +1083,17 @@ func _draw_walk() -> void:
 		if kind == "norden" or kind == "mabel":
 			var tex: Texture2D = textures.get(kind)
 			if tex:
-				draw_texture_rect(tex, Rect2(p.x - 92, p.y - 300, 184, 300), false, WHITE)
+				draw_texture_rect_region(tex, _npc_rect(kind, p), character_art.visible_bounds(tex), WHITE)
 			draw_string(ThemeDB.fallback_font, p + Vector2(-52, -330), str(walk_target.get("label", "按 W 交互")), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, WHITE)
 		elif kind == "mirror":
 			_draw_mirror_gate(p)
+	_draw_dash_trail()
 	_draw_player_at(player_pos - Vector2(camera_x, 0), WHITE)
-	draw_string(ThemeDB.fallback_font, Vector2(40, 48), "A / D 移动    W 靠近并交互", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, WHITE)
+	_draw_particles_world()
+	draw_string(ThemeDB.fallback_font, Vector2(40, 48), "A / D 移动    SPACE 跳跃    SHIFT / K / 右键 冲刺    W 靠近并交互", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, WHITE)
+
+func _npc_rect(id: String, foot: Vector2) -> Rect2:
+	return character_art.ground_rect(textures.get(id), foot, 340.0 if id == "mabel" else 300.0)
 
 func _draw_world_grid() -> void:
 	draw_rect(Rect2(0, GROUND_Y + 2, VIEW.x, VIEW.y - GROUND_Y), Color(0.02, 0.02, 0.02, 1))
@@ -1106,6 +1184,10 @@ func _draw_player_at(pos: Vector2, tint: Color) -> void:
 			var start := float(frame) * 0.12 + float(i) * TAU / 3.0
 			draw_arc(pos, radius * 1.32, start, start + 0.85, 20, Color(CYAN, 0.72), 2.0)
 		draw_circle(pos, radius * 0.5, Color(1, 1, 1, 0.92))
+		return
+	var state: String = character_art.player_state(player_dash_frames, player_dash_out, bool(input_state.get("shoot", false)))
+	var aim := (get_viewport().get_mouse_position() - pos - Vector2(0, -80)).normalized() if mouse_seen else Vector2(player_facing, 0)
+	if character_art.draw_player(self, textures, pos + Vector2(0, 20), player_facing, state, aim, tint):
 		return
 	draw_set_transform(pos, 0.0, Vector2(-1, 1) if mirrored else Vector2.ONE)
 	draw_colored_polygon(PackedVector2Array([Vector2(-18, -18), Vector2(-68, 8), Vector2(-80, 52), Vector2(-8, 22)]), cape_color)
