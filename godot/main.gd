@@ -198,6 +198,7 @@ func _load_assets() -> void:
 		"mirror": "res://art/bg/mirror.jpg",
 		"mirror_alt": "res://art/bg/mirror_alt.jpg",
 		"throne": "res://art/obj/throne.png",
+		"mirror_stand": "res://art/obj/mirror_stand.png",
 		"norden": "res://art/char/norden_idle.png",
 		"mabel": "res://art/char/mabel_idle.png",
 		"crimson_01": "res://art/battle/scarlet/scarlet-action-red-eyes-01-cutout.png",
@@ -1742,6 +1743,11 @@ func _draw_world_grid() -> void:
 		draw_line(Vector2(x, GROUND_Y), Vector2(x + 90, GROUND_Y - 185), Color(CYAN, 0.08), 1.0)
 
 func _draw_mirror_gate(pos: Vector2) -> void:
+	# 新镜子立绘（gpt-image-2 生成，三色合规）；缺图时退回程序绘制
+	var mtex: Texture2D = textures.get("mirror_stand")
+	if mtex:
+		character_art.draw_ground(self, mtex, pos, 420.0)
+		return
 	draw_rect(Rect2(pos.x - 74, pos.y - 260, 148, 260), Color(CYAN, 0.12))
 	draw_rect(Rect2(pos.x - 62, pos.y - 248, 124, 236), Color(CYAN, 0.16), false, 3.0)
 	draw_line(pos + Vector2(-45, -205), pos + Vector2(30, -135), Color(1, 1, 1, 0.7), 2.0)
