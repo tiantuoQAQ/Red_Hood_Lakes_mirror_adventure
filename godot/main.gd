@@ -94,9 +94,14 @@ var boss_state_timer := 0
 var boss_reposition_target := Vector2.ZERO
 var boss_lunge_start := Vector2.ZERO
 var boss_lunge_return := Vector2.ZERO
+# Boss special skill state
+var boss_skill_state := ""  # "telegraph", "firing", "cooldown"
+var boss_skill_timer := 0
+var boss_skill_subframe := 0  # Frame counter within current skill phase
 var bullets: Array = []
 var shots: Array = []
 var warnings: Array = []
+var skill_warnings: Array = []  # Visual telegraph lines/circles for special skills
 var particles: Array = []
 var mirror_shards: Array = []
 var trail: Array = []
@@ -303,6 +308,10 @@ func _start_story(id: String) -> void:
 	if not story_data.has(id):
 		mode = Mode.END
 		return
+	# Mirror shards transition on chapter change (story → story)
+	if mode == Mode.STORY and id != chapter_id:
+		_spawn_mirror_shards(18, 0.75)
+	
 	chapter_id = id
 	story_commands = Array(story_data[id].get("cmds", []))
 	story_index = 0
@@ -538,6 +547,10 @@ func _finish_walk() -> void:
 		mode = Mode.TITLE
 
 func _start_walk(command: Dictionary) -> void:
+	# Mirror shards transition (from any mode → walk)
+	if mode != Mode.WALK:
+		_spawn_mirror_shards(20, 0.8)
+	
 	mode = Mode.WALK
 	paused = false
 	walk_next = str(command.get("next", ""))
@@ -587,6 +600,10 @@ func _update_walk() -> void:
 		_finish_walk()
 
 func _start_battle(id: String, after: String) -> void:
+	# Mirror shards transition (from any mode → battle)
+	if mode != Mode.BATTLE:
+		_spawn_mirror_shards(20, 0.9)
+	
 	mode = Mode.BATTLE
 	boss_id = id
 	boss_after = after
@@ -605,8 +622,12 @@ func _start_battle(id: String, after: String) -> void:
 	boss_reposition_target = boss_pos
 	boss_lunge_start = Vector2.ZERO
 	boss_lunge_return = Vector2.ZERO
+	boss_skill_state = ""
+	boss_skill_timer = 0
+	boss_skill_subframe = 0
 	bullets.clear()
 	warnings.clear()
+	skill_warnings.clear()
 	shots.clear()
 	particles.clear()
 	trail.clear()
@@ -967,35 +988,201 @@ func _update_boss() -> void:
 
 func _spawn_boss_pattern() -> void:
 	var color := RED if boss_id == "crimson" else HAZARD
-	var pattern := (boss_phase + int(frame / 80)) % (6 if boss_id == "crimson" else 7)
-	var origin := boss_pos
-	match pattern:
-		0:
-			for i in range(18):
-				var a := TAU * float(i) / 18.0 + float(frame) * 0.01
-				_spawn_bullet(origin, Vector2(cos(a), sin(a)) * 215.0, color, "hazard")
-		1:
-			for i in range(7):
-				var a := lerpf(-0.95, 0.95, float(i) / 6.0)
-				_spawn_bullet(origin, Vector2(-cos(a), sin(a)) * 300.0, color, "lance")
-				_spawn_bullet(origin + Vector2(0, 24), Vector2(-cos(a), -sin(a)) * 300.0, color, "lance")
-		2:
-			for i in range(8):
-				var a := float(i) * TAU / 8.0 + float(frame) * 0.02
-				_spawn_bullet(origin, Vector2(cos(a), sin(a)) * 250.0, color, "homing")
-		3:
-			for i in range(12):
-				var x := 1250.0 + float(i) * 82.0
-				_spawn_bullet(Vector2(x, 50.0), Vector2(0, 300.0), color, "rain")
-		4:
-			for i in range(5):
-				var a := -0.55 + float(i) * 0.27
-				_spawn_bullet(origin, Vector2(-cos(a), sin(a)) * 420.0, color, "blade")
-				_spawn_bullet(origin, Vector2(-cos(a), -sin(a)) * 420.0, color, "blade")
-		5:
-			warnings.append({"pos": origin, "angle": (player_pos - origin).angle(), "life": 0.65})
-			for i in range(2):
-				_spawn_bullet(origin, Vector2(-1, 0).rotated(0.10 if i == 0 else -0.10) * 520.0, color, "laser")
+	# Special skill pattern: use phase-specific signature moves
+	if boss_id == "crimson":
+		match boss_phase:
+			0:  # Stage 1: 赤线突刺 (Telegraph 24 frames → thrust 900px/s)
+				_crimson_thrust_lines()
+			2:  # Stage 3: 扇形斩击 (5-7 blades, safe gap)
+				_crimson_fan_slash()
+			4:  # Stage 5: 赤月终式 (12 waves @ 30° intervals, warning 42 frames)
+				_crimson_red_moon_finale()
+			_:  # Fallback: legacy circle pattern
+				for i in range(18):
+					var a := TAU * float(i) / 18.0 + float(frame) * 0.01
+					_spawn_bullet(boss_pos, Vector2(cos(a), sin(a)) * 215.0, color, "hazard")
+	elif boss_id == "marysue":
+		match boss_phase:
+			0:  # Stage 1: 法环收束 (12 bullets, 96px gap, 260px/s)
+				_marysue_ring_collapse()
+			2:  # Stage 3: 光翼裁切 (left/right fan, 6 each, 380px/s)
+				_marysue_wing_sweep()
+			5:  # Stage 6: 倒置终稿 (16 bullets, 340px/s, 128px gap, warning 60 frames)
+				_marysue_inverted_finale()
+			_:  # Fallback: legacy homing pattern
+				for i in range(8):
+					var a := float(i) * TAU / 8.0 + float(frame) * 0.02
+					_spawn_bullet(boss_pos, Vector2(cos(a), sin(a)) * 250.0, color, "homing")
+
+# Crimson Stage 1: Thrust lines (direct lunge刀光)
+func _crimson_thrust_lines() -> void:
+	# Telegraph: 24 frames red line → thrust 900px/s
+	if boss_skill_state == "":
+		boss_skill_state = "telegraph"
+		boss_skill_timer = 24
+		boss_skill_subframe = 0
+		var aim := (player_pos - boss_pos).normalized()
+		skill_warnings.append({"kind": "line", "pos": boss_pos, "dir": aim, "life": 24.0 / 60.0, "color": RED})
+	elif boss_skill_state == "telegraph":
+		boss_skill_timer -= 1
+		if boss_skill_timer <= 0:
+			boss_skill_state = "firing"
+			boss_skill_timer = 30  # Thrust duration
+			# Fire single thrust blade (900px/s, length 420px)
+			var aim: Vector2 = skill_warnings[0]["dir"] if skill_warnings.size() > 0 else Vector2(-1, 0)
+			_spawn_bullet(boss_pos, aim * 900.0, RED, "lance")
+	elif boss_skill_state == "firing":
+		boss_skill_timer -= 1
+		if boss_skill_timer <= 0:
+			boss_skill_state = ""
+			skill_warnings.clear()
+
+# Crimson Stage 3: Fan slash (扇形 5-7 blades, safe gap)
+func _crimson_fan_slash() -> void:
+	if boss_skill_state == "":
+		boss_skill_state = "telegraph"
+		boss_skill_timer = 30  # 30 frames warning
+		boss_skill_subframe = 0
+		# Draw 7 telegraph lines (arc pattern)
+		for i in range(7):
+			var a := lerpf(-0.6, 0.6, float(i) / 6.0)  # Fan arc ±0.6 rad
+			var dir := Vector2(-cos(a), sin(a))
+			skill_warnings.append({"kind": "line", "pos": boss_pos, "dir": dir, "life": 30.0 / 60.0, "color": RED})
+	elif boss_skill_state == "telegraph":
+		boss_skill_timer -= 1
+		if boss_skill_timer <= 0:
+			boss_skill_state = "firing"
+			boss_skill_timer = 7 * 4  # 7 blades @ 4 frame intervals
+			boss_skill_subframe = 0
+	elif boss_skill_state == "firing":
+		boss_skill_timer -= 1
+		# Fire one blade every 4 frames
+		if boss_skill_timer % 4 == 0:
+			var idx := (7 * 4 - boss_skill_timer) / 4
+			if idx < skill_warnings.size():
+				var warn: Dictionary = skill_warnings[idx]
+				_spawn_bullet(boss_pos, warn["dir"] * 420.0, RED, "blade")
+		if boss_skill_timer <= 0:
+			boss_skill_state = ""
+			skill_warnings.clear()
+
+# Crimson Stage 5: Red moon finale (12 waves @ 30° intervals, 420px/s)
+func _crimson_red_moon_finale() -> void:
+	if boss_skill_state == "":
+		boss_skill_state = "telegraph"
+		boss_skill_timer = 42  # 42 frames warning
+		boss_skill_subframe = 0
+		# Flash 3 times (visual only, no mechanic)
+		for i in range(12):
+			var a := float(i) * TAU / 12.0
+			var dir := Vector2(cos(a), sin(a))
+			skill_warnings.append({"kind": "line", "pos": boss_pos, "dir": dir, "life": 42.0 / 60.0, "color": RED})
+	elif boss_skill_state == "telegraph":
+		boss_skill_timer -= 1
+		if boss_skill_timer <= 0:
+			boss_skill_state = "firing"
+			boss_skill_timer = 12 * 5  # 12 bullets @ 5 frame intervals
+			boss_skill_subframe = 0
+	elif boss_skill_state == "firing":
+		boss_skill_timer -= 1
+		# Fire one wave every 5 frames
+		if boss_skill_timer % 5 == 0:
+			var idx := (12 * 5 - boss_skill_timer) / 5
+			if idx < skill_warnings.size():
+				var warn: Dictionary = skill_warnings[idx]
+				var speed := 420.0 if idx < 6 else 500.0  # Speed boost after 7th
+				_spawn_bullet(boss_pos, warn["dir"] * speed, RED, "blade")
+		if boss_skill_timer <= 0:
+			boss_skill_state = ""
+			skill_warnings.clear()
+			# Cooldown: 72 frames (handled by boss_attack_timer reset)
+
+# Marysue Stage 1: Ring collapse (12 bullets, 260px/s, 96px gap)
+func _marysue_ring_collapse() -> void:
+	if boss_skill_state == "":
+		boss_skill_state = "telegraph"
+		boss_skill_timer = 36  # 36 frames warning
+		boss_skill_subframe = 0
+		# Draw collapsing ring visual (12 points)
+		for i in range(12):
+			var a := float(i) * TAU / 12.0
+			var dir := Vector2(cos(a), sin(a))
+			skill_warnings.append({"kind": "circle", "pos": boss_pos, "dir": dir, "life": 36.0 / 60.0, "color": HAZARD})
+	elif boss_skill_state == "telegraph":
+		boss_skill_timer -= 1
+		if boss_skill_timer <= 0:
+			boss_skill_state = "firing"
+			boss_skill_timer = 12 * 4  # 12 bullets @ 4 frame intervals
+			boss_skill_subframe = 0
+	elif boss_skill_state == "firing":
+		boss_skill_timer -= 1
+		# Fire one bullet every 4 frames
+		if boss_skill_timer % 4 == 0:
+			var idx := (12 * 4 - boss_skill_timer) / 4
+			if idx < skill_warnings.size():
+				var warn: Dictionary = skill_warnings[idx]
+				_spawn_bullet(boss_pos, warn["dir"] * 260.0, HAZARD, "hazard")
+		if boss_skill_timer <= 0:
+			boss_skill_state = ""
+			skill_warnings.clear()
+
+# Marysue Stage 3: Wing sweep (left/right fan, 6 each, 380px/s)
+func _marysue_wing_sweep() -> void:
+	if boss_skill_state == "":
+		boss_skill_state = "telegraph"
+		boss_skill_timer = 30  # 30 frames warning
+		boss_skill_subframe = 0
+		# Left wing: 6 blades @ -60°/-40°/-20°/+20°/+40°/+60°
+		for i in range(6):
+			var angles := [-1.05, -0.7, -0.35, 0.35, 0.7, 1.05]  # Radians
+			var dir := Vector2(cos(angles[i]), sin(angles[i]))
+			skill_warnings.append({"kind": "line", "pos": boss_pos, "dir": dir, "life": 30.0 / 60.0, "color": HAZARD})
+	elif boss_skill_state == "telegraph":
+		boss_skill_timer -= 1
+		if boss_skill_timer <= 0:
+			boss_skill_state = "firing"
+			boss_skill_timer = 6 * 5  # 6 blades @ 5 frame intervals
+			boss_skill_subframe = 0
+	elif boss_skill_state == "firing":
+		boss_skill_timer -= 1
+		# Fire one blade every 5 frames
+		if boss_skill_timer % 5 == 0:
+			var idx := (6 * 5 - boss_skill_timer) / 5
+			if idx < skill_warnings.size():
+				var warn: Dictionary = skill_warnings[idx]
+				_spawn_bullet(boss_pos, warn["dir"] * 380.0, HAZARD, "blade")
+		if boss_skill_timer <= 0:
+			boss_skill_state = ""
+			skill_warnings.clear()
+
+# Marysue Stage 6: Inverted finale (16 bullets, 340px/s, 128px gap, warning 60 frames)
+func _marysue_inverted_finale() -> void:
+	if boss_skill_state == "":
+		boss_skill_state = "telegraph"
+		boss_skill_timer = 60  # 60 frames warning
+		boss_skill_subframe = 0
+		# Four-corner runes (visual warning only, 16 bullets will cover 360°)
+		for i in range(16):
+			var a := float(i) * TAU / 16.0
+			var dir := Vector2(cos(a), sin(a))
+			skill_warnings.append({"kind": "circle", "pos": boss_pos, "dir": dir, "life": 60.0 / 60.0, "color": HAZARD})
+	elif boss_skill_state == "telegraph":
+		boss_skill_timer -= 1
+		if boss_skill_timer <= 0:
+			boss_skill_state = "firing"
+			boss_skill_timer = 16 * 5  # 16 bullets @ 5 frame intervals
+			boss_skill_subframe = 0
+	elif boss_skill_state == "firing":
+		boss_skill_timer -= 1
+		# Fire one bullet every 5 frames
+		if boss_skill_timer % 5 == 0:
+			var idx := (16 * 5 - boss_skill_timer) / 5
+			if idx < skill_warnings.size():
+				var warn: Dictionary = skill_warnings[idx]
+				_spawn_bullet(boss_pos, warn["dir"] * 340.0, HAZARD, "hazard")
+		if boss_skill_timer <= 0:
+			boss_skill_state = ""
+			skill_warnings.clear()
 
 func _spawn_bullet(pos: Vector2, velocity: Vector2, color: Color, kind: String) -> void:
 	bullets.append({"pos": pos, "vel": velocity, "life": 5.0, "color": color, "kind": kind, "angle": velocity.angle(), "grazed": false})
@@ -1149,6 +1336,12 @@ func _update_fx() -> void:
 		shard["rot"] = float(shard["rot"]) + float(shard["spin"]) * FIXED_DT
 		shard["life"] = float(shard["life"]) - FIXED_DT
 	mirror_shards = mirror_shards.filter(func(s): return float(s.get("life", 0.0)) > 0.0)
+	
+	# Update skill warnings
+	for warn in skill_warnings:
+		warn["life"] = float(warn.get("life", 0.0)) - FIXED_DT
+	skill_warnings = skill_warnings.filter(func(w): return float(w.get("life", 0.0)) > 0.0)
+	
 	red_vignette = maxf(0.0, red_vignette - 1.0)
 	if banner_timer <= 0:
 		banner = ""
@@ -1278,9 +1471,20 @@ func _draw_story() -> void:
 			draw_string(ThemeDB.fallback_font, Vector2(440, 320), story_title_sub, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, GREY)
 	if story_cmd.get("t", "") == "say" or story_cmd.get("t", "") == "duel":
 		draw_rect(Rect2(50, 520, 1180, 150), Color(0.02, 0.02, 0.02, 0.9))
-		draw_line(Vector2(50, 520), Vector2(1230, 520), Color(RED if story_who == "rek" else CYAN, 0.8), 2.0)
+		# Name plate color by speaker: rek/crimson #FF0000, marysue #82FF00, norden #FFFFFF, mabel #00BAFF
+		var name_color := WHITE  # Default
+		match story_who:
+			"rek", "蕾克", "rek_crimson", "猩红魔姬":
+				name_color = RED  # #FF0000
+			"marysue", "玛丽苏":
+				name_color = HAZARD  # #82FF00
+			"norden", "诺登":
+				name_color = WHITE  # #FFFFFF
+			"mabel", "梅贝尔":
+				name_color = CYAN  # #00BAFF
+		draw_line(Vector2(50, 520), Vector2(1230, 520), name_color.lerp(Color(0.6, 0.6, 0.6), 0.2), 2.0)
 		if story_who != "":
-			draw_string(ThemeDB.fallback_font, Vector2(82, 555), _display_name(story_who), HORIZONTAL_ALIGNMENT_LEFT, -1, 22, RED if story_who == "rek" else CYAN)
+			draw_string(ThemeDB.fallback_font, Vector2(82, 555), _display_name(story_who), HORIZONTAL_ALIGNMENT_LEFT, -1, 22, name_color)
 		var shown := story_text.substr(0, int(story_reveal))
 		draw_string(ThemeDB.fallback_font, Vector2(82, 605), shown, HORIZONTAL_ALIGNMENT_LEFT, 1110, 24, WHITE)
 		draw_string(ThemeDB.fallback_font, Vector2(1000, 652), "ENTER / SPACE 继续    TAB 跳过", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, GREY)
@@ -1486,6 +1690,18 @@ func _boss_pose_key() -> String:
 	return "crimson_02"  # Fallback
 
 func _draw_projectiles() -> void:
+	# Draw skill warnings (telegraph visual: lines/circles for special moves)
+	for warn in skill_warnings:
+		var p: Vector2 = warn["pos"] - Vector2(camera_x, 0)
+		var kind := str(warn.get("kind", "line"))
+		var alpha := clampf(float(warn.get("life", 0.0)) * 2.0, 0.0, 1.0) * 0.45
+		if kind == "line":
+			var dir: Vector2 = warn["dir"]
+			draw_line(p, p + dir * 720.0, Color(warn["color"], alpha), 3.0)
+		elif kind == "circle":
+			var dir: Vector2 = warn["dir"]
+			draw_circle(p + dir * 180.0, 12.0, Color(warn["color"], alpha * 0.6))
+	
 	for warning in warnings:
 		var p: Vector2 = warning["pos"] - Vector2(camera_x, 0)
 		var dir := Vector2(cos(warning["angle"]), sin(warning["angle"]))
@@ -1730,14 +1946,15 @@ func _spawn_walk_dust() -> void:
 		"vel": vel,
 		"life": randf_range(10.0, 16.0) / 60.0,
 		"max_life": 16.0 / 60.0,
-		"alpha": 0.35
+		"alpha": 0.35,
+		"radius": randf_range(1.5, 3.0)
 	})
 
 ## Draw walk dust particles
 func _draw_walk_dust() -> void:
 	for dust in walk_dust:
 		var p: Vector2 = dust["pos"] - Vector2(camera_x, 0)
-		var radius := randf_range(1.0, 3.0)
+		var radius: float = dust.get("radius", 2.0)
 		draw_circle(p, radius, Color(GREY, dust["alpha"]))
 
 ## Trigger jump squash & stretch animation
