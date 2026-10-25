@@ -700,10 +700,14 @@ func _start_walk(command: Dictionary, long_map: bool = false) -> void:
 		for prop in walk_props:
 			if prop is Dictionary and prop.has("x"):
 				prop["x"] = float(prop["x"]) + WALK_SHIFT
-	walk_camera = bool(command.get("cam", walk_target.size() > 0))   # 有交互目标时默认跟随（否则目标可能在屏幕外）
+	walk_camera = bool(command.get("cam", true))   # 走位段默认跟随小红帽
 	if command.has("bg"):
 		story_bg = str(command.get("bg", story_bg))
-	camera_x = 0.0
+	# 起始就把镜头对齐到玩家，避免先跳到地图最左再滑过来
+	if walk_camera:
+		camera_x = clampf(player_pos.x - VIEW.x * 0.38, 0.0, WORLD_W - VIEW.x)
+	else:
+		camera_x = 0.0
 
 func _update_walk() -> void:
 	if portrait_fade > 0.0:
@@ -712,7 +716,8 @@ func _update_walk() -> void:
 	_update_shots()
 	_update_npc_glow()
 	if walk_camera:
-		camera_x = lerpf(camera_x, clampf(player_pos.x - 360.0, 0.0, WORLD_W - VIEW.x), 0.12)
+		var cam_target := clampf(player_pos.x - VIEW.x * 0.38, 0.0, WORLD_W - VIEW.x)
+		camera_x = lerpf(camera_x, cam_target, 1.0 - pow(0.0004, FIXED_DT))
 	if walk_target.size() > 0:
 		var target_x := float(walk_target.get("x", player_pos.x))
 		if _just("confirm") and absf(player_pos.x - target_x) < 110.0:
