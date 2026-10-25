@@ -113,12 +113,13 @@ const STORY = {
       { t: 'say', who: 'norden', show: true, text: '请允许我自我介绍。' },
       { t: 'say', who: 'norden', show: true, text: '我是「白之兔」诺登。' },
       { t: 'say', who: 'norden', show: true, text: '情况复杂，先记住一件事——' },
-      { t: 'say', who: 'norden', show: true, text: '我奉格林大人之命，暂且助您。' },
+      { t: 'say', who: 'norden', show: true, text: '我是为了格林大人，才来寻您。' },
+      { t: 'say', who: 'norden', show: true, text: '……虽然，那位大人还不认识我。' },
 
       { t: 'say', who: 'rek', show: true, text: '……我不能相信你。' },
       { t: 'say', who: 'rek', show: true, text: '你的意图是——' },
       { t: 'say', who: 'norden', show: true, text: '此刻不必追问我的意图。' },
-      { t: 'say', who: 'norden', show: true, text: '我救您，是为了格林大人。' },
+      { t: 'say', who: 'norden', show: true, text: '我救您，也只是为了格林大人。' },
       { t: 'say', who: 'norden', show: true, text: '您被玛丽苏偷袭了。是我，从她手上把您救下来的。' },
       { t: 'say', who: 'rek', show: true, text: '……' },
 

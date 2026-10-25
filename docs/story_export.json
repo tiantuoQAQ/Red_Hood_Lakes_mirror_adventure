@@ -354,7 +354,13 @@
         "t": "say",
         "who": "norden",
         "show": true,
-        "text": "我奉格林大人之命，暂且助您。"
+        "text": "我是为了格林大人，才来寻您。"
+      },
+      {
+        "t": "say",
+        "who": "norden",
+        "show": true,
+        "text": "……虽然，那位大人还不认识我。"
       },
       {
         "t": "say",
@@ -378,7 +384,7 @@
         "t": "say",
         "who": "norden",
         "show": true,
-        "text": "我救您，是为了格林大人。"
+        "text": "我救您，也只是为了格林大人。"
       },
       {
         "t": "say",
