@@ -130,6 +130,8 @@ var spikes: Array = []        # 突刺锋 {pos, life, max}
 var green_flash_t := 0.0      # 全屏绿闪剩余秒数
 var mirror_flip := false      # 第六阶段：左右交换
 var boss_hit_flash := 0
+var boss_prev_pos := Vector2.ZERO
+var boss_move_particle_tick := 0
 var boss_ring_flash := 0  # Ring alpha flash state: 0 = steady 0.85, >0 = flashing
 var boss_skill_name := ""
 # Boss movement state machine
@@ -1200,6 +1202,7 @@ func _update_boss() -> void:
 	if not cutin_active and battle_intro_t <= 0.0:
 		_spawn_boss_pattern()
 	
+	_boss_move_particles()
 	_update_boss_extras()
 	_update_fx_rings()
 	if cutin_active:
@@ -3189,3 +3192,35 @@ func _stop_battle_bgm() -> void:
 	if battle_bgm_player != null and battle_bgm_player.playing:
 		battle_bgm_player.stop()
 	battle_bgm_started = false
+
+
+## Boss 移动时的粒子特效（小光点）
+func _boss_move_particles() -> void:
+	var delta := boss_pos - boss_prev_pos
+	var speed := delta.length() / maxf(FIXED_DT, 0.0001)
+	boss_prev_pos = boss_pos
+	boss_move_particle_tick += 1
+	if speed < 40.0:
+		return
+	var dir := delta.normalized()
+	var amount := 2 if speed < 200.0 else 3
+	if boss_move_particle_tick % 2 != 0:
+		return
+	for k in range(amount):
+		var offset := Vector2(randf_range(-26, 26), randf_range(-46, 46))
+		var origin := boss_pos + offset - dir * 18.0
+		if boss_id == "crimson":
+			# 红色余烬：向后飘散、缓慢下落
+			_spawn_particle(origin, Color(1, randf_range(0.1, 0.35), 0.1, 0.9), randf_range(0.35, 0.7),
+				Vector2(-dir.x * randf_range(60, 160) + randf_range(-30, 30), randf_range(20, 90)), randf_range(2.5, 5.0))
+		else:
+			# 绿色光点：向上飘、带轻微旋转感
+			_spawn_particle(origin, Color(0.51, 1.0, 0.0, 0.9), randf_range(0.45, 0.85),
+				Vector2(-dir.x * randf_range(30, 90) + randf_range(-40, 40), randf_range(-110, -30)), randf_range(2.0, 4.5))
+	# 高速时额外一圈细腻光尘
+	if speed > 500.0:
+		for k in range(3):
+			var a := randf() * TAU
+			_spawn_particle(boss_pos + Vector2(cos(a), sin(a)) * randf_range(20.0, 60.0),
+				Color(1, 1, 1, 0.55) if boss_id == "crimson" else Color(0.51, 1.0, 0.0, 0.7),
+				randf_range(0.2, 0.4), Vector2(randf_range(-60, 60), randf_range(-60, 60)), 2.0)
