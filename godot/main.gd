@@ -11,6 +11,14 @@ const GROUND_Y := 574.0
 const ARENA_LEFT := 48.0
 const ARENA_RIGHT := WORLD_W - 48.0
 const ARENA_TOP := 48.0
+# Player & Boss battle display heights (user spec 2026-10-25)
+const PLAYER_HEIGHT := 170.0  # Player displayed at 170px in battle
+const BOSS_HEIGHT := 170.0    # Boss matches player height
+# NPC map display heights
+const NPC_NORDEN_HEIGHT := 210.0
+const NPC_MABEL_HEIGHT := 235.0
+# Ring animation: 594px source → 391px display (2.3 × character height)
+const RING_DISPLAY_DIAMETER := 391.0
 const RED := Color("#ff0000")
 const HAZARD := Color("#82ff00")
 const CYAN := Color("#00baff")
@@ -1138,7 +1146,9 @@ func _draw() -> void:
 
 func _draw_background() -> void:
 	draw_rect(Rect2(Vector2.ZERO, VIEW), BLACK)
-	var bg_tex: Texture2D = null if story_bg == "void" else (textures.get("mirror") if story_bg == "mirror" else textures.get("mirror_alt"))
+	# Battle mode: always use clean mirror.jpg background (not mirror_alt with crack panel)
+	var bg_key := "mirror" if mode == Mode.BATTLE else (story_bg if story_bg == "mirror" else "mirror_alt")
+	var bg_tex: Texture2D = null if (mode != Mode.BATTLE and story_bg == "void") else textures.get(bg_key)
 	if bg_tex:
 		# Darken background during battle: alpha 0.42 → apply additional 0.38 tint for battle (total ~0.16)
 		var alpha := 0.42
@@ -1281,7 +1291,7 @@ func _draw_walk() -> void:
 			character_art.draw_ground(self, tex, pos, 320.0)
 		elif kind == "norden" or kind == "mabel":
 			var fallback_tex: Texture2D = textures.get(kind)
-			var height := 340.0 if kind == "mabel" else 300.0
+			var height := NPC_MABEL_HEIGHT if kind == "mabel" else NPC_NORDEN_HEIGHT
 			character_art.draw_npc_breathe(self, kind, pos, height, elapsed, fallback_tex)
 		elif kind == "mirror":
 			_draw_mirror_gate(pos)
@@ -1290,7 +1300,7 @@ func _draw_walk() -> void:
 		var p := Vector2(float(walk_target.get("x", 0.0)) - camera_x, GROUND_Y)
 		if kind == "norden" or kind == "mabel":
 			var fallback_tex: Texture2D = textures.get(kind)
-			var height := 340.0 if kind == "mabel" else 300.0
+			var height := NPC_MABEL_HEIGHT if kind == "mabel" else NPC_NORDEN_HEIGHT
 			character_art.draw_npc_breathe(self, kind, p, height, elapsed, fallback_tex)
 			draw_string(ThemeDB.fallback_font, p + Vector2(-52, -330), str(walk_target.get("label", "按 W 交互")), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, WHITE)
 		elif kind == "mirror":
@@ -1301,7 +1311,8 @@ func _draw_walk() -> void:
 	draw_string(ThemeDB.fallback_font, Vector2(40, 48), "A / D 移动    SPACE 跳跃    SHIFT / K / 右键 冲刺    W 靠近并交互", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, WHITE)
 
 func _npc_rect(id: String, foot: Vector2) -> Rect2:
-	return character_art.ground_rect(textures.get(id), foot, 340.0 if id == "mabel" else 300.0)
+	var height := NPC_MABEL_HEIGHT if id == "mabel" else NPC_NORDEN_HEIGHT
+	return character_art.ground_rect(textures.get(id), foot, height)
 
 func _draw_world_grid() -> void:
 	draw_rect(Rect2(0, GROUND_Y + 2, VIEW.x, VIEW.y - GROUND_Y), Color(0.02, 0.02, 0.02, 1))
@@ -1340,8 +1351,9 @@ func _draw_boss_fx() -> void:
 	var ring_key := "ring_%s_%02d" % [ring_dir, ring_frame]
 	var ring_tex: Texture2D = textures.get(ring_key)
 	if ring_tex:
-		# Ring is 594px square, drawn at 594px diameter, centered on boss body center
-		var ring_size := Vector2(594.0, 594.0)
+		# Ring: 594px source → 391px display (2.3 × character height = 2.3 × 170)
+		var ring_scale := RING_DISPLAY_DIAMETER / 594.0
+		var ring_size := Vector2(594.0, 594.0) * ring_scale
 		draw_texture_rect(ring_tex, Rect2(center - ring_size * 0.5, ring_size), false)
 
 func _draw_boss() -> void:
@@ -1351,9 +1363,8 @@ func _draw_boss() -> void:
 	var tex: Texture2D = textures.get(key)
 	if tex:
 		var tint := WHITE if boss_hit_flash == 0 or frame % 4 < 2 else Color(1, 1, 1, 0.4)
-		# Boss displayed height must match player's 261px (0.34 * 768)
-		var target_height := 261.0
-		var scale := target_height / tex.get_height()
+		# Boss displayed height = 170px (matches player, user spec 2026-10-25)
+		var scale := BOSS_HEIGHT / tex.get_height()
 		# Anchor at body center (center is the floating reference point)
 		draw_texture_rect(tex, Rect2(center.x - tex.get_width() * scale * 0.5, center.y - tex.get_height() * scale * 0.5, tex.get_width() * scale, tex.get_height() * scale), false, tint)
 	else:
@@ -1462,12 +1473,14 @@ func _draw_particles_world() -> void:
 func _draw_hud() -> void:
 	var color := RED if boss_id == "crimson" else HAZARD
 	draw_string(ThemeDB.fallback_font, Vector2(32, 36), "MIRROR // BATTLE", HORIZONTAL_ALIGNMENT_LEFT, -1, 17, GREY)
-	# Boss HUD: name above, health bar center, stage below
+	# Boss HUD: name / health bar / stage label stacked with >= 6px spacing
 	draw_string(ThemeDB.fallback_font, Vector2(890, 36), "猩红魔姬·雷帝" if boss_id == "crimson" else "黑童话之母·玛丽苏", HORIZONTAL_ALIGNMENT_LEFT, -1, 19, color)
-	draw_rect(Rect2(820, 52, 400, 16), Color(0.08, 0.08, 0.08, 1))
-	draw_rect(Rect2(820, 52, 400 * boss_hp / boss_max_hp, 16), color)
+	# Health bar: y=58 (36 + 19 line height ~22, leave 6px gap)
+	draw_rect(Rect2(820, 58, 400, 16), Color(0.08, 0.08, 0.08, 1))
+	draw_rect(Rect2(820, 58, 400 * boss_hp / boss_max_hp, 16), color)
+	# Stage label: y=90 (58 + 16 bar + 6px gap)
 	var stage_label := "STAGE %d / %d" % [boss_phase + 1, boss_phase_count] if boss_id == "crimson" else "STAGE %d" % (boss_phase + 1)
-	draw_string(ThemeDB.fallback_font, Vector2(890, 85), stage_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, GREY)
+	draw_string(ThemeDB.fallback_font, Vector2(890, 90), stage_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, GREY)
 	draw_string(ThemeDB.fallback_font, Vector2(40, 650), "HP", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, GREY)
 	for i in range(3):
 		var heart := Vector2(78 + i * 26, 644)

@@ -2,9 +2,11 @@ extends RefCounted
 
 ## Equal scaling and visible-foot anchors for map NPCs and player art.
 var bounds_cache: Dictionary = {}
-const PLAYER_SCALE := 0.34
-const PLAYER_FOOT := Vector2(550, 730)
-const PLAYER_NECK := Vector2(610, 320)
+# Player display height in battle: 170px (user spec 2026-10-25)
+# Scale is computed from this height / natural visible bounds height
+const PLAYER_HEIGHT := 170.0
+const PLAYER_FOOT := Vector2(550, 730)  # Anchor point in source texture (768px natural)
+const PLAYER_NECK := Vector2(610, 320)  # Neck pivot in source texture
 const DASH_FRAMES := 20
 const BREATHE_FRAMES := 8
 const BREATHE_FPS := 8.0
@@ -43,16 +45,21 @@ func draw_player(canvas: CanvasItem, art: Dictionary, foot: Vector2, facing: flo
 	var texture: Texture2D = art.get("rek_" + state)
 	if not texture:
 		return false
+	# Compute scale from target display height / natural texture visible height
+	var bounds := visible_bounds(texture)
+	if bounds.size.y <= 0:
+		return false
+	var scale := PLAYER_HEIGHT / bounds.size.y
 	canvas.draw_set_transform(foot, 0, Vector2(facing, 1))
-	canvas.draw_texture_rect(texture, Rect2(-PLAYER_FOOT * PLAYER_SCALE, texture.get_size() * PLAYER_SCALE), false, tint)
+	canvas.draw_texture_rect(texture, Rect2(-PLAYER_FOOT * scale, texture.get_size() * scale), false, tint)
 	if not state.begins_with("dash_"):
 		var head: Texture2D = art.get("rek_head")
 		if head:
-			var neck := (PLAYER_NECK - PLAYER_FOOT) * PLAYER_SCALE
+			var neck := (PLAYER_NECK - PLAYER_FOOT) * scale
 			var local_aim := Vector2(aim.x * facing, aim.y)
 			var angle := clampf(local_aim.angle() * 0.16, -0.25, 0.25)
 			canvas.draw_set_transform(foot + Vector2(neck.x * facing, neck.y), angle * facing, Vector2(facing, 1))
-			canvas.draw_texture_rect(head, Rect2(-PLAYER_NECK * PLAYER_SCALE, head.get_size() * PLAYER_SCALE), false, tint)
+			canvas.draw_texture_rect(head, Rect2(-PLAYER_NECK * scale, head.get_size() * scale), false, tint)
 	canvas.draw_set_transform(Vector2.ZERO, 0, Vector2.ONE)
 	return true
 
