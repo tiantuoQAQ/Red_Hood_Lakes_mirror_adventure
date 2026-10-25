@@ -27,7 +27,7 @@ const STORY = {
       { t: 'scene', bg: 'night' },
       { t: 'fade', to: 'black', frames: 1 },
 
-      { t: 'say', who: '', text: '这封信，是在她走了三天之后被找到的。' },
+      { t: 'say', who: '', text: '她离开三天后，这封信才被人发现。' },
       { t: 'say', who: '', text: '桌子上留着它。压在水杯底下，压得很平。' },
 
       { t: 'say', who: '蕾克', text: '格林。' },
@@ -38,10 +38,10 @@ const STORY = {
       { t: 'say', who: '蕾克', text: '我不想把你卷进这件事里来。' },
       { t: 'say', who: '蕾克', text: '你总说，让我等你。' },
       { t: 'say', who: '蕾克', text: '可这一次，我不能再等了。' },
-      { t: 'say', who: '蕾克', text: '我不会让这个世界如她所愿。' },
-      { t: 'say', who: '蕾克', text: '只要我还没有死，这个故事就永远不会结束。' },
+      { t: 'say', who: '蕾克', text: '我不会让玛丽苏如愿。' },
+      { t: 'say', who: '蕾克', text: '只要我还活着，就不会让她写下结局。' },
       { t: 'say', who: '蕾克', text: '所以，别难过。' },
-      { t: 'say', who: '蕾克', text: '等我回来——我们还有很多话，没来得及说完。' },
+      { t: 'say', who: '蕾克', text: '等我回来——我们还有话没说完。' },
 
       { t: 'say', who: '', text: '信就断在这里。' },
       { t: 'say', who: '', text: '最后一个字写得很重，像是写的人后来不敢再往下写。' },
@@ -64,18 +64,18 @@ const STORY = {
   ambush: {
     cmds: [
       { t: 'say', who: 'marysue', expr: 'shadow', show: true, text: '库嘻嘻……' },
-      { t: 'say', who: 'marysue', expr: 'shadow', show: true, text: '沉浸在人家赐予你的美好里，迎来属于自己的结局，不好吗？' },
+      { t: 'say', who: 'marysue', expr: 'shadow', show: true, text: '沉浸在人家赐你的美好里，走向注定的结局，不好吗？' },
       { t: 'say', who: 'marysue', expr: 'shadow', show: true, text: '为什么这么急着，跳出人家的童话呢～' },
 
       { t: 'say', who: 'rek', show: true, text: '……真让人恶心。' },
-      { t: 'say', who: 'rek', expr: 'eyes_closed', show: true, text: '在你写的故事里，主角等到的，永远只有悲惨结局。' },
+      { t: 'say', who: 'rek', expr: 'eyes_closed', show: true, text: '你的故事里，主角等来的永远是悲惨结局。' },
       { t: 'say', who: 'rek', expr: 'eyes_open', show: true, text: '我，不认可这样的结局。' },
       { t: 'say', who: 'rek', style: 'red', shake: true, show: true, text: '玛丽苏……' },
-      { t: 'say', who: 'rek', style: 'red', shake: true, show: true, text: '在砍下你的头颅之前，我是不会死的。' },
+      { t: 'say', who: 'rek', style: 'red', shake: true, show: true, text: '在砍下你的头颅前，我绝不会倒下。' },
 
       { t: 'pose', who: 'rek', expr: 'ready', frames: 40 },
 
-      { t: 'say', who: 'marysue', show: true, text: '哎呀呀，人家好怕啊～' },
+      { t: 'say', who: 'marysue', show: true, text: '哎呀呀，人家真是怕极了呢～' },
       { t: 'say', who: 'marysue', show: true, text: '人家可是……从来没有把你当成敌人哦。' },
       { t: 'say', who: 'marysue', expr: 'eyes_closed', show: true, text: '而且……你真觉得……' },
       { t: 'say', who: 'marysue', expr: 'eyes_open', show: true, text: '你能碰到我吗？' },
@@ -109,27 +109,27 @@ const STORY = {
 
       { t: 'say', who: 'norden', show: true, text: '请允许我自我介绍。' },
       { t: 'say', who: 'norden', show: true, text: '我是「白之兔」诺登。' },
-      { t: 'say', who: 'norden', show: true, text: '现在的情况有些复杂。您只需要知道一件事——' },
-      { t: 'say', who: 'norden', show: true, text: '我是站在格林大人这一边的。' },
+      { t: 'say', who: 'norden', show: true, text: '情况复杂，先记住一件事——' },
+      { t: 'say', who: 'norden', show: true, text: '我奉格林大人之命，暂且助您。' },
 
       { t: 'say', who: 'rek', show: true, text: '……我不能相信你。' },
       { t: 'say', who: 'rek', show: true, text: '你的意图是——' },
-      { t: 'say', who: 'norden', show: true, text: '这不重要。' },
-      { t: 'say', who: 'norden', show: true, text: '我所做的一切，都是为了格林大人。' },
+      { t: 'say', who: 'norden', show: true, text: '此刻不必追问我的意图。' },
+      { t: 'say', who: 'norden', show: true, text: '我救您，是为了格林大人。' },
       { t: 'say', who: 'norden', show: true, text: '您被玛丽苏偷袭了。是我，从她手上把您救下来的。' },
       { t: 'say', who: 'rek', show: true, text: '……' },
 
       { t: 'say', who: 'norden', show: true, text: '我们都想阻止玛丽苏的狂妄之举。' },
-      { t: 'say', who: 'norden', show: true, text: '既然如此，我们暂时互相帮助——不好吗？' },
+      { t: 'say', who: 'norden', show: true, text: '既然目标相同，暂且合作吧。' },
 
       { t: 'say', who: 'norden', expr: 'eyes_closed', show: true, text: '玛丽苏现在正在「镜中世界」，筹划她自己的计划。' },
-      { t: 'say', who: 'norden', expr: 'eyes_open', show: true, text: '您要做的，就是前往「镜中世界」，然后击败她。' },
+      { t: 'say', who: 'norden', expr: 'eyes_open', show: true, text: '请入镜中世界，阻止玛丽苏。' },
 
       { t: 'say', who: 'rek', show: true, text: '……你为什么不自己去。' },
       { t: 'say', who: 'norden', show: true, text: '因为我是「观察者」。' },
       { t: 'title', who: 'norden', title: '白之女王 · 观察者', frames: 150 },
-      { t: 'say', who: 'norden', show: true, text: '直接与玛丽苏爆发冲突，后果不可估量。' },
-      { t: 'say', who: 'norden', show: true, text: '所以这件事，只能由您来完成。为了格林大人。' },
+      { t: 'say', who: 'norden', show: true, text: '我是观察者，不能直接干涉她。' },
+      { t: 'say', who: 'norden', show: true, text: '所以只能请您入镜。为了格林大人。' },
 
       { t: 'say', who: 'rek', show: true, text: '……我好像，没有别的选择。' },
       { t: 'say', who: 'norden', show: true, text: '感谢您的理解。' },
@@ -165,7 +165,7 @@ const STORY = {
 
       { t: 'say', who: '', text: '镜子里没有回声。' },
       { t: 'say', who: '', text: '树是倒着长的——根在天上，枝叶垂进地面。' },
-      { t: 'say', who: '', text: '这片森林干净得像从来没有人来过。' },
+      { t: 'say', who: '', text: '这片森林空无一人，像被镜子抹去痕迹。' },
       { t: 'say', who: 'rek', expr: 'wary', show: true, text: '……这里什么都没有。' },
       { t: 'say', who: '', text: '除了路尽头那张王座。' },
 
@@ -191,14 +191,14 @@ const STORY = {
       { t: 'say', who: 'rek_crimson', expr: 'stand_ready', show: true, text: '吾乃猩红魔姬·雷帝。' },
       { t: 'title', who: 'rek_crimson', title: '猩红魔姬 · 雷帝', frames: 150 },
       { t: 'pose', who: 'rek_crimson', expr: 'stand', frames: 45 },
-      { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '玛丽苏大人最得意的作品。' },
-      { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '在这之前，没有人愿意救我。' },
+      { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '我是玛丽苏大人最得意的作品。' },
+      { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '从前，没有人愿意救我。' },
       { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '只有玛丽苏大人。' },
       { t: 'say', who: 'rek', expr: 'wary', show: true, text: '……被救，和被造出来，是两回事。' },
       { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '你胡说什么。' },
-      { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '背弃血亲与友人，以此换得力量之人。' },
+      { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '听说你背弃亲友，换来了力量。' },
       { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '而你，小红帽蕾克——' },
-      { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '不过是她随手丢下的一个失败样本。' },
+      { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '你不过是玛丽苏随手丢弃的失败样本。' },
       { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '玛丽苏大人命吾在此，将你击溃。' },
 
       { t: 'say', who: 'rek', expr: 'wary', show: true, text: '……失败样本。' },
@@ -217,11 +217,11 @@ const STORY = {
     cmds: [
       { t: 'music', name: 'marysue' },
       { t: 'say', who: 'rek_crimson', expr: 'defeated', show: true, text: '怎么可能！……你的力量，怎么会这么强？' },
-      { t: 'say', who: 'rek', expr: 'ready', show: true, text: '你被玛丽苏蛊惑了，误入歧途。' },
-      { t: 'say', who: 'rek', expr: 'ready', show: true, text: '为何到了这般地步，还不醒悟？' },
+      { t: 'say', who: 'rek', expr: 'ready', show: true, text: '你以为力量是救赎，其实她操纵了你。' },
+      { t: 'say', who: 'rek', expr: 'ready', show: true, text: '到了这一步，你还不肯看清吗？' },
 
       { t: 'say', who: 'rek_crimson', expr: 'defeated', show: true, text: '不可能！' },
-      { t: 'say', who: 'rek_crimson', expr: 'defeated', show: true, text: '在我被亲人背叛的时候，是玛丽苏大人赐予了我力量——' },
+      { t: 'say', who: 'rek_crimson', expr: 'defeated', show: true, text: '亲人背叛我时，是玛丽苏大人给了我力量——' },
       { t: 'say', who: 'rek_crimson', expr: 'defeated', show: true, text: '足以摧毁一切的力量！' },
 
       { t: 'say', who: 'rek', expr: 'ready', show: true, text: '你的所有经历——背叛、无助，甚至这次失败——' },
@@ -230,7 +230,7 @@ const STORY = {
 
       { t: 'say', who: 'rek_crimson', expr: 'defeated', show: true, text: '怎么可能！玛丽苏大——' },
 
-      { t: 'say', who: '', text: '——小雷帝，蕾克说的都是真的哦～' },
+      { t: 'say', who: '', text: '——小雷帝，蕾克说得没错哦～' },
       { t: 'say', who: 'rek', expr: 'shock', show: true, text: '！？' },
       { t: 'say', who: 'rek_crimson', expr: 'shock', show: true, text: '！？' },
 
@@ -239,9 +239,9 @@ const STORY = {
       { t: 'intro', id: 'marysue' },
 
       { t: 'say', who: 'marysue', show: true, text: '是我哦。' },
-      { t: 'say', who: 'marysue', show: true, text: '让父母丢下你的，是我。' },
+      { t: 'say', who: 'marysue', show: true, text: '你父母离开你，也是我安排的。' },
       { t: 'say', who: 'marysue', show: true, text: '那些欺负你的“朋友”，也是人家安排的。' },
-      { t: 'say', who: 'marysue', expr: 'smug', show: true, text: '你哭着求人救你的时候，人家刚好路过——' },
+      { t: 'say', who: 'marysue', expr: 'smug', show: true, text: '你哭着求救时，人家就安排了那场相遇——' },
       { t: 'say', who: 'marysue', expr: 'smug', show: true, text: '多完美的剧本呀。' },
 
       { t: 'say', who: 'rek_crimson', expr: 'defeated', show: true, text: '你！！！……咳咳！' },
@@ -262,14 +262,14 @@ const STORY = {
       { t: 'say', who: 'rek_crimson', expr: 'eyes_closed', show: true, text: '把我的力量拿去吧——它本来就不该属于我。' },
 
       { t: 'pose', who: 'rek', expr: 'ready', frames: 40 },
-      { t: 'say', who: '', text: '红色的东西从她胸口流出来。很烫，像有人把手按在胸口。' },
+      { t: 'say', who: '', text: '红光自她胸口流出，烫得像一只手。' },
       { t: 'grant', skill: 'red_tragedy', banner: '红之惨剧' },
       { t: 'card', line1: '红之惨剧', line2: '夺回被夺走的一切', frames: 150 },
 
       { t: 'say', who: 'rek', expr: 'eyes_open', show: true, text: '……我接住了。' },
 
       { t: 'say', who: 'marysue', expr: 'smug', show: true, text: '真是感人呢。' },
-      { t: 'say', who: 'marysue', expr: 'smug', show: true, text: '可惜，你们加在一起，也不够看哦。' },
+      { t: 'say', who: 'marysue', expr: 'smug', show: true, text: '可惜，蕾克，加上你的力量也不够看哦。' },
       { t: 'say', who: 'marysue', expr: 'mock', show: true, text: '来吧——让这场童话，有个像样的结尾。' },
 
       { t: 'next', chapter: 'final' }
@@ -282,9 +282,9 @@ const STORY = {
       { t: 'scene', bg: 'mirror' },
       { t: 'duel', left: '蕾克', right: '玛丽苏', text: '玛丽苏：就凭你，也想照亮这面镜子？' },
 
-      { t: 'say', who: 'marysue', show: true, text: '那面镜子已经把你记住了一次。' },
+      { t: 'say', who: 'marysue', show: true, text: '镜子已经记住过你的气息。' },
       { t: 'say', who: 'marysue', show: true, text: '第二次，可不会那么客气哦。' },
-      { t: 'say', who: 'rek', expr: 'wary', show: true, text: '……上一次，我还没学会怎么杀你。' },
+      { t: 'say', who: 'rek', expr: 'wary', show: true, text: '上次交手，我还没学会如何击败你。' },
       { t: 'say', who: 'marysue', show: true, text: '……' },
       { t: 'say', who: 'marysue', show: true, text: '你不该回来的。' },
       { t: 'say', who: 'marysue', show: true, text: '人家把门关上，是为了你好。' },
@@ -315,19 +315,19 @@ const STORY = {
       { t: 'say', who: '', text: '空间里，响起另一个声音。' },
       { t: 'intro', id: 'norden' },
       { t: 'say', who: 'norden', show: true, text: '玛丽苏。' },
-      { t: 'say', who: 'norden', show: true, text: '我要收回箱庭的权能。' },
+      { t: 'say', who: 'norden', show: true, text: '我要收回你掌中的箱庭权能。' },
 
       { t: 'say', who: 'marysue', expr: 'shock', show: true, text: '原来是你！？' },
-      { t: 'say', who: 'marysue', expr: 'shock', show: true, text: '我就说，蕾克怎么可能……！' },
+      { t: 'say', who: 'marysue', expr: 'shock', show: true, text: '我就知道，蕾克不可能赢我……！' },
       { t: 'say', who: 'marysue', expr: 'smug', show: true, text: '给我等着！' },
-      { t: 'say', who: 'marysue', expr: 'smug', show: true, text: '我们没完，白之女王——' },
+      { t: 'say', who: 'marysue', expr: 'smug', show: true, text: '我们没完，诺登——白之女王！' },
 
       { t: 'mirrorfx', dur: 90, count: 22, power: 0.9 },
       { t: 'flash', seq: [{ c: 'green', f: 6 }, { c: 'white', f: 4 }, { c: 'black', f: 12 }] },
       { t: 'say', who: '', text: '绿色的光炸开，又迅速熄灭。' },
 
       { t: 'say', who: 'norden', show: true, text: '……很可惜，让她跑了。' },
-      { t: 'say', who: 'norden', show: true, text: '不过这样也好。剩下的，交给时间。' },
+      { t: 'say', who: 'norden', show: true, text: '也好。剩下的，就交给时间吧。' },
       { t: 'say', who: 'norden', show: true, text: '就此别过吧，蕾克小姐。' },
 
       { t: 'say', who: 'rek', expr: 'wary', show: true, text: '诺登。' },
@@ -349,8 +349,8 @@ const STORY = {
       { t: 'say', who: 'rek', expr: 'eyes_closed', show: true, text: '……累死了。' },
       { t: 'say', who: 'rek', expr: 'eyes_open', show: true, text: '格林。' },
       { t: 'say', who: 'rek', show: true, text: '我回来了。' },
-      { t: 'say', who: '', text: '空地上站着一个人。' },
-      { t: 'say', who: '', text: '她没有见过她。' },
+      { t: 'say', who: '', text: '空地上，站着一个陌生人。' },
+      { t: 'say', who: '', text: '蕾克从未见过那个人。' },
       {
         t: 'walk',
         playerX: 780,
@@ -369,13 +369,13 @@ const STORY = {
       { t: 'say', who: 'mabel', expr: 'look_back', show: true, text: '哎呀呀，看来我们的女主角回来了？' },
       { t: 'say', who: 'rek', expr: 'wary', show: true, text: '……' },
       { t: 'say', who: 'mabel', expr: 'eyes_open', show: true, text: '别用那种眼神看着我啦。' },
-      { t: 'say', who: 'mabel', expr: 'eyes_open', show: true, text: '一个贫瘠的少女，有什么值得让人警惕的。' },
-      { t: 'say', who: 'mabel', expr: 'eyes_open', show: true, text: '我叫梅贝尔，空虚的少女。' },
+      { t: 'say', who: 'mabel', expr: 'eyes_open', show: true, text: '一个无足轻重的少女，有什么好警惕的？' },
+      { t: 'say', who: 'mabel', expr: 'eyes_open', show: true, text: '我叫梅贝尔，一个戏份空白的少女。' },
       { t: 'say', who: 'mabel', expr: 'eyes_open', show: true, text: '在这个故事里，没有属于我的戏份……' },
       { t: 'say', who: 'mabel', expr: 'eyes_closed', show: true, text: '这段故事真的很枯燥呢，不是吗？' },
       { t: 'say', who: 'rek', expr: 'wary', show: true, text: '……你想表达些什么。' },
-      { t: 'say', who: 'mabel', expr: 'eyes_open', show: true, text: '嘛嘛，毕竟是作者一个人搓出来的嘛。' },
-      { t: 'say', who: 'mabel', expr: 'eyes_open', show: true, text: '内容肯定和本少女一样贫瘠。' },
+      { t: 'say', who: 'mabel', expr: 'eyes_open', show: true, text: '嘛，毕竟是作者一个人写出来的嘛。' },
+      { t: 'say', who: 'mabel', expr: 'eyes_open', show: true, text: '故事大概也和本少女一样空虚吧。' },
 
       { t: 'say', who: 'mabel', expr: 'eyes_closed', show: true, text: '不过——恭喜你，见证了这个故事。' },
       { t: 'say', who: 'mabel', expr: 'eyes_open', show: true, text: '你知道走到这里意味着什么吗？' },
