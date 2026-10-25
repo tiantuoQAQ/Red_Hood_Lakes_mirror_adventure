@@ -193,6 +193,8 @@ var hurt_vignette := 0
 var ball_hint_t := 0.0
 var tutorial_timer := 0.0
 var death_timer := 0.0
+var death_count := 0
+var death_wait_confirm := false
 var retry_flash := 0.0
 var stage_flash := 0.0
 var death_shards: Array = []
@@ -428,6 +430,8 @@ func _physics_process(_delta: float) -> void:
 		paused = not paused
 	if paused and (_just("confirm") or _just("shoot")):
 		paused = false
+	if death_wait_confirm and (_just("confirm") or _mouse_clicked()):
+		_respawn_after_death()
 	if tutorial_timer > 0.0:
 		tutorial_timer = maxf(0.0, tutorial_timer - FIXED_DT)
 		if _just("confirm") or _just("skip") or _just("shoot"):
@@ -936,6 +940,8 @@ func _start_battle(id: String, after: String) -> void:
 	player_courage = 0.0
 	player_energy = 0.0   # 从 0 起，方便看到擦弹/命中回复
 	battle_start_pos = player_pos
+	death_count = 0
+	death_wait_confirm = false
 	player_dash_frames = 0
 	player_dash_buffer = 0
 	player_dash_ramp = 0
@@ -994,6 +1000,9 @@ func _update_battle() -> void:
 		screen_shake = maxf(0.0, screen_shake - 0.36)
 
 func _update_player() -> void:
+	if death_timer > 0.0 or death_wait_confirm:
+		player_vel = Vector2.ZERO
+		return
 	player_dash_cd = maxi(0, player_dash_cd - 1)
 	player_dash_invuln = maxi(0, player_dash_invuln - 1)
 	player_hurt_invuln = maxi(0, player_hurt_invuln - 1)
@@ -2617,7 +2626,9 @@ func _draw_hud() -> void:
 		draw_string(ThemeDB.fallback_font, rect.position + Vector2(0, rect.size.y + 13), str(slot["name"]) + (" (L演示)" if str(slot["tex"]) == "skill_icon_red" else ""), HORIZONTAL_ALIGNMENT_LEFT, -1, 12,
 			Color(1, 0.4, 0.4) if can else GREY)
 	draw_string(ThemeDB.fallback_font, Vector2(880, 675), "冲刺 %s" % ("READY" if player_dash_cd <= 0 else "%02d" % player_dash_cd), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, RED if player_dash_cd <= 0 else GREY)
-	draw_string(ThemeDB.fallback_font, Vector2(1040, 675), "擦弹链 %d" % player_graze_chain, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, WHITE)
+	if death_count > 0:
+		draw_string(ThemeDB.fallback_font, Vector2(40, 700), "DEATH × %d" % death_count, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(1, 0.35, 0.35))
+		draw_string(ThemeDB.fallback_font, Vector2(1040, 675), "擦弹链 %d" % player_graze_chain, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, WHITE)
 	if banner_timer > 0 and banner != "":
 		draw_string(ThemeDB.fallback_font, Vector2(510, 340), banner, HORIZONTAL_ALIGNMENT_LEFT, -1, 34, WHITE)
 	if paused:
@@ -3587,6 +3598,7 @@ func _start_death() -> void:
 		return
 	death_timer = 1.9
 	death_flash = 1.0
+	death_count += 1
 	player_hp = 0
 	bullets.clear()
 	screen_shake = 1.2
@@ -3628,21 +3640,35 @@ func _update_death() -> void:
 		sh["vel"] = Vector2(sh["vel"]) * 0.985 + Vector2(0, 520.0) * FIXED_DT
 		sh["rot"] = float(sh["rot"]) + float(sh["spin"]) * FIXED_DT
 	death_shards = death_shards.filter(func(x): return float(x.get("life", 0.0)) > 0.0)
-	if death_timer <= 0.0:
-		player_hp = PLAYER_MAX_HP
-		player_pos = battle_start_pos
-		player_vel = Vector2.ZERO
-		player_hurt_invuln = 90
-		bullets.clear()
-		spikes.clear()
-		whirls.clear()
-		boss_hp = boss_max_hp
-		banner = "……是幻觉么。"
-		banner_timer = 170
-		retry_flash = 1.0
-		_spawn_fx_ring(player_pos, Color(1, 1, 1, 0.9), 260.0, 0.5, 5.0)
+	if death_timer <= 0.0 and not death_wait_confirm:
+		# 演出结束：停在「按 ENTER 复活」界面
+		death_wait_confirm = true
+
+## 确认复活：回到当前阶段开头，Boss 本阶段血量回满
+func _respawn_after_death() -> void:
+	death_wait_confirm = false
+	player_hp = PLAYER_MAX_HP
+	player_pos = battle_start_pos
+	player_vel = Vector2.ZERO
+	player_hurt_invuln = 90
+	bullets.clear()
+	spikes.clear()
+	whirls.clear()
+	beam_warning_list.clear()
+	boss_hp = boss_max_hp          # 本阶段满血重打
+	banner = "……是幻觉么。（第 %d 次）" % death_count
+	banner_timer = 170
+	retry_flash = 1.0
+	_spawn_fx_ring(player_pos, Color(1, 1, 1, 0.9), 260.0, 0.5, 5.0)
 
 func _draw_death_overlay() -> void:
+	if death_wait_confirm:
+		draw_rect(Rect2(Vector2.ZERO, VIEW), Color(0, 0, 0, 0.82))
+		draw_string(ThemeDB.fallback_font, Vector2(500, 320), "镜 碎 了", HORIZONTAL_ALIGNMENT_LEFT, -1, 44, WHITE)
+		draw_string(ThemeDB.fallback_font, Vector2(430, 386), "第 %d 次 · 本阶段重新开始" % death_count, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color(1, 0.4, 0.4))
+		var blink := 0.55 + 0.45 * sin(elapsed * 5.0)
+		draw_string(ThemeDB.fallback_font, Vector2(492, 452), "按 ENTER / 点击 复活", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(1, 1, 1, blink))
+		return
 	if death_timer <= 0.0:
 		return
 	var k := clampf(death_timer / 1.9, 0.0, 1.0)
