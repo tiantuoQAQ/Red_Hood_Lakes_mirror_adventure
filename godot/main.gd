@@ -49,7 +49,7 @@ const GREY := Color("#9a9a9a")
 const BLACK := Color("#090909")
 const BG := Color("#111111")
 const FIXED_DT := 1.0 / 60.0
-const DASH_STAMINA_COST := 40.0   # 用户要求：一次冲刺消耗 40 体力
+const DASH_STAMINA_COST := 35.0   # 用户要求：一次冲刺消耗 40 体力
 const DASH_FRAMES := preload("res://godot/character_art.gd").DASH_FRAMES
 const BALL_ENTRY_STAMINA_COST := 7.0
 
@@ -181,18 +181,20 @@ var player_dash_direction := 1.0
 var player_dash_buffer_direction := 1.0
 var player_hp := 5
 const PLAYER_MAX_HP := 5
-var player_stamina := 100.0
+var player_stamina := 120.0
 var player_stamina_display := 100.0  # Smooth lerp display value for stamina bar
 var player_courage := 0.0
 var player_energy: float = 4.0
 const ENERGY_MAX := 4.0
 const ENERGY_PER_GRAZE := 0.45   # 擦弹回复能量
-const ENERGY_PER_HIT := 0.16     # 子弹命中回复能量（明显可见）
+const ENERGY_PER_HIT := 0.22     # 子弹命中回复能量（明显可见）
 var energy_flash := 0            # 能量满/消耗时的闪动
 var hurt_vignette := 0
 var ball_hint_t := 0.0
 var tutorial_timer := 0.0
 var death_timer := 0.0
+var retry_flash := 0.0
+var stage_flash := 0.0
 var death_shards: Array = []
 var death_flash := 0.0
 var death_reason := ""
@@ -1004,7 +1006,7 @@ func _update_player() -> void:
 		player_jump_buffer = 8
 	var dash_pressed := _just("dash")
 	if player_ball:
-		player_stamina = maxf(0.0, player_stamina - 32.0 * FIXED_DT)  # Ball form continuous drain: 32 stamina/s (Web規格)
+		player_stamina = maxf(0.0, player_stamina - 24.0 * FIXED_DT)  # Ball form continuous drain: 32 stamina/s (Web規格)
 		if not bool(input_state.get("dash", false)) or player_stamina <= 0.0:
 			_exit_ball()
 		else:
@@ -1089,7 +1091,7 @@ func _update_player() -> void:
 			player_vel.y += 2000.0 * FIXED_DT
 		player_pos += player_vel * FIXED_DT
 		if player_grounded:
-			player_stamina = minf(100.0, player_stamina + 78.0 * FIXED_DT)   # 体力回复 ×1.5  # Ground stamina recovery: +26 stamina/s (允许连续冲刺)
+			player_stamina = minf(120.0, player_stamina + 78.0 * FIXED_DT)   # 体力回复 ×1.5  # Ground stamina recovery: +26 stamina/s (允许连续冲刺)
 			# Walk dust (grounded, moving)
 			if absf(player_vel.x) > 80.0:
 				walk_dust_timer -= 1
@@ -1285,6 +1287,8 @@ func _update_boss() -> void:
 			bullets.clear()
 			warnings.clear()
 			_spawn_fx_ring(boss_pos, Color(1, 1, 1, 0.9), 420.0, 0.5, 6.0)
+			hitstop = 12
+			stage_flash = 1.0
 			_spawn_mirror_shards(10, 0.8)
 			banner = "PHASE %d" % (boss_phase + 1)
 			banner_timer = 85
@@ -2122,6 +2126,9 @@ func _draw_battle() -> void:
 		ball_hint_t = maxf(0.0, ball_hint_t - FIXED_DT)
 		var ha := minf(1.0, ball_hint_t / 1.0)
 		draw_string(ThemeDB.fallback_font, Vector2(360, 200), "空中 按住 W + 冲刺 → 球形态（无敌）", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color(1, 1, 1, 0.85 * ha))
+	if stage_flash > 0.0:
+		stage_flash = maxf(0.0, stage_flash - FIXED_DT * 2.2)
+		draw_rect(Rect2(Vector2.ZERO, VIEW), Color(1, 1, 1, 0.6 * stage_flash))
 	if hurt_vignette > 0:
 		var hv := float(hurt_vignette) / 18.0
 		draw_rect(Rect2(0, 0, VIEW.x, 14), Color(1, 0, 0, 0.45 * hv))
@@ -2290,6 +2297,8 @@ func _draw_projectiles() -> void:
 		# 全局：外圈光晕（所有弹幕都发光）
 		draw_circle(p, 26.0, Color(color, 0.06))
 		draw_circle(p, 17.0, Color(color, 0.10))
+		# 白色细描边：让弹幕在深色/火焰背景上依然清晰
+		draw_arc(p, 20.0, 0.0, TAU, 20, Color(1, 1, 1, 0.28), 1.4)
 		match kind:
 			"blade", "crescent":
 				var ln := 78.0 if kind == "blade" else 108.0
@@ -2526,7 +2535,7 @@ func _draw_hud() -> void:
 	# Base: neutral gray; Fill: cyan #00BAFF; < 7: red #FF0000
 	draw_string(ThemeDB.fallback_font, Vector2(40, 675), "体力", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, GREY)
 	draw_rect(Rect2(78, 665, 140, 10), Color(0.4, 0.4, 0.4, 1))  # Base: neutral gray
-	var stamina_fill_ratio := clampf(player_stamina_display / 100.0, 0.0, 1.0)
+	var stamina_fill_ratio := clampf(player_stamina_display / 120.0, 0.0, 1.0)
 	var stamina_color := Color("#FF0000") if player_stamina < 7.0 else Color("#00BAFF")  # Red when < 7, cyan otherwise
 	draw_rect(Rect2(78, 665, 140 * stamina_fill_ratio, 10), stamina_color)
 	# Optional: display stamina number
@@ -3145,7 +3154,7 @@ func _draw_boss_extras() -> void:
 			col.a = 0.28
 			draw_line(pv, pn, col, 6.0)
 	var cam := Vector2(camera_x, 0.0)
-	# 地面旋风
+	# 地面旋风（出现前预警）
 	for w in whirls:
 		var wx: float = float(w["x"]) - camera_x
 		var ph: float = float(w["phase"])
@@ -3591,6 +3600,7 @@ func _update_death() -> void:
 		boss_hp = boss_max_hp
 		banner = "……是幻觉么。"
 		banner_timer = 170
+		retry_flash = 1.0
 		_spawn_fx_ring(player_pos, Color(1, 1, 1, 0.9), 260.0, 0.5, 5.0)
 
 func _draw_death_overlay() -> void:
@@ -3703,7 +3713,7 @@ func _apply_player_damage() -> void:
 	if player_hurt_invuln > 0 or player_dash_invuln > 0 or player_ball:
 		return
 	player_hp -= 1
-	player_hurt_invuln = 80
+	player_hurt_invuln = 60
 	hurt_vignette = 18
 	sfx_player.play("hurt")
 	screen_shake = 0.6
