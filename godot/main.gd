@@ -1622,7 +1622,6 @@ func _use_red_skill() -> void:
 	if player_energy < 2:
 		return
 	player_energy -= 2.0          # 消耗 2 MP（用户要求）
-	player_hp = mini(PLAYER_MAX_HP, player_hp + 2)   # 回复 2 HP
 	tragedy_buff_t = 20.0         # 20 秒强化剑气
 	sfx_player.play("skill")
 	if skill_red_tragedy:
@@ -2618,7 +2617,7 @@ func _draw_hud() -> void:
 		draw_string(ThemeDB.fallback_font, kbadge.position + Vector2(5, 13), str(slot["key"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 13,
 			WHITE if can else GREY)
 		# 技能说明（格下方小字）
-		var desc: String = str({"skill_icon_red": "清弹+伤害+回2HP", "skill_icon_gun": "鼠标处范围伤害", "skill_icon_hell": "全屏伤害"}.get(slot["tex"], ""))
+		var desc: String = str({"skill_icon_red": "清弹+大伤害+强化剑气", "skill_icon_gun": "鼠标处范围伤害", "skill_icon_hell": "全屏伤害"}.get(slot["tex"], ""))
 		if desc != "":
 			draw_string(ThemeDB.fallback_font, rect.position + Vector2(0, rect.size.y + 26), desc, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.8, 0.8, 0.8))
 		# 技能名（格下方小字）
@@ -3554,7 +3553,7 @@ func _draw_tutorial() -> void:
 		y += 44.0
 
 	draw_string(ThemeDB.fallback_font, Vector2(120, 470), "技能效果：", HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color(1, 1, 1, a))
-	draw_string(ThemeDB.fallback_font, Vector2(150, 502), "· 红之惨剧（E）：全图清除弹幕，并对 Boss 造成大伤害，回复 2 HP + 强化剑气 20 秒", HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color(0.9, 0.9, 0.9, a))
+	draw_string(ThemeDB.fallback_font, Vector2(150, 502), "· 红之惨剧（E）：全图清除弹幕，并对 Boss 造成大伤害，强化剑气 20 秒", HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color(0.9, 0.9, 0.9, a))
 	draw_string(ThemeDB.fallback_font, Vector2(150, 530), "· 枪火击溃（C）：在鼠标位置造成范围伤害", HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color(0.9, 0.9, 0.9, a))
 	draw_string(ThemeDB.fallback_font, Vector2(150, 558), "· 业火（V）：全屏伤害，无需瞄准", HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color(0.9, 0.9, 0.9, a))
 	draw_string(ThemeDB.fallback_font, Vector2(150, 594), "MP 回复：命中敌人 + 擦弹（贴近弹幕但不被击中）", HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color(1, 0.8, 0.4, a))
@@ -3841,7 +3840,6 @@ func _use_cheat_tragedy() -> void:
 	spikes.clear()
 	beam_warning_list.clear()
 	boss_hp = maxf(0.0, boss_hp - 120.0)
-	player_hp = mini(PLAYER_MAX_HP, player_hp + 2)
 	tragedy_buff_t = 20.0
 	player_hurt_invuln = 120
 	banner = "红之惨剧（演示）"
