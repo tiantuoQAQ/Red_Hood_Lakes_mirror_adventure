@@ -50,7 +50,6 @@ const STORY = {
       { t: 'scene', bg: 'forest' },
       { t: 'say', who: '', text: '她把信压在桌上，一个人走进森林。' },
 
-      { t: 'card', line1: '悲愤交加的勇者', line2: '踏上了寻回珍视之人的旅途', frames: 170 },
 
       // ↓ 玩家接管，走到路的尽头
       { t: 'walk', untilX: 1040, next: 'ambush' }
