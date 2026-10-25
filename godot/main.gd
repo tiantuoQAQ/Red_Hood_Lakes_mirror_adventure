@@ -986,7 +986,7 @@ func _update_player() -> void:
 			player_pos.x = clampf(player_pos.x, ARENA_LEFT, ARENA_RIGHT)
 			player_pos.y = clampf(player_pos.y, 48.0, GROUND_Y - 20.0)
 			if frame % 2 == 0:
-				_spawn_particle(player_pos - player_vel.normalized() * 18.0, CYAN, 0.4, -player_vel.normalized() * 60.0, 4.0)
+				_spawn_particle(player_pos - player_vel.normalized() * 18.0, Color(1, 0.22, 0.22, 0.9), 0.45, -player_vel.normalized() * 70.0, 5.0)
 			_check_graze_and_hits()
 			return
 	if dash_pressed and not player_grounded and bool(input_state.get("up", false)) and player_stamina > 20.0:
@@ -1085,7 +1085,7 @@ func _update_player() -> void:
 func _exit_ball() -> void:
 	player_ball = false
 	player_vel = Vector2.ZERO
-	_spawn_burst(player_pos, CYAN, 6)
+	_spawn_burst(player_pos, Color(1, 0.3, 0.3), 6)
 
 func _fire_shot() -> void:
 	player_fire_cd = 9
@@ -2343,7 +2343,8 @@ func _draw_player_at(pos: Vector2, tint: Color) -> void:
 		draw_circle(pos, radius * 1.5, Color(RED, 0.20))
 		for i in range(3):
 			var start := float(frame) * 0.12 + float(i) * TAU / 3.0
-			draw_arc(pos, radius * 1.32, start, start + 0.85, 20, Color(CYAN, 0.72), 2.0)
+			draw_arc(pos, radius * 1.32, start, start + 0.85, 20, Color(1, 0.18, 0.18, 0.78), 2.4)
+			draw_arc(pos, radius * 1.18, start + 0.3, start + 1.05, 20, Color(1, 1, 1, 0.45), 1.4)
 		draw_circle(pos, radius * 0.5, Color(1, 1, 1, 0.92))
 		return
 	var state: String = character_art.player_state(player_dash_frames, player_dash_out, bool(input_state.get("shoot", false)))
