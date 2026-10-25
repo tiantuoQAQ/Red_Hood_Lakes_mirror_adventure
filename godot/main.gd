@@ -3655,7 +3655,11 @@ func _respawn_after_death() -> void:
 	spikes.clear()
 	whirls.clear()
 	beam_warning_list.clear()
-	boss_hp = boss_max_hp          # 本阶段满血重打
+	boss_phase = 0                 # 用户要求：从第一阶段满血重开
+	boss_hp = boss_max_hp
+	cutin_active = false
+	cutin_timer = 0.0
+	battle_intro_t = 0.0
 	banner = "……是幻觉么。（第 %d 次）" % death_count
 	banner_timer = 170
 	retry_flash = 1.0
@@ -3665,7 +3669,7 @@ func _draw_death_overlay() -> void:
 	if death_wait_confirm:
 		draw_rect(Rect2(Vector2.ZERO, VIEW), Color(0, 0, 0, 0.82))
 		draw_string(ThemeDB.fallback_font, Vector2(500, 320), "镜 碎 了", HORIZONTAL_ALIGNMENT_LEFT, -1, 44, WHITE)
-		draw_string(ThemeDB.fallback_font, Vector2(430, 386), "第 %d 次 · 本阶段重新开始" % death_count, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color(1, 0.4, 0.4))
+		draw_string(ThemeDB.fallback_font, Vector2(430, 386), "第 %d 次 · 从第一阶段重新开始" % death_count, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color(1, 0.4, 0.4))
 		var blink := 0.55 + 0.45 * sin(elapsed * 5.0)
 		draw_string(ThemeDB.fallback_font, Vector2(492, 452), "按 ENTER / 点击 复活", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(1, 1, 1, blink))
 		return
