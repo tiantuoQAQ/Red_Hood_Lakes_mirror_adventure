@@ -50,16 +50,24 @@ func draw_player(canvas: CanvasItem, art: Dictionary, foot: Vector2, facing: flo
 	if bounds.size.y <= 0:
 		return false
 	var scale := PLAYER_HEIGHT / bounds.size.y
+	# 自适应锚点：极老的素材用标定锚点，其它尺寸按「可见内容底边中心」对齐地面，避免悬空或陷地
+	var canvas_size := texture.get_size()
+	var anchor := PLAYER_FOOT
+	if absf(canvas_size.y - 768.0) > 1.0 or absf(canvas_size.x - 896.0) > 1.0:
+		anchor = Vector2(bounds.position.x + bounds.size.x * 0.5, bounds.position.y + bounds.size.y)
 	canvas.draw_set_transform(foot, 0, Vector2(facing, 1) * squash)
-	canvas.draw_texture_rect(texture, Rect2(-PLAYER_FOOT * scale, texture.get_size() * scale), false, tint)
+	canvas.draw_texture_rect(texture, Rect2(-anchor * scale, texture.get_size() * scale), false, tint)
 	if not state.begins_with("dash_"):
 		var head: Texture2D = art.get("rek_head")
 		if head:
-			var neck := (PLAYER_NECK - PLAYER_FOOT) * scale
+			var neck_src := PLAYER_NECK
+			if absf(canvas_size.y - 768.0) > 1.0 or absf(canvas_size.x - 896.0) > 1.0:
+				neck_src = Vector2(bounds.position.x + bounds.size.x * 0.5, bounds.position.y + bounds.size.y * 0.18)
+			var neck := (neck_src - anchor) * scale
 			var local_aim := Vector2(aim.x * facing, aim.y)
 			var angle := clampf(local_aim.angle() * 0.16, -0.25, 0.25)
 			canvas.draw_set_transform(foot + Vector2(neck.x * facing, neck.y), angle * facing, Vector2(facing, 1) * squash)
-			canvas.draw_texture_rect(head, Rect2(-PLAYER_NECK * scale, head.get_size() * scale), false, tint)
+			canvas.draw_texture_rect(head, Rect2(-neck_src * scale, head.get_size() * scale), false, tint)
 	canvas.draw_set_transform(Vector2.ZERO, 0, Vector2.ONE)
 	return true
 
