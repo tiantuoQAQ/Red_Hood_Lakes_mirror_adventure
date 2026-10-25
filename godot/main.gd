@@ -168,6 +168,9 @@ var npc_glow_alpha := 0.0  # Current glow alpha [0..1]
 var npc_glow_target := 0.0 # Target alpha (0 outside, 1 inside range)
 var last_land_frame := -999  # Frame of last land SFX to enforce min interval
 
+# Debug flag for testing: when true, draw only player on black background
+var debug_player_only := false
+
 func _ready() -> void:
 	_load_assets()
 	_load_story()
@@ -1389,6 +1392,12 @@ func _spawn_mirror_shards(count: int, power: float) -> void:
 		mirror_shards.append({"pos": Vector2(640, 350), "vel": Vector2(cos(angle), sin(angle)) * randf_range(90.0, 280.0) * power, "rot": randf_range(0, TAU), "spin": randf_range(-4, 4), "life": randf_range(0.7, 1.4), "size": randf_range(8, 24)})
 
 func _draw() -> void:
+	# Debug mode: draw only player on black background
+	if debug_player_only:
+		draw_rect(Rect2(Vector2.ZERO, VIEW), BLACK)
+		_draw_player_at(player_pos - Vector2(camera_x, 0), WHITE)
+		return
+	
 	var shake := Vector2.ZERO
 	if screen_shake > 0.0:
 		shake = Vector2(sin(float(frame) * 2.3) * screen_shake, cos(float(frame) * 1.7) * screen_shake * 0.6)
@@ -1917,7 +1926,8 @@ func _draw_player_at(pos: Vector2, tint: Color) -> void:
 		head_dir = Vector2(player_facing, 0)
 	draw_circle(Vector2(-10, -55) + head_dir * 3.0, 4, CYAN)
 	draw_circle(Vector2(10, -55) + head_dir * 3.0, 4, CYAN)
-	draw_line(Vector2(18, -22), Vector2(52, -4), Color(0.9, 0.9, 0.9, tint.a), 5.0)
+	# Weapon line removed: was drawing incorrectly as a fixed horizontal line in screenshots
+	# draw_line(Vector2(18, -22), Vector2(52, -4), Color(0.9, 0.9, 0.9, tint.a), 5.0)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 func _draw_particles_world() -> void:

@@ -125,6 +125,21 @@ func _run() -> void:
 		game._start_battle("marysue", "marysue_defeat")
 		game.boss_pos = Vector2(930, 226)
 		await _capture("marysue_battle.png")
+		# Battle action screenshots: 180 frames after battle start (3 seconds of combat)
+		game._start_battle("crimson", "crimson_fall")
+		game.boss_pos = Vector2(930, 226)
+		game.scripted_input = {"right": true}
+		for tick in range(180):
+			game._physics_process(1.0 / 60.0)
+		await _capture("crimson_battle_action.png")
+		game._start_battle("marysue", "marysue_defeat")
+		game.boss_pos = Vector2(930, 226)
+		game.scripted_input = {"right": true}
+		for tick in range(180):
+			game._physics_process(1.0 / 60.0)
+		await _capture("marysue_battle_action.png")
+		# Player-only screenshot to debug gray bar artifact
+		await _capture_player_only("player_only.png")
 		# Magic circle alignment check: ring center vs boss art center (wave 15 spec)
 		var boss_center := game.boss_pos - Vector2(game.camera_x, 0)
 		var boss_tex: Texture2D = game.textures.get(game._boss_pose_key())
@@ -155,6 +170,18 @@ func _capture(filename: String) -> Image:
 	await RenderingServer.frame_post_draw
 	var result := viewport.get_texture().get_image()
 	_expect(result.save_png(OUTPUT_DIR.path_join(filename)) == OK, "Save screenshot: " + filename)
+	return result
+
+func _capture_player_only(filename: String) -> Image:
+	# Enable player-only rendering mode
+	game.debug_player_only = true
+	game.queue_redraw()
+	await process_frame
+	await RenderingServer.frame_post_draw
+	var result := viewport.get_texture().get_image()
+	_expect(result.save_png(OUTPUT_DIR.path_join(filename)) == OK, "Save player-only screenshot: " + filename)
+	# Restore normal rendering
+	game.debug_player_only = false
 	return result
 
 func _visible_npc_reaches_ground(screenshot: Image) -> bool:
