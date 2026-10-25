@@ -140,6 +140,27 @@ var textures: Dictionary = {}
 var character_art = preload("res://godot/character_art.gd").new()
 var music_player: AudioStreamPlayer
 var current_music := ""
+var sfx_player: Node  # SFX player pool
+
+# Dash FX state
+var dash_fx_active := false
+var dash_speed_lines: Array = []  # { pos, vel, life, max_life, width }
+var dash_dots: Array = []          # { pos, vel, life, max_life, radius, color }
+var dash_screen_fx := 0           # Screen edge flash countdown (4 frames)
+var graze_this_frame := false     # Deduplication flag for graze SFX
+
+# Walk dust state
+var walk_dust: Array = []  # { pos, vel, life, max_life, alpha }
+var walk_dust_timer := 0
+
+# Jump squash state
+var jump_squash := Vector2.ONE  # (x_scale, y_scale) for player visual
+var jump_squash_timer := 0
+
+# NPC interaction glow state
+var npc_glow_alpha := 0.0  # Current glow alpha [0..1]
+var npc_glow_target := 0.0 # Target alpha (0 outside, 1 inside range)
+var last_land_frame := -999  # Frame of last land SFX to enforce min interval
 
 func _ready() -> void:
 	_load_assets()
@@ -147,6 +168,9 @@ func _ready() -> void:
 	music_player = AudioStreamPlayer.new()
 	music_player.name = "BattleMusic"
 	add_child(music_player)
+	sfx_player = preload("res://godot/sfx_player.gd").new()
+	sfx_player.name = "SFXPlayer"
+	add_child(sfx_player)
 	queue_redraw()
 
 func _load_assets() -> void:
@@ -551,6 +575,7 @@ func _start_walk(command: Dictionary) -> void:
 func _update_walk() -> void:
 	_update_player()
 	_update_shots()
+	_update_npc_glow()
 	if walk_camera:
 		camera_x = lerpf(camera_x, clampf(player_pos.x - 360.0, 0.0, WORLD_W - VIEW.x), 0.12)
 	if walk_target.size() > 0:
@@ -726,6 +751,7 @@ func _update_player() -> void:
 			player_dash_cd = DASH_FRAMES + 16  # Dash CD: 20 frames dash + 16 frames cooldown
 			player_dash_invuln = DASH_FRAMES + 4  # Dash invuln: 24 frames (20 dash + 4 extra, from Web規格)
 			_spawn_burst(player_pos, RED, 8)
+			_start_dash_fx()
 		elif player_dash_cd <= 0 and player_stamina < DASH_STAMINA_COST:
 			# Insufficient stamina feedback: brief red flash
 			player_dash_buffer = 0
@@ -756,6 +782,7 @@ func _update_player() -> void:
 			player_vel.y = -700.0
 			player_grounded = false
 			player_jump_buffer = 0
+			_trigger_jump_squash("jump")
 		var target_speed := axis * 340.0
 		var control := 4600.0 if axis != 0.0 else 3800.0
 		player_vel.x = move_toward(player_vel.x, target_speed, control * FIXED_DT)
@@ -764,13 +791,22 @@ func _update_player() -> void:
 		player_pos += player_vel * FIXED_DT
 		if player_grounded:
 			player_stamina = minf(100.0, player_stamina + 26.0 * FIXED_DT)  # Ground stamina recovery: +26 stamina/s (允许连续冲刺)
+			# Walk dust (grounded, moving)
+			if absf(player_vel.x) > 80.0:
+				walk_dust_timer -= 1
+				if walk_dust_timer <= 0:
+					walk_dust_timer = randi_range(6, 10)
+					_spawn_walk_dust()
 		if bool(input_state.get("shoot", false)) and player_fire_cd <= 0:
 			_fire_shot()
 	player_pos.x = clampf(player_pos.x, ARENA_LEFT, ARENA_RIGHT)
+	var was_grounded := player_grounded
 	if player_pos.y + 20.0 >= GROUND_Y:
 		player_pos.y = GROUND_Y - 20.0
 		player_vel.y = 0.0
 		player_grounded = true
+		if not was_grounded:
+			_trigger_land()
 	else:
 		player_grounded = false
 	if player_pos.y < 48.0:
@@ -1015,6 +1051,13 @@ func _check_graze_and_hits() -> void:
 			player_courage = minf(100.0, player_courage + multiplier)
 			player_dash_cd = maxi(0, player_dash_cd - 2)
 			_spawn_burst(center, WHITE, 4)
+			# Graze SFX: play once per frame even if multiple grazes
+			if not graze_this_frame:
+				graze_this_frame = true
+				if player_graze_chain % 5 == 0:
+					sfx_player.play("graze_up")
+				else:
+					sfx_player.play("graze")
 		if distance <= 10.0 and player_hurt_invuln <= 0 and player_dash_invuln <= 0:
 			player_hp -= 1
 			player_hurt_invuln = 70
@@ -1024,6 +1067,7 @@ func _check_graze_and_hits() -> void:
 			red_vignette = 18.0
 			screen_shake = 9.0
 			_spawn_burst(center, WHITE, 18)
+			sfx_player.play("hurt")
 			if player_hp <= 0:
 				player_dying = true
 				player_hp = 3
@@ -1035,6 +1079,7 @@ func _use_red_skill() -> void:
 	if player_courage < 100.0:
 		return
 	player_courage = 0.0
+	sfx_player.play("skill")
 	if skill_red_tragedy:
 		bullets.clear()
 		boss_hp = maxf(0.0, boss_hp - 80.0)
@@ -1107,6 +1152,27 @@ func _update_fx() -> void:
 	red_vignette = maxf(0.0, red_vignette - 1.0)
 	if banner_timer <= 0:
 		banner = ""
+	
+	# Update dash FX
+	_update_dash_fx()
+	
+	# Update walk dust
+	for dust in walk_dust:
+		dust["pos"] += dust["vel"] * FIXED_DT
+		dust["life"] = float(dust["life"]) - FIXED_DT
+		var progress := 1.0 - float(dust["life"]) / float(dust["max_life"])
+		dust["alpha"] = (1.0 - progress) * 0.35
+	walk_dust = walk_dust.filter(func(d): return float(d.get("life", 0.0)) > 0.0)
+	
+	# Update jump squash timer
+	if jump_squash_timer > 0:
+		jump_squash_timer -= 1
+		_update_jump_squash()
+	else:
+		jump_squash = Vector2.ONE
+	
+	# Reset graze frame flag
+	graze_this_frame = false
 
 func _spawn_particle(pos: Vector2, color: Color, life: float, vel := Vector2.ZERO, size := 4.0) -> void:
 	particles.append({"pos": pos, "vel": vel, "life": life, "max": life, "color": color, "size": size})
@@ -1117,6 +1183,7 @@ func _spawn_burst(pos: Vector2, color: Color, count: int) -> void:
 		_spawn_particle(pos, color, randf_range(0.25, 0.7), Vector2(cos(angle), sin(angle)) * randf_range(45.0, 230.0), randf_range(2.0, 7.0))
 
 func _spawn_mirror_shards(count: int, power: float) -> void:
+	sfx_player.play("shards")
 	for i in range(count):
 		var angle := TAU * float(i) / maxf(1.0, float(count)) + randf_range(-0.3, 0.3)
 		mirror_shards.append({"pos": Vector2(640, 350), "vel": Vector2(cos(angle), sin(angle)) * randf_range(90.0, 280.0) * power, "rot": randf_range(0, TAU), "spin": randf_range(-4, 4), "life": randf_range(0.7, 1.4), "size": randf_range(8, 24)})
@@ -1310,10 +1377,13 @@ func _draw_walk() -> void:
 		if kind == "norden" or kind == "mabel":
 			var fallback_tex: Texture2D = textures.get(kind)
 			var height := NPC_MABEL_HEIGHT if kind == "mabel" else NPC_NORDEN_HEIGHT
+			_draw_npc_glow(p, height)
 			character_art.draw_npc_breathe(self, kind, p, height, elapsed, fallback_tex)
 			draw_string(ThemeDB.fallback_font, p + Vector2(-52, -330), str(walk_target.get("label", "按 W 交互")), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, WHITE)
 		elif kind == "mirror":
 			_draw_mirror_gate(p)
+	_draw_walk_dust()
+	_draw_dash_fx()
 	_draw_dash_trail()
 	_draw_player_at(player_pos - Vector2(camera_x, 0), WHITE)
 	_draw_particles_world()
@@ -1339,6 +1409,8 @@ func _draw_battle() -> void:
 	_draw_world_grid()
 	_draw_boss_fx()
 	_draw_projectiles()
+	_draw_walk_dust()
+	_draw_dash_fx()
 	_draw_dash_trail()
 	_draw_boss()
 	_draw_player_at(player_pos - Vector2(camera_x, 0), WHITE)
@@ -1440,7 +1512,7 @@ func _draw_dash_trail() -> void:
 	for item in trail:
 		var pos: Vector2 = item["pos"] - Vector2(camera_x, 0)
 		var alpha := clampf(float(item["life"]) / float(item["max"]), 0.0, 1.0) * 0.28
-		character_art.draw_player(self, textures, pos + Vector2(0, 20), float(item["facing"]), str(item["state"]), Vector2(float(item["facing"]), 0), Color(1, 0, 0, alpha))
+		character_art.draw_player(self, textures, pos + Vector2(0, 20), float(item["facing"]), str(item["state"]), Vector2(float(item["facing"]), 0), Color(1, 0, 0, alpha), Vector2.ONE)
 
 func _draw_player_at(pos: Vector2, tint: Color) -> void:
 	var mirrored := player_facing < 0.0
@@ -1458,9 +1530,13 @@ func _draw_player_at(pos: Vector2, tint: Color) -> void:
 		return
 	var state: String = character_art.player_state(player_dash_frames, player_dash_out, bool(input_state.get("shoot", false)))
 	var aim := (get_viewport().get_mouse_position() - pos - Vector2(0, -80)).normalized() if mouse_seen else Vector2(player_facing, 0)
-	if character_art.draw_player(self, textures, pos + Vector2(0, 20), player_facing, state, aim, tint):
+	
+	# Apply jump squash & stretch to character art
+	if character_art.draw_player(self, textures, pos + Vector2(0, 20), player_facing, state, aim, tint, jump_squash):
 		return
-	draw_set_transform(pos, 0.0, Vector2(-1, 1) if mirrored else Vector2.ONE)
+	
+	# Fallback procedural player (also apply squash)
+	draw_set_transform(pos, 0.0, jump_squash * (Vector2(-1, 1) if mirrored else Vector2.ONE))
 	draw_colored_polygon(PackedVector2Array([Vector2(-18, -18), Vector2(-68, 8), Vector2(-80, 52), Vector2(-8, 22)]), cape_color)
 	draw_rect(Rect2(-16, -28, 32, 56), body_color)
 	draw_circle(Vector2(0, -52), 24, Color(0.72, 0.72, 0.72, tint.a))
@@ -1540,3 +1616,179 @@ func _draw_fx_overlay() -> void:
 		draw_rect(Rect2(0, VIEW.y - 18, VIEW.x, 18), Color(RED, alpha))
 		draw_rect(Rect2(0, 0, 18, VIEW.y), Color(RED, alpha))
 		draw_rect(Rect2(VIEW.x - 18, 0, 18, VIEW.y), Color(RED, alpha))
+	
+	# Draw dash screen FX (white edge flash, 4 frames)
+	if dash_screen_fx > 0:
+		var alpha_seq := [0.10, 0.075, 0.045, 0.015]
+		var idx := 4 - dash_screen_fx
+		if idx >= 0 and idx < alpha_seq.size():
+			var alpha: float = alpha_seq[idx]
+			var margin := 64.0
+			# Top/bottom edge bars
+			draw_rect(Rect2(0, 0, VIEW.x, margin), Color(WHITE, alpha))
+			draw_rect(Rect2(0, VIEW.y - margin, VIEW.x, margin), Color(WHITE, alpha))
+			# Left/right edge bars
+			draw_rect(Rect2(0, 0, margin, VIEW.y), Color(WHITE, alpha))
+			draw_rect(Rect2(VIEW.x - margin, 0, margin, VIEW.y), Color(WHITE, alpha))
+
+## Start dash FX: trigger screen flash and initial burst
+func _start_dash_fx() -> void:
+	dash_fx_active = true
+	dash_screen_fx = 4
+	sfx_player.play("dash")
+	# Burst: 8 red + 1 white center dot
+	for i in range(8):
+		var angle := TAU * float(i) / 8.0 + randf_range(-0.18, 0.18)
+		var dir := Vector2(cos(angle), sin(angle))
+		var speed := randf_range(40.0, 130.0)
+		dash_dots.append({
+			"pos": player_pos,
+			"vel": dir * speed,
+			"life": randf_range(10.0, 16.0) / 60.0,
+			"max_life": 16.0 / 60.0,
+			"radius": randf_range(1.5, 3.0),
+			"color": RED
+		})
+
+## Update dash FX every frame during dash
+func _update_dash_fx() -> void:
+	if dash_screen_fx > 0:
+		dash_screen_fx -= 1
+	
+	var active := player_dash_frames > 0 or player_dash_out > 0
+	if not active:
+		dash_fx_active = false
+	
+	if not dash_fx_active:
+		return
+	
+	var speed_ratio := clampf(absf(player_vel.x) / 1020.0, 0.0, 1.0)
+	var back_dir := Vector2(-signf(player_vel.x), 0) if absf(player_vel.x) > 10.0 else Vector2(-player_dash_direction, 0)
+	
+	# Speed lines: 2 per frame
+	for i in range(2):
+		var length := lerpf(18.0, 72.0, speed_ratio)
+		var width := lerpf(2.0, 3.5, speed_ratio)
+		var offset := randf_range(-7.0, 7.0)
+		var start := player_pos + Vector2(0, offset)
+		dash_speed_lines.append({
+			"pos": start,
+			"vel": back_dir * length,
+			"life": 3.0 / 60.0,
+			"max_life": 3.0 / 60.0,
+			"width": width
+		})
+	
+	# Light dots: 1 per frame during dash
+	if frame % 2 == 0 and dash_dots.size() < 32:
+		var angle := back_dir.angle() + randf_range(-0.5, 0.5)
+		var dir := Vector2(cos(angle), sin(angle))
+		dash_dots.append({
+			"pos": player_pos,
+			"vel": dir * randf_range(40.0, 80.0),
+			"life": randf_range(10.0, 16.0) / 60.0,
+			"max_life": 16.0 / 60.0,
+			"radius": randf_range(1.5, 3.0),
+			"color": RED
+		})
+	
+	# Update speed lines
+	for line in dash_speed_lines:
+		line["life"] = float(line["life"]) - FIXED_DT
+	dash_speed_lines = dash_speed_lines.filter(func(l): return float(l.get("life", 0.0)) > 0.0)
+	
+	# Update dash dots
+	for dot in dash_dots:
+		dot["pos"] += dot["vel"] * FIXED_DT
+		dot["life"] = float(dot["life"]) - FIXED_DT
+	dash_dots = dash_dots.filter(func(d): return float(d.get("life", 0.0)) > 0.0)
+
+## Draw dash FX (speed lines + dots) before player
+func _draw_dash_fx() -> void:
+	# Speed lines: white, additive
+	for line in dash_speed_lines:
+		var progress := 1.0 - float(line["life"]) / float(line["max_life"])
+		var alpha := 0.62 * pow(1.0 - progress, 0.75)
+		var start: Vector2 = line["pos"] - Vector2(camera_x, 0)
+		var end: Vector2 = start + line["vel"]
+		draw_line(start, end, Color(WHITE, alpha), line["width"], true)
+	
+	# Dash dots: red, additive
+	for dot in dash_dots:
+		var progress := 1.0 - float(dot["life"]) / float(dot["max_life"])
+		var alpha := 1.0 - progress
+		var radius := float(dot["radius"]) * (1.0 - 0.45 * progress)
+		var p: Vector2 = dot["pos"] - Vector2(camera_x, 0)
+		draw_circle(p, radius, Color(dot["color"], alpha))
+
+## Spawn walk dust particle
+func _spawn_walk_dust() -> void:
+	var back := player_pos + Vector2(-player_facing * 12.0, 16.0)
+	var vel := Vector2(-player_facing * randf_range(20.0, 40.0), randf_range(-10.0, 0.0))
+	walk_dust.append({
+		"pos": back,
+		"vel": vel,
+		"life": randf_range(10.0, 16.0) / 60.0,
+		"max_life": 16.0 / 60.0,
+		"alpha": 0.35
+	})
+
+## Draw walk dust particles
+func _draw_walk_dust() -> void:
+	for dust in walk_dust:
+		var p: Vector2 = dust["pos"] - Vector2(camera_x, 0)
+		var radius := randf_range(1.0, 3.0)
+		draw_circle(p, radius, Color(GREY, dust["alpha"]))
+
+## Trigger jump squash & stretch animation
+func _trigger_jump_squash(phase: String) -> void:
+	match phase:
+		"prejump":
+			jump_squash_timer = 2
+			jump_squash = Vector2(1.10, 0.88)
+		"jump":
+			jump_squash_timer = 3
+			jump_squash = Vector2(0.94, 1.10)
+		"land":
+			jump_squash_timer = 4
+			jump_squash = Vector2(1.12, 0.84)
+
+func _update_jump_squash() -> void:
+	# Lerp back to Vector2.ONE over remaining frames
+	var t := 1.0 / float(maxi(1, jump_squash_timer))
+	jump_squash = jump_squash.lerp(Vector2.ONE, t)
+
+## Trigger land event
+func _trigger_land() -> void:
+	_trigger_jump_squash("land")
+	# Land SFX with minimum 12-frame interval
+	if frame - last_land_frame >= 12:
+		sfx_player.play("land")
+		last_land_frame = frame
+
+## Update NPC interaction glow (walk mode only)
+func _update_npc_glow() -> void:
+	if mode != Mode.WALK or walk_target.size() == 0:
+		npc_glow_target = 0.0
+	else:
+		var target_x := float(walk_target.get("x", player_pos.x))
+		var distance := absf(player_pos.x - target_x)
+		npc_glow_target = 1.0 if distance < 110.0 else 0.0
+	
+	# Smooth transition: 8 frames fade-in, 12 frames fade-out
+	var speed := (1.0 / 8.0) if npc_glow_target > npc_glow_alpha else (1.0 / 12.0)
+	npc_glow_alpha = move_toward(npc_glow_alpha, npc_glow_target, speed)
+
+## Draw NPC glow (breathing radial gradient)
+func _draw_npc_glow(foot: Vector2, height: float) -> void:
+	if npc_glow_alpha <= 0.01:
+		return
+	var breathe := 1.0 + sin(elapsed * 0.8 * TAU) * 0.15
+	var base_alpha: float = lerpf(0.18, 0.25, (breathe + 1.0) * 0.5) * npc_glow_alpha
+	var center := foot - Vector2(0, height * 0.5)
+	var radius := height * 0.62 * breathe
+	# Draw radial gradient as concentric circles (simple approximation)
+	for i in range(6, 0, -1):
+		var r := radius * float(i) / 6.0
+		var a: float = base_alpha * (1.0 - float(i - 1) / 6.0) * 0.5
+		draw_circle(center, r, Color(CYAN, a))
