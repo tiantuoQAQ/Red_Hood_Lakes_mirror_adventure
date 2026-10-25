@@ -495,6 +495,10 @@ func _update_title() -> void:
 
 func _start_story(id: String) -> void:
 	seen_speakers.clear()
+	mirror_flip = false
+	flash_green_t = 0.0
+	green_flash_t = 0.0
+	beam_warning_list.clear()
 	# 换章时清空对话立绘（否则上一章角色会残留）
 	story_left = ""
 	story_right = ""
@@ -780,6 +784,10 @@ func _finish_walk() -> void:
 		mode = Mode.TITLE
 
 func _start_walk(command: Dictionary, long_map: bool = false) -> void:
+	mirror_flip = false
+	flash_green_t = 0.0
+	green_flash_t = 0.0
+	beam_warning_list.clear()
 	last_left = ""
 	last_right = ""
 	portrait_fade = 0.0
@@ -1310,6 +1318,9 @@ func _update_boss() -> void:
 			boss_lunge_start = boss_pos
 		else:
 			mode = Mode.VICTORY
+			mirror_flip = false   # 战斗结束立刻恢复正常方向
+			flash_green_t = 0.0
+			green_flash_t = 0.0
 			_stop_battle_bgm()
 			banner = ""
 			_spawn_burst(boss_pos, RED if boss_id == "crimson" else HAZARD, 58)
