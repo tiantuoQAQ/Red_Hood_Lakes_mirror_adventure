@@ -579,6 +579,7 @@ func _start_walk(command: Dictionary) -> void:
 	shots.clear()
 	trail.clear()
 	particles.clear()
+	walk_dust.clear()
 	walk_target = command.get("target", {})
 	walk_props = command.get("props", [])
 	walk_camera = bool(command.get("cam", false))
@@ -633,6 +634,7 @@ func _start_battle(id: String, after: String) -> void:
 	shots.clear()
 	particles.clear()
 	trail.clear()
+	walk_dust.clear()
 	mirror_shards.clear()
 	player_pos = Vector2(350.0, GROUND_Y - 20.0)
 	player_vel = Vector2.ZERO
@@ -1768,10 +1770,31 @@ func _draw_projectiles() -> void:
 		draw_circle(p, radius * 1.5, Color(color, 0.12))
 
 func _draw_dash_trail() -> void:
+	# Draw dash trail as tapered red polygons (not full character silhouettes)
+	var active_dashing := player_dash_frames > 0 or player_dash_out > 0
+	if not active_dashing:
+		return
+	
 	for item in trail:
 		var pos: Vector2 = item["pos"] - Vector2(camera_x, 0)
-		var alpha := clampf(float(item["life"]) / float(item["max"]), 0.0, 1.0) * 0.28
-		character_art.draw_player(self, textures, pos + Vector2(0, 20), float(item["facing"]), str(item["state"]), Vector2(float(item["facing"]), 0), Color(1, 0, 0, alpha), Vector2.ONE)
+		var life_ratio := clampf(float(item["life"]) / float(item["max"]), 0.0, 1.0)
+		var alpha_start := life_ratio * 0.34
+		var facing: float = item["facing"]
+		# Tapered polygon: wide at back, narrow at front (red #FF0000)
+		var width_back := 28.0 * life_ratio
+		var width_front := 8.0 * life_ratio
+		var length := 42.0
+		var dir := Vector2(facing, 0)
+		var perp := Vector2(0, 1)
+		var back := pos - dir * length * 0.5
+		var front := pos + dir * length * 0.5
+		var points := PackedVector2Array([
+			back + perp * width_back,
+			back - perp * width_back,
+			front - perp * width_front,
+			front + perp * width_front
+		])
+		draw_colored_polygon(points, Color(RED, alpha_start))
 
 func _draw_player_at(pos: Vector2, tint: Color) -> void:
 	var mirrored := player_facing < 0.0
@@ -1861,14 +1884,18 @@ func _draw_end() -> void:
 	draw_string(ThemeDB.fallback_font, Vector2(450, 500), "ENTER / SPACE 重新开始", HORIZONTAL_ALIGNMENT_LEFT, -1, 20, GREY)
 
 func _draw_fx_overlay() -> void:
-	for shard in mirror_shards:
-		var p: Vector2 = shard["pos"]
-		var size: float = shard["size"]
-		var points := PackedVector2Array([p + Vector2(-size, -size * 0.4), p + Vector2(size * 0.6, -size), p + Vector2(size, size * 0.45), p + Vector2(-size * 0.5, size)])
-		var transformed := PackedVector2Array()
-		for point in points:
-			transformed.append(p + (point - p).rotated(shard["rot"]))
-		draw_colored_polygon(transformed, Color(WHITE, clampf(float(shard["life"]), 0.0, 1.0) * 0.32))
+	# Draw mirror shards ONLY when fade/flash are not blocking (no blackout)
+	var fade_blocking := (mode == Mode.STORY and story_fade > 0.02)
+	var flash_blocking := (mode == Mode.STORY and not story_flash_seq.is_empty())
+	if not fade_blocking and not flash_blocking:
+		for shard in mirror_shards:
+			var p: Vector2 = shard["pos"]
+			var size: float = shard["size"]
+			var points := PackedVector2Array([p + Vector2(-size, -size * 0.4), p + Vector2(size * 0.6, -size), p + Vector2(size, size * 0.45), p + Vector2(-size * 0.5, size)])
+			var transformed := PackedVector2Array()
+			for point in points:
+				transformed.append(p + (point - p).rotated(shard["rot"]))
+			draw_colored_polygon(transformed, Color(WHITE, clampf(float(shard["life"]), 0.0, 1.0) * 0.32))
 	if red_vignette > 0.0:
 		var alpha := clampf(red_vignette / 18.0, 0.0, 1.0) * 0.34
 		draw_rect(Rect2(0, 0, VIEW.x, 18), Color(RED, alpha))
