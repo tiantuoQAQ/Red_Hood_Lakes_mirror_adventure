@@ -190,6 +190,8 @@ var hurt_vignette := 0
 var ball_hint_t := 0.0
 var tutorial_timer := 0.0
 var death_timer := 0.0
+var death_shards: Array = []
+var death_flash := 0.0
 var death_reason := ""
 var battle_start_pos := Vector2(500.0, 500.0)
 var tutorial_shown := false
@@ -3423,21 +3425,50 @@ func _draw_signboard() -> void:
 
 ## 死亡流程：镜裂 → 碎镜 → 回到起点 → 幻觉台词
 func _start_death() -> void:
-	death_timer = 1.6
+	death_timer = 1.9
+	death_flash = 1.0
 	player_hp = 0
 	bullets.clear()
-	_spawn_mirror_shards(46, 1.6)
-	screen_shake = 0.9
+	screen_shake = 1.2
 	sfx_player.play("shards")
-	if sfx_player:
-		sfx_player.play("explode")
+	sfx_player.play("explode")
+	# 生成不规则玻璃碎片（以受击点为中心炸开）
+	death_shards.clear()
+	var center := player_pos - Vector2(camera_x, 0) + Vector2(0, -20)
+	for i in range(34):
+		var ang := TAU * float(i) / 34.0 + randf_range(-0.12, 0.12)
+		var dist := randf_range(30.0, 210.0)
+		var px := center + Vector2(cos(ang), sin(ang)) * dist
+		var pts := PackedVector2Array()
+		var n := randi_range(3, 5)
+		var r0 := randf_range(18.0, 52.0)
+		for k in range(n):
+			var a2 := TAU * float(k) / float(n) + randf_range(-0.35, 0.35)
+			var rr := r0 * randf_range(0.55, 1.25)
+			pts.append(Vector2(cos(a2), sin(a2)) * rr)
+		death_shards.append({
+			"pos": px,
+			"vel": Vector2(cos(ang), sin(ang)) * randf_range(160.0, 620.0),
+			"rot": randf_range(0.0, TAU),
+			"spin": randf_range(-7.0, 7.0),
+			"life": randf_range(1.1, 1.9),
+			"max": 1.9,
+			"pts": pts,
+			"tint": randf_range(0.55, 1.0)
+		})
 
 func _update_death() -> void:
 	if death_timer <= 0.0:
 		return
 	death_timer = maxf(0.0, death_timer - FIXED_DT)
+	death_flash = maxf(0.0, death_flash - FIXED_DT * 3.2)
+	for sh in death_shards:
+		sh["life"] = float(sh["life"]) - FIXED_DT
+		sh["pos"] = Vector2(sh["pos"]) + Vector2(sh["vel"]) * FIXED_DT
+		sh["vel"] = Vector2(sh["vel"]) * 0.985 + Vector2(0, 520.0) * FIXED_DT
+		sh["rot"] = float(sh["rot"]) + float(sh["spin"]) * FIXED_DT
+	death_shards = death_shards.filter(func(x): return float(x.get("life", 0.0)) > 0.0)
 	if death_timer <= 0.0:
-		# 复活：回到战场起点，满血，清弹，Boss 重置本阶段血量
 		player_hp = PLAYER_MAX_HP
 		player_pos = battle_start_pos
 		player_vel = Vector2.ZERO
@@ -3453,25 +3484,44 @@ func _update_death() -> void:
 func _draw_death_overlay() -> void:
 	if death_timer <= 0.0:
 		return
-	var k := clampf(death_timer / 1.6, 0.0, 1.0)
-	var a := 1.0 - k
-	draw_rect(Rect2(Vector2.ZERO, VIEW), Color(0, 0, 0, 0.55 * a))
-	# 镜裂：从画面中心放射的裂缝
-	var c := VIEW * 0.5
-	draw_set_transform(c, 0.0, Vector2(1, 1))
-	for i in range(14):
-		var ang := TAU * float(i) / 14.0 + 0.21
-		var length := 260.0 + 90.0 * sin(float(i) * 2.3)
-		var p0 := Vector2.ZERO
-		var seg := 4
+	var k := clampf(death_timer / 1.9, 0.0, 1.0)
+	var dark := clampf(1.0 - k * 1.5, 0.0, 1.0)
+	# 玻璃碎片：不规则多边形 + 冷白半透明 + 反光边
+	for sh in death_shards:
+		var lk := clampf(float(sh["life"]) / float(sh["max"]), 0.0, 1.0)
+		var pts: PackedVector2Array = sh["pts"]
+		var pos: Vector2 = sh["pos"]
+		var rot: float = sh["rot"]
+		var world := PackedVector2Array()
+		for pv in pts:
+			world.append(pos + pv.rotated(rot))
+		var tint: float = float(sh["tint"])
+		draw_colored_polygon(world, Color(0.82 * tint, 0.86 * tint, 0.92 * tint, 0.42 * lk))
+		var closed := world.duplicate()
+		closed.append(world[0])
+		draw_polyline(closed, Color(1, 1, 1, 0.95 * lk), 2.0)
+		if world.size() >= 3:
+			draw_line(world[0], world[1], Color(1, 1, 1, 0.55 * lk), 3.0)
+	# 分叉裂纹
+	var c := Vector2(640, 340)
+	for i in range(16):
+		var ang := TAU * float(i) / 16.0 + 0.13
+		var length := (240.0 + 120.0 * sin(float(i) * 2.7)) * (1.0 - k * 0.35)
+		var dir := Vector2(cos(ang), sin(ang))
+		var seg := 5
 		for s2 in range(seg):
 			var t0 := float(s2) / float(seg)
 			var t1 := float(s2 + 1) / float(seg)
-			var jitter := Vector2(randf_range(-18, 18), randf_range(-18, 18)) * t1
-			var q0 := Vector2(cos(ang), sin(ang)) * length * t0 + jitter * 0.5
-			var q1 := Vector2(cos(ang), sin(ang)) * length * t1 + jitter
-			draw_line(q0, q1, Color(1, 1, 1, 0.75 * a), 2.6)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-	# 镜片飞出
-	_spawn_mirror_shards(0, 0.0)
-	draw_string(ThemeDB.fallback_font, Vector2(500, 370), "镜 碎 了", HORIZONTAL_ALIGNMENT_LEFT, -1, 40, Color(1, 1, 1, a))
+			var jitter := Vector2(randf_range(-14, 14), randf_range(-14, 14)) * t1
+			var q0 := c + dir * length * t0 + jitter * 0.6
+			var q1 := c + dir * length * t1 + jitter
+			draw_line(q0, q1, Color(1, 1, 1, (1.0 - float(s2) * 0.1) * (1.0 - k)), 4.0 - float(s2) * 0.5)
+			if s2 == 2:
+				var bdir := dir.rotated(randf_range(-0.9, 0.9)).normalized()
+				draw_line(q1, q1 + bdir * randf_range(60.0, 130.0), Color(0.9, 0.9, 0.95, 0.5 * (1.0 - k)), 1.5)
+	if death_flash > 0.0:
+		draw_rect(Rect2(Vector2.ZERO, VIEW), Color(1, 1, 1, 0.5 * death_flash))
+	draw_rect(Rect2(Vector2.ZERO, VIEW), Color(0, 0, 0, 0.62 * dark))
+	if death_timer > 0.9:
+		var ta := clampf((death_timer - 0.9) / 0.6, 0.0, 1.0)
+		draw_string(ThemeDB.fallback_font, Vector2(520, 372), "镜 碎 了", HORIZONTAL_ALIGNMENT_LEFT, -1, 40, Color(1, 1, 1, ta))
