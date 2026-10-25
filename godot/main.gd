@@ -199,7 +199,8 @@ func _load_assets() -> void:
 		"marysue_02": "res://art/battle/marysue/marysue-battle-02.png",
 		"marysue_03": "res://art/battle/marysue/marysue-battle-03.png",
 		"cutin_crimson": "res://art/cg/cutin_crimson.png",
-		"cutin_marysue": "res://art/cg/cutin_marysue.png"
+		"cutin_marysue": "res://art/cg/cutin_marysue.png",
+		"logo_hongzhijing": "res://art/logo/hongzhijing_logo.png"
 	}
 	for key in paths:
 		var tex = _load_texture(paths[key])
@@ -1436,12 +1437,34 @@ func _draw_background() -> void:
 	draw_line(Vector2(0, GROUND_Y), Vector2(VIEW.x, GROUND_Y), Color(CYAN, 0.28), 2.0)
 
 func _draw_title() -> void:
-	draw_string(ThemeDB.fallback_font, Vector2(386, 220), "M I R R O R", HORIZONTAL_ALIGNMENT_LEFT, -1, 70, WHITE)
-	draw_string(ThemeDB.fallback_font, Vector2(520, 278), "镜", HORIZONTAL_ALIGNMENT_LEFT, -1, 46, CYAN)
-	draw_line(Vector2(350, 310), Vector2(930, 310), Color(CYAN, 0.45), 2.0)
-	draw_string(ThemeDB.fallback_font, Vector2(450, 400), "横版镜面 Boss Rush", HORIZONTAL_ALIGNMENT_LEFT, -1, 26, GREY)
-	draw_string(ThemeDB.fallback_font, Vector2(460, 510), "按 ENTER / SPACE 开始", HORIZONTAL_ALIGNMENT_LEFT, -1, 30, RED)
-	draw_string(ThemeDB.fallback_font, Vector2(414, 560), "A D 移动   SPACE 跳跃   SHIFT / K / 右键 冲刺   J / Z / 左键 射击", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, GREY)
+	var logo_tex: Texture2D = textures.get("logo_hongzhijing")
+	if logo_tex:
+		# Logo: 1200×420 source, display at ~62% view width = ~790px width
+		var logo_width := 790.0
+		var logo_height := logo_tex.get_height() * (logo_width / float(logo_tex.get_width()))
+		var logo_center := Vector2(VIEW.x * 0.5, 200.0)
+		# Gentle breath animation: ±0.5% scale, 4 second cycle
+		var breath := 1.0 + sin(elapsed * (TAU / 4.0)) * 0.005
+		var logo_rect := Rect2(logo_center.x - logo_width * breath * 0.5, logo_center.y - logo_height * breath * 0.5, logo_width * breath, logo_height * breath)
+		draw_texture_rect(logo_tex, logo_rect, false, Color.WHITE)
+		
+		# Prompt: "ENTER 开始游戏" below logo
+		var prompt_y := logo_center.y + logo_height * 0.5 + 100.0
+		draw_string(ThemeDB.fallback_font, Vector2(VIEW.x * 0.5 - 100.0, prompt_y), "ENTER 开始游戏", HORIZONTAL_ALIGNMENT_LEFT, -1, 30, RED)
+		
+		# Version: "DEMO v0.1" below prompt (gray 60%)
+		var version_y := prompt_y + 50.0
+		draw_string(ThemeDB.fallback_font, Vector2(VIEW.x * 0.5 - 50.0, version_y), "DEMO v0.1", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(GREY, 0.6))
+		
+		# Controls hint at bottom
+		draw_string(ThemeDB.fallback_font, Vector2(414, 560), "A D 移动   SPACE 跳跃   SHIFT / K / 右键 冲刺   J / Z / 左键 射击", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, GREY)
+	else:
+		# Fallback: text-based title when logo fails to load
+		draw_string(ThemeDB.fallback_font, Vector2(400, 220), "红之镜 DEMO", HORIZONTAL_ALIGNMENT_LEFT, -1, 70, RED)
+		draw_string(ThemeDB.fallback_font, Vector2(450, 300), "MIRROR OF RED", HORIZONTAL_ALIGNMENT_LEFT, -1, 32, Color(GREY, 0.65))
+		draw_string(ThemeDB.fallback_font, Vector2(460, 420), "按 ENTER / SPACE 开始", HORIZONTAL_ALIGNMENT_LEFT, -1, 30, RED)
+		draw_string(ThemeDB.fallback_font, Vector2(520, 480), "DEMO v0.1", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(GREY, 0.6))
+		draw_string(ThemeDB.fallback_font, Vector2(414, 560), "A D 移动   SPACE 跳跃   SHIFT / K / 右键 冲刺   J / Z / 左键 射击", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, GREY)
 
 func _draw_story() -> void:
 	if story_cg:
