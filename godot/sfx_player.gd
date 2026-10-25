@@ -17,6 +17,9 @@ func _ready() -> void:
 	_load_sfx("hurt", "res://audio/sfx/hurt.wav")
 	_load_sfx("skill", "res://audio/sfx/skill.wav")
 	_load_sfx("shards", "res://audio/sfx/shards.wav")
+	_load_sfx("lock_beep", "res://audio/sfx/lock_beep.wav")
+	_load_sfx("spike", "res://audio/sfx/spike.wav")
+	_load_sfx("explode", "res://audio/sfx/explode.wav")
 
 func _load_sfx(id: String, path: String) -> void:
 	if not ResourceLoader.exists(path):

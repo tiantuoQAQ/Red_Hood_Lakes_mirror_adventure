@@ -5,6 +5,10 @@ extends Node2D
 ## browser prototype's fixed 60 Hz numbers and is drawn in this single scene
 ## so it remains easy to tune against the Web reference.
 
+const PHASE_NAMES := {
+	"crimson": ["壹 · 试锋", "贰 · 裂帛", "叁 · 血雨", "肆 · 镜刃", "伍 · 红之惨剧"],
+	"marysue": ["壹 · 箱庭", "贰 · 反语", "叁 · 镜廊", "肆 · 断线", "伍 · 狂言", "陆 · 天地倒悬"]
+}
 const VIEW := Vector2(1280.0, 720.0)
 const WORLD_W := 4800.0           # 用户要求：地图加长，初始看不到 NPC，要往右走才遇到
 const WALK_SHIFT := 1200.0        # 走位段的 NPC/道具整体右移，避免一进图就看见
@@ -91,6 +95,18 @@ var boss_phase_count := 5
 var boss_attack_timer := 0
 var boss_move_timer := 0
 var boss_anim: Dictionary = {}   # 魔姬动作帧: idle/move/thrust/slash
+var intro_anim: Dictionary = {}  # 战前开场视频帧: crimson / marysue
+var cutin_active := false
+var cutin_timer := 0.0
+var battle_intro_t := 0.0     # 开场动画剩余秒数
+var whirls: Array = []        # 地面旋风 {x, phase}
+var lock_timer := 0.0         # 锁定突刺计时
+var lock_target := Vector2.ZERO
+var lock_cooldown := 0
+var lock_state := ""          # "", "aim", "spike"
+var spikes: Array = []        # 突刺锋 {pos, life, max}
+var green_flash_t := 0.0      # 全屏绿闪剩余秒数
+var mirror_flip := false      # 第六阶段：左右交换
 var boss_hit_flash := 0
 var boss_ring_flash := 0  # Ring alpha flash state: 0 = steady 0.85, >0 = flashing
 var boss_skill_name := ""
@@ -226,6 +242,15 @@ func _load_assets() -> void:
 		if ring_tex:
 			textures[ring_key] = ring_tex
 
+	# 战前开场动画帧（即梦 mp4 抽帧，24 帧）
+	for who in ["crimson", "marysue"]:
+		var iframes: Array = []
+		for fi in range(24):
+			var itex := _load_texture("res://art/cg/intro_%s/frame_%02d.png" % [who, fi])
+			if itex:
+				iframes.append(itex)
+		if iframes.size() > 0:
+			intro_anim[who] = iframes
 	# 猩红魔姬动作序列（来自即梦视频，每套 16 帧）
 	boss_anim.clear()
 	for anim_name in ["idle", "move", "thrust", "slash"]:
@@ -648,6 +673,15 @@ func _start_battle(id: String, after: String) -> void:
 		_spawn_mirror_shards(20, 0.9)
 	
 	mode = Mode.BATTLE
+	battle_intro_t = 2.6
+	cutin_active = false
+	cutin_timer = 0.0
+	whirls.clear()
+	spikes.clear()
+	lock_state = ""
+	lock_timer = 0.0
+	green_flash_t = 0.0
+	mirror_flip = false
 	boss_id = id
 	boss_after = after
 	boss_max_hp = 240.0 if id == "crimson" else 420.0
@@ -1000,13 +1034,22 @@ func _update_boss() -> void:
 	
 	# Attack pattern timer (independent of movement)
 	# 修：带状态的招式（预警→发射）必须每帧推进，否则一招要等几十秒才出弹
-	if boss_skill_state != "":
+	if cutin_active or battle_intro_t > 0.0:
+		pass
+	elif boss_skill_state != "":
 		_spawn_boss_pattern()
 		boss_attack_timer = 40
 	elif boss_attack_timer <= 0:
 		boss_attack_timer = 78 if boss_id == "crimson" else 64
 		_spawn_boss_pattern()
 	
+	_update_boss_extras()
+	if cutin_active:
+		cutin_timer -= FIXED_DT
+		if cutin_timer <= 0.0:
+			cutin_active = false
+	if battle_intro_t > 0.0:
+		battle_intro_t = maxf(0.0, battle_intro_t - FIXED_DT)
 	if hellfire_timer > 0:
 		hellfire_timer -= 1
 		hellfire_tick -= 1
@@ -1023,6 +1066,11 @@ func _update_boss() -> void:
 			warnings.clear()
 			banner = "PHASE %d" % (boss_phase + 1)
 			banner_timer = 85
+			if boss_phase == boss_phase_count - 1:
+				cutin_active = true
+				cutin_timer = 2.0
+				sfx_player.play("skill")
+				_spawn_mirror_shards(18, 1.2)
 			screen_shake = 10.0
 			boss_ring_flash = 10  # Phase transition ring flash
 			_spawn_mirror_shards(18, 1.0)
@@ -1038,61 +1086,11 @@ func _update_boss() -> void:
 			_stop_music()
 
 func _spawn_boss_pattern() -> void:
-	var color := RED if boss_id == "crimson" else HAZARD
-	# Special skill pattern: use phase-specific signature moves
 	if boss_id == "crimson":
-		match boss_phase:
-			0:  # Stage 1: 赤线突刺 + 环形齐射
-				_crimson_thrust_lines()
-				if boss_skill_state == "" and frame % 3 == 0:
-					for i in range(12):
-						var a0 := TAU * float(i) / 12.0 + float(frame) * 0.02
-						_spawn_bullet(boss_pos, Vector2(cos(a0), sin(a0)) * 230.0, RED, "hazard")
-			1:  # Stage 2: 突刺 + 扇形
-				_crimson_thrust_lines()
-				if boss_skill_state == "":
-					_crimson_fan_slash()
-			2:  # Stage 3: 扇形斩击 + 双侧刀光
-				_crimson_fan_slash()
-				if boss_skill_state == "" and frame % 4 == 0:
-					for i in range(6):
-						var a1 := PI * (0.15 + 0.14 * float(i))
-						_spawn_bullet(boss_pos, Vector2(cos(a1), sin(a1)) * 300.0, RED, "blade")
-			3:  # Stage 4: 激光 + 突刺
-				_crimson_laser_sweep()
-				if boss_skill_state == "":
-					_crimson_thrust_lines()
-			4:  # Stage 5: 赤月终式 (12 waves @ 30° intervals, warning 42 frames)
-				_crimson_red_moon_finale()
-			_:  # Fallback: legacy circle pattern
-				for i in range(18):
-					var a := TAU * float(i) / 18.0 + float(frame) * 0.01
-					_spawn_bullet(boss_pos, Vector2(cos(a), sin(a)) * 215.0, color, "hazard")
-	elif boss_id == "marysue":
-		match boss_phase:
-			0:  # Stage 1: 法环收束 + 绿色游星
-				_marysue_ring_collapse()
-				if boss_skill_state == "" and frame % 5 == 0:
-					for i in range(8):
-						var g0 := TAU * float(i) / 8.0 + elapsed * 0.8
-						_spawn_bullet(boss_pos, Vector2(cos(g0), sin(g0)) * 200.0, HAZARD, "hazard")
-			1:  # Stage 2: 双环花旋
-				if frame % 3 == 0:
-					for i in range(10):
-						var g1 := TAU * float(i) / 10.0 + elapsed * 1.6
-						_spawn_bullet(boss_pos, Vector2(cos(g1), sin(g1)) * 240.0, HAZARD, "hazard")
-			2:  # Stage 3: 光翼裁切 + 落雨
-				_marysue_wing_sweep()
-			3:  # Stage 4: 翡翠贯射
-				_marysue_laser_beam()
-			5:  # Stage 6: 倒置终稿 (16 bullets, 340px/s, 128px gap, warning 60 frames)
-				_marysue_inverted_finale()
-			_:  # Fallback: legacy homing pattern
-				for i in range(8):
-					var a := float(i) * TAU / 8.0 + float(frame) * 0.02
-					_spawn_bullet(boss_pos, Vector2(cos(a), sin(a)) * 250.0, color, "homing")
+		_patterns_crimson()
+	else:
+		_patterns_marysue()
 
-# Crimson Stage 1: Thrust lines (direct lunge刀光)
 func _crimson_thrust_lines() -> void:
 	# Telegraph: 24 frames red line → thrust 900px/s
 	if boss_skill_state == "":
@@ -1804,8 +1802,10 @@ func _draw_battle() -> void:
 	_draw_dash_fx()
 	_draw_dash_trail()
 	_draw_boss()
+	_draw_boss_extras()
 	_draw_player_at(player_pos - Vector2(camera_x, 0), WHITE)
 	_draw_particles_world()
+	_draw_battle_overlays()
 	_draw_hud()
 
 func _draw_boss_fx() -> void:
@@ -2117,6 +2117,10 @@ func _draw_hud() -> void:
 	# Stage label: y=90 (58 + 16 bar + 6px gap)
 	var stage_label := "STAGE %d / %d" % [boss_phase + 1, boss_phase_count] if boss_id == "crimson" else "STAGE %d" % (boss_phase + 1)
 	draw_string(ThemeDB.fallback_font, Vector2(890, 90), stage_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, GREY)
+	# 阶段名（血条下方，用户要求）
+	var pnames: Array = PHASE_NAMES.get(boss_id, [])
+	if boss_phase < pnames.size():
+		draw_string(ThemeDB.fallback_font, Vector2(1060, 92), str(pnames[boss_phase]), HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color(RED if boss_id == "crimson" else HAZARD))
 	draw_string(ThemeDB.fallback_font, Vector2(40, 650), "HP", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, GREY)
 	for i in range(3):
 		var heart := Vector2(78 + i * 26, 644)
@@ -2404,3 +2408,233 @@ func _marysue_laser_beam() -> void:
 		if boss_skill_timer <= 0:
 			boss_skill_state = ""
 			skill_warnings.clear()
+
+
+# ======================= 新 Boss 招式体系 =======================
+
+func _patterns_crimson() -> void:
+	var color := RED
+	match boss_phase:
+		0:  # 一阶段：天上直线剑气（非追踪）
+			if boss_skill_state == "":
+				boss_skill_state = "telegraph"
+				boss_skill_timer = 22
+				var dir := (player_pos - boss_pos).normalized()
+				skill_warnings.append({"kind": "line", "pos": boss_pos, "dir": dir, "life": 22.0 / 60.0, "color": RED})
+			elif boss_skill_state == "telegraph":
+				boss_skill_timer -= 1
+				if boss_skill_timer <= 0:
+					boss_skill_state = "firing"
+					boss_skill_timer = 20
+					var aim: Vector2 = skill_warnings[0]["dir"] if skill_warnings.size() > 0 else Vector2.LEFT
+					for k in range(3):
+						var off := (float(k) - 1.0) * 0.10
+						_spawn_bullet(boss_pos, Vector2(cos(aim.angle() + off), sin(aim.angle() + off)) * 620.0, color, "blade")
+			elif boss_skill_state == "firing":
+				boss_skill_timer -= 1
+				if boss_skill_timer <= 0:
+					boss_skill_state = ""
+					skill_warnings.clear()
+		1:  # 二阶段：落地突刺 + 少量追踪剑气
+			if boss_skill_state == "":
+				boss_skill_state = "telegraph"
+				boss_skill_timer = 28
+				boss_pos.y = 380.0
+				skill_warnings.append({"kind": "line", "pos": boss_pos, "dir": (player_pos - boss_pos).normalized(), "life": 28.0 / 60.0, "color": RED})
+			elif boss_skill_state == "telegraph":
+				boss_skill_timer -= 1
+				if boss_skill_timer <= 0:
+					boss_skill_state = "firing"
+					boss_skill_timer = 30
+					boss_pos.x = clampf(player_pos.x, 1250.0, 2180.0)
+					_spawn_bullet(boss_pos, Vector2(-1, 0) * 900.0, color, "lance")
+					for k in range(3):
+						var hb := (player_pos - boss_pos).normalized()
+						_spawn_bullet(boss_pos, hb * 300.0, color, "homing")
+			elif boss_skill_state == "firing":
+				boss_skill_timer -= 1
+				if boss_skill_timer <= 0:
+					boss_skill_state = ""
+					skill_warnings.clear()
+					boss_pos.y = 226.0
+		2:  # 三阶段：天上追踪剑气 + 两个旋风
+			_spawn_two_whirls()
+			if boss_skill_state == "":
+				boss_skill_state = "firing"
+				boss_skill_timer = 60
+				for k in range(3):
+					var hb2 := (player_pos - boss_pos).normalized()
+					_spawn_bullet(boss_pos, hb2 * 280.0, color, "homing")
+			elif boss_skill_state == "firing":
+				boss_skill_timer -= 1
+				if boss_skill_timer <= 0:
+					boss_skill_state = ""
+		3:  # 四阶段：剑雨 + 剑气
+			_spawn_two_whirls()
+			if frame % 6 == 0:
+				for k in range(3):
+					var rx := 150.0 + randf() * 2200.0
+					_spawn_bullet(Vector2(rx, 30.0), Vector2(0, 420.0), color, "rain")
+			if frame % 30 == 0:
+				var dir3 := (player_pos - boss_pos).normalized()
+				_spawn_bullet(boss_pos, dir3 * 700.0, color, "blade")
+		4:  # 五阶段：高频突刺 + 剑气 + 每 2 秒锁定突刺锋
+			_spawn_two_whirls()
+			if frame % 14 == 0:
+				var dir4 := (player_pos - boss_pos).normalized()
+				_spawn_bullet(boss_pos, dir4 * 760.0, color, "blade")
+			if frame % 24 == 0:
+				_spawn_bullet(boss_pos, Vector2(randf_range(-1, 1), randf_range(-0.3, 0.6)).normalized() * 620.0, color, "lance")
+			if lock_state == "" and lock_cooldown <= 0:
+				lock_state = "aim"
+				lock_timer = 0.5
+				lock_target = player_pos
+				lock_cooldown = 120
+				sfx_player.play("lock_beep")
+
+func _patterns_marysue() -> void:
+	var color := HAZARD
+	match boss_phase:
+		0:  # 一阶段：小光球
+			if frame % 42 == 0:
+				for i in range(12):
+					var a := TAU * float(i) / 12.0 + elapsed
+					_spawn_bullet(boss_pos, Vector2(cos(a), sin(a)) * 140.0, color, "hazard")
+		1:  # 二阶段：缓慢移动的追踪激光
+			if frame % 50 == 0:
+				for i in range(3):
+					var d := (player_pos - boss_pos).normalized()
+					var off := (float(i) - 1.0) * 0.35
+					_spawn_bullet(boss_pos, Vector2(cos(d.angle() + off), sin(d.angle() + off)) * 130.0, color, "homing_laser")
+		2:  # 三阶段：光球雨 + 大光球（落地爆炸 + 冲击波）
+			if frame % 8 == 0:
+				_spawn_bullet(Vector2(120.0 + randf() * 2000.0, 40.0), Vector2(0, 260.0), color, "rain")
+			if frame % 150 == 0:
+				_spawn_bullet(Vector2(player_pos.x, 60.0), Vector2(0, 300.0), color, "bigorb")
+		3:  # 四阶段：地图随机各处激光，持续 2 秒
+			if frame % 70 == 0:
+				for i in range(4):
+					var lx := 120.0 + randf() * 2000.0
+					_spawn_bullet(Vector2(lx, 40.0), Vector2(0, 300.0), color, "laser_down")
+		4:  # 五阶段：带激光在地面冲刺 + 全屏绿闪（无伤害、遮挡视野）
+			green_flash_t = 1.2
+			if boss_skill_state == "":
+				boss_skill_state = "firing"
+				boss_skill_timer = 40
+				boss_pos.y = 420.0
+				boss_pos.x = clampf(player_pos.x + randf_range(-200.0, 200.0), 1250.0, 2180.0)
+				_spawn_bullet(boss_pos, Vector2(-1, 0) * 800.0, color, "laser")
+			elif boss_skill_state == "firing":
+				boss_skill_timer -= 1
+				if boss_skill_timer <= 0:
+					boss_skill_state = ""
+					boss_pos.y = 226.0
+		5:  # 六阶段：镜像翻转
+			if not mirror_flip:
+				mirror_flip = true
+			if frame % 40 == 0:
+				for i in range(8):
+					var a5 := TAU * float(i) / 8.0 + elapsed * 1.3
+					_spawn_bullet(boss_pos, Vector2(cos(a5), sin(a5)) * 210.0, color, "hazard")
+
+func _spawn_two_whirls() -> void:
+	if whirls.size() >= 2:
+		return
+	var base := clampf(player_pos.x, 300.0, 2100.0)
+	whirls = [{"x": base - 320.0, "phase": 0.0}, {"x": base + 320.0, "phase": 1.7}]
+
+func _update_boss_extras() -> void:
+	# 旋风：转动 + 碰撞（贴地才伤害，带无敌帧判定）
+	for w in whirls:
+		w["phase"] = float(w.get("phase", 0.0)) + FIXED_DT * 3.0
+		var dx: float = absf(player_pos.x - float(w["x"]))
+		if dx < 36.0 and player_grounded and player_hurt_invuln <= 0 and player_dash_invuln <= 0 and not player_ball:
+			player_hp -= 1
+			player_hurt_invuln = 70
+			player_vel.x = signf(player_pos.x - float(w["x"])) * 420.0
+			sfx_player.play("hurt")
+			if player_hp <= 0:
+				player_hp = 0
+	# 锁定突刺锋
+	if lock_cooldown > 0:
+		lock_cooldown -= 1
+	if lock_state == "aim":
+		lock_timer -= FIXED_DT
+		if lock_timer <= 0.0:
+			lock_state = "spike"
+			lock_timer = 0.5
+			spikes.append({"pos": lock_target, "life": 0.5, "max": 0.5})
+			sfx_player.play("spike")
+	elif lock_state == "spike":
+		lock_timer -= FIXED_DT
+		if lock_timer <= 0.0:
+			lock_state = ""
+	# 突刺锋伤害 + 淡出
+	for sp in spikes:
+		sp["life"] = float(sp["life"]) - FIXED_DT
+		var d: float = Vector2(sp["pos"]).distance_to(Vector2(player_pos.x, GROUND_Y - 20.0))
+		if d < 46.0 and player_hurt_invuln <= 0 and player_dash_invuln <= 0 and not player_ball:
+			player_hp -= 1
+			player_hurt_invuln = 70
+			sfx_player.play("hurt")
+	spikes = spikes.filter(func(x): return float(x.get("life", 0.0)) > 0.0)
+	# 绿闪衰减
+	if green_flash_t > 0.0:
+		green_flash_t = maxf(0.0, green_flash_t - FIXED_DT)
+
+func _draw_boss_extras() -> void:
+	var cam := Vector2(camera_x, 0.0)
+	# 地面旋风
+	for w in whirls:
+		var wx: float = float(w["x"]) - camera_x
+		var ph: float = float(w["phase"])
+		for k in range(4):
+			var rr := 14.0 + float(k) * 9.0
+			draw_arc(Vector2(wx, GROUND_Y - 26.0 - float(k) * 16.0), rr, ph + float(k), ph + float(k) + PI * 1.3, 18, Color(1, 0, 0, 0.55 - float(k) * 0.1), 3.0)
+		draw_circle(Vector2(wx, GROUND_Y - 8.0), 26.0, Color(1, 0, 0, 0.12))
+	# 锁定瞄准特效
+	if lock_state == "aim":
+		var t := Vector2(lock_target.x - camera_x, lock_target.y)
+		var blink := 0.5 + 0.5 * sin(elapsed * 30.0)
+		draw_arc(t, 34.0, 0, TAU, 40, Color(1, 0, 0, 0.5 + 0.4 * blink), 2.5)
+		draw_line(t + Vector2(-46, 0), t + Vector2(-24, 0), Color(1, 0, 0, 0.9), 2.0)
+		draw_line(t + Vector2(24, 0), t + Vector2(46, 0), Color(1, 0, 0, 0.9), 2.0)
+		draw_line(t + Vector2(0, -46), t + Vector2(0, -24), Color(1, 0, 0, 0.9), 2.0)
+		draw_line(t + Vector2(0, 24), t + Vector2(0, 46), Color(1, 0, 0, 0.9), 2.0)
+	# 突刺锋（地面刀锋）
+	for sp in spikes:
+		var a: float = clampf(float(sp["life"]) / maxf(0.01, float(sp["max"])), 0.0, 1.0)
+		var bx: float = float(sp["pos"].x) - camera_x
+		var top := Vector2(bx, GROUND_Y - 150.0 * a)
+		draw_colored_polygon(PackedVector2Array([top, Vector2(bx - 26, GROUND_Y), Vector2(bx + 26, GROUND_Y)]), Color(1, 0, 0, 0.75 * a))
+		draw_line(Vector2(bx, GROUND_Y), top, Color(1, 1, 1, 0.85 * a), 3.0)
+
+func _draw_battle_overlays() -> void:
+	# 开场动画
+	if battle_intro_t > 0.0 and intro_anim.has(boss_id):
+		var frames: Array = intro_anim[boss_id]
+		if frames.size() > 0:
+			var idx := int((2.6 - battle_intro_t) / 2.6 * float(frames.size() - 1))
+			idx = clampi(idx, 0, frames.size() - 1)
+			var tex: Texture2D = frames[idx]
+			var factor := maxf(VIEW.x / tex.get_width(), VIEW.y / tex.get_height())
+			var size := tex.get_size() * factor
+			draw_texture_rect(tex, Rect2((VIEW - size) * 0.5, size), false)
+			draw_rect(Rect2(0, 0, VIEW.x, VIEW.y), Color(0, 0, 0, 0.25))
+			draw_string(ThemeDB.fallback_font, Vector2(470, 600), "BATTLE START", HORIZONTAL_ALIGNMENT_LEFT, -1, 46, WHITE)
+	# 必杀插图「！」
+	if cutin_active:
+		var ct: Texture2D = textures.get("cutin_crimson" if boss_id == "crimson" else "cutin_marysue")
+		draw_rect(Rect2(0, 0, VIEW.x, VIEW.y), Color(0, 0, 0, 0.55))
+		if ct:
+			var cw := VIEW.x * 0.62
+			var ch := cw * ct.get_height() / float(ct.get_width())
+			draw_texture_rect(ct, Rect2((VIEW.x - cw) * 0.5, (VIEW.y - ch) * 0.5 - 20, cw, ch), false)
+		draw_string(ThemeDB.fallback_font, Vector2(420, 660), "！  必  杀", HORIZONTAL_ALIGNMENT_LEFT, -1, 54, RED if boss_id == "crimson" else HAZARD)
+	# 全屏绿闪（无伤害、遮挡视野）
+	if green_flash_t > 0.0:
+		var ga := 0.28 + 0.22 * absf(sin(elapsed * 9.0))
+		draw_rect(Rect2(0, 0, VIEW.x, VIEW.y), Color(0.51, 1.0, 0.0, ga * clampf(green_flash_t, 0.0, 1.0)))
+	# 镜像翻转提示
+	if mirror_flip:
+		draw_string(ThemeDB.fallback_font, Vector2(430, 150), "镜中世界 · 左右交换", HORIZONTAL_ALIGNMENT_LEFT, -1, 30, HAZARD)
