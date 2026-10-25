@@ -258,8 +258,11 @@ func _ready() -> void:
 	map_bgm_player.bus = "Master"
 	map_bgm_player.volume_db = -10.0
 	add_child(map_bgm_player)
+	# 地图 BGM：优先 map_bgm.ogg，缺文件时退回 norden_bgm.ogg（仓库自包含）
 	if ResourceLoader.exists("res://audio/map_bgm.ogg"):
 		map_bgm_player.stream = load("res://audio/map_bgm.ogg")
+	elif ResourceLoader.exists("res://audio/norden_bgm.ogg"):
+		map_bgm_player.stream = load("res://audio/norden_bgm.ogg")
 	mirror_bgm_player = AudioStreamPlayer.new()
 	mirror_bgm_player.bus = "Master"
 	mirror_bgm_player.volume_db = -12.0
@@ -269,6 +272,8 @@ func _ready() -> void:
 			["marysue_world_bgm", -12.0], ["interlude_bgm", -12.0], ["map_bgm", -12.0]]:
 		var track_id := str(spec[0])
 		var path := "res://audio/%s.ogg" % track_id
+		if track_id == "map_bgm" and not ResourceLoader.exists(path):
+			path = "res://audio/norden_bgm.ogg"
 		if not ResourceLoader.exists(path):
 			continue
 		var pl := AudioStreamPlayer.new()

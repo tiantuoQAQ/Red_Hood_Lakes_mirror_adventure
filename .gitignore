@@ -32,3 +32,6 @@ tmp/
 # Godot editor cache and import metadata (local paths, not for repo)
 .godot/
 *.import
+
+!art/**/*.jpg
+!docs/**/*.jpg
