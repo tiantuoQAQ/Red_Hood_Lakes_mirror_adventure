@@ -89,12 +89,12 @@ func _run() -> void:
 	game._physics_process(1.0 / 60.0)
 	if DisplayServer.get_name() != "headless":
 		await _capture("rek_dash.png")
-	for tick in range(4):
+	for tick in range(7):
 		game._physics_process(1.0 / 60.0)
 	_expect(game.character_art.player_state(game.player_dash_frames, game.player_dash_out, false) == "dash_02", "Dash advances to the second art frame")
 	if DisplayServer.get_name() != "headless":
 		await _capture("rek_dash_02.png")
-	for tick in range(4):
+	for tick in range(7):
 		game._physics_process(1.0 / 60.0)
 	_expect(game.character_art.player_state(game.player_dash_frames, game.player_dash_out, false) == "dash_03", "Dash advances to the third art frame")
 	if DisplayServer.get_name() != "headless":

@@ -19,6 +19,7 @@ const BLACK := Color("#090909")
 const BG := Color("#111111")
 const FIXED_DT := 1.0 / 60.0
 const DASH_STAMINA_COST := 3.0
+const DASH_FRAMES := preload("res://godot/character_art.gd").DASH_FRAMES
 const BALL_ENTRY_STAMINA_COST := 7.0
 
 enum Mode { TITLE, STORY, WALK, BATTLE, VICTORY, END }
@@ -53,7 +54,9 @@ var story_bg := "night"
 var story_fade := 0.0
 var story_fade_target := 0.0
 var story_fade_speed := 0.0
-var story_flash := 0.0
+var story_flash_seq: Array = []
+var story_flash_index := 0
+var story_flash_frames := 0
 var story_cg: Texture2D
 var story_next := ""
 var walk_target: Dictionary = {}
@@ -93,6 +96,9 @@ var player_pos := Vector2(250.0, GROUND_Y - 20.0)
 var player_vel := Vector2.ZERO
 var player_grounded := true
 var player_facing := 1.0
+var player_move_facing := 1.0
+var player_dash_direction := 1.0
+var player_dash_buffer_direction := 1.0
 var player_hp := 3
 var player_stamina := 100.0
 var player_courage := 0.0
@@ -253,6 +259,7 @@ func _start_story(id: String) -> void:
 	story_cmd = {}
 	story_text = ""
 	story_reveal = 0.0
+	story_flash_seq.clear()
 	mode = Mode.STORY
 	_story_advance()
 
@@ -269,11 +276,19 @@ func _story_advance() -> void:
 		story_intro = ""
 		if kind != "cg":
 			story_cg = null
+		if kind != "flash":
+			story_flash_seq.clear()
 		if kind != "card":
 			story_card = ["", ""]
 		match kind:
 			"scene":
 				story_bg = str(command.get("bg", story_bg))
+				if bool(command.get("clear", false)):
+					story_left = ""
+					story_right = ""
+					story_left_expr = ""
+					story_right_expr = ""
+				camera_x = 0.0
 				continue
 			"music":
 				_set_music(str(command.get("name", "stop")))
@@ -324,11 +339,18 @@ func _story_advance() -> void:
 			"fade":
 				story_fade_target = 1.0 if str(command.get("to", "black")) == "black" else 0.0
 				story_timer = float(command.get("frames", 30)) / 60.0
-				story_fade_speed = 1.0 / maxf(0.1, story_timer)
+				story_fade_speed = 1.0 / maxf(FIXED_DT, story_timer)
+				if story_timer <= FIXED_DT:
+					story_fade = story_fade_target
+					story_timer = 0.0
+					continue
 				return
 			"flash":
-				story_flash = 0.25
-				story_timer = 0.55
+				story_flash_seq = Array(command.get("seq", [])).duplicate()
+				story_flash_index = 0
+				if story_flash_seq.is_empty():
+					continue
+				story_flash_frames = maxi(1, int(story_flash_seq[0].get("f", 1)))
 				return
 			"wait":
 				story_timer = float(command.get("frames", 30)) / 60.0
@@ -339,7 +361,8 @@ func _story_advance() -> void:
 				return
 			"cg":
 				var art_path := str(command.get("art", ""))
-				story_cg = load("res://" + art_path) if art_path != "" else null
+				var path := "res://" + art_path
+				story_cg = _load_texture(path) if art_path != "" and FileAccess.file_exists(path) else null
 				story_timer = float(command.get("frames", 90)) / 60.0
 				return
 			"end":
@@ -404,7 +427,8 @@ func _portrait_speaking(id: String) -> bool:
 	return base != "" and (id == base or id.begins_with(base + "_"))
 
 func _update_story() -> void:
-	if _just("skip"):
+	var locked: bool = bool(story_cmd.get("locked", false)) or story_cmd.get("t", "") == "flash"
+	if _just("skip") and not locked:
 		while story_index < story_commands.size():
 			var skip_kind := str(story_commands[story_index].get("t", ""))
 			story_index += 1
@@ -426,16 +450,32 @@ func _update_story() -> void:
 			else:
 				_story_advance()
 		return
+	if not story_flash_seq.is_empty():
+		story_flash_frames -= 1
+		if story_flash_frames <= 0:
+			story_flash_index += 1
+			if story_flash_index >= story_flash_seq.size():
+				story_flash_seq.clear()
+				_story_advance()
+			else:
+				story_flash_frames = maxi(1, int(story_flash_seq[story_flash_index].get("f", 1)))
+		return
 	if story_timer > 0.0:
 		story_timer -= FIXED_DT
 	if story_fade != story_fade_target:
 		story_fade = move_toward(story_fade, story_fade_target, story_fade_speed * FIXED_DT)
-	if story_flash > 0.0:
-		story_flash = maxf(0.0, story_flash - FIXED_DT)
-	if _just("confirm") and story_timer > 0.0:
+	if _just("confirm") and story_timer > 0.0 and not locked:
 		story_timer = 0.0
 	if story_timer <= 0.0 and absf(story_fade - story_fade_target) < 0.02:
 		_story_advance()
+
+func _flash_color() -> Color:
+	if story_flash_seq.is_empty():
+		return Color.TRANSPARENT
+	match str(story_flash_seq[story_flash_index].get("c", "white")):
+		"black": return Color.BLACK
+		"green": return HAZARD
+		_: return Color.WHITE
 
 func _finish_walk() -> void:
 	var next := walk_next
@@ -456,12 +496,17 @@ func _start_walk(command: Dictionary) -> void:
 	player_pos = Vector2(float(player_x), GROUND_Y - 20.0)
 	player_vel = Vector2.ZERO
 	player_grounded = true
+	player_facing = 1.0
+	player_move_facing = 1.0
+	player_dash_direction = 1.0
+	player_dash_buffer_direction = 1.0
 	player_ball = false
 	player_dash_frames = 0
 	player_dash_buffer = 0
 	player_dash_ramp = 0
 	player_dash_out = 0
 	player_dash_cd = 0
+	player_dash_invuln = 0
 	player_jump_buffer = 0
 	player_stamina = 100.0
 	bullets.clear()
@@ -513,6 +558,10 @@ func _start_battle(id: String, after: String) -> void:
 	player_vel = Vector2.ZERO
 	player_grounded = true
 	player_hp = 3
+	player_facing = 1.0
+	player_move_facing = 1.0
+	player_dash_direction = 1.0
+	player_dash_buffer_direction = 1.0
 	player_stamina = 100.0
 	player_courage = 0.0
 	player_energy = 4
@@ -586,10 +635,11 @@ func _update_player() -> void:
 	var axis := float(int(input_state.get("right", false)) - int(input_state.get("left", false)))
 	var vertical := float(int(input_state.get("down", false)) - int(input_state.get("up", false)))
 	if axis != 0.0:
-		player_facing = signf(axis)
-	var aim_world := get_viewport().get_mouse_position() + Vector2(camera_x, 0)
-	if mouse_seen and absf(aim_world.x - player_pos.x) > 18.0:
-		player_facing = -1.0 if aim_world.x < player_pos.x else 1.0
+		player_move_facing = signf(axis)
+	if player_dash_frames > 0 or player_dash_out > 0:
+		player_facing = player_dash_direction
+	else:
+		player_facing = player_move_facing
 	if _just("jump"):
 		player_jump_buffer = 8
 	var dash_pressed := _just("dash")
@@ -625,14 +675,17 @@ func _update_player() -> void:
 		return
 	if dash_pressed:
 		player_dash_buffer = 8
+		player_dash_buffer_direction = player_move_facing
 	if player_dash_buffer > 0:
 		if player_dash_cd <= 0 and player_dash_frames == 0 and player_dash_out == 0 and player_stamina >= DASH_STAMINA_COST:
 			player_stamina -= DASH_STAMINA_COST
 			player_dash_buffer = 0
-			player_dash_frames = 12
+			player_dash_direction = signf(axis) if axis != 0.0 else player_dash_buffer_direction
+			player_facing = player_dash_direction
+			player_dash_frames = DASH_FRAMES
 			player_dash_ramp = 3
-			player_dash_cd = 28
-			player_dash_invuln = 16
+			player_dash_cd = DASH_FRAMES + 16
+			player_dash_invuln = DASH_FRAMES + 4
 			_spawn_burst(player_pos, RED, 8)
 		else:
 			player_dash_buffer -= 1
@@ -643,16 +696,16 @@ func _update_player() -> void:
 			var progress := 1.0 - float(player_dash_ramp) / 3.0
 			ramp = 0.45 + 0.55 * (1.0 - pow(1.0 - progress, 2.0))
 			player_dash_ramp -= 1
-		player_vel = Vector2(player_facing * 1020.0 * ramp, 0)
+		player_vel = Vector2(player_dash_direction * 1020.0 * ramp, 0)
 		player_pos += player_vel * FIXED_DT
-		trail.append({"pos": player_pos, "life": 0.2, "max": 0.2})
+		trail.append({"pos": player_pos, "life": 0.2, "max": 0.2, "facing": player_dash_direction, "state": character_art.player_state(player_dash_frames, 1, false)})
 		if trail.size() > 12:
 			trail.pop_front()
 		if player_dash_frames == 0:
 			player_dash_out = 6
 	elif player_dash_out > 0:
 		player_dash_out -= 1
-		player_vel.x = lerpf(player_vel.x, axis * 340.0, 0.28)
+		player_vel.x = lerpf(player_vel.x, player_dash_direction * 340.0, 0.28)
 		player_pos += player_vel * FIXED_DT
 	else:
 		if player_grounded and player_jump_buffer > 0:
@@ -953,7 +1006,7 @@ func _draw() -> void:
 
 func _draw_background() -> void:
 	draw_rect(Rect2(Vector2.ZERO, VIEW), BLACK)
-	var bg_tex: Texture2D = textures.get("mirror") if story_bg == "mirror" else textures.get("mirror_alt")
+	var bg_tex: Texture2D = null if story_bg == "void" else (textures.get("mirror") if story_bg == "mirror" else textures.get("mirror_alt"))
 	if bg_tex:
 		draw_texture_rect(bg_tex, Rect2(-camera_x * 0.25, 0, VIEW.x * 1.45, VIEW.y), false, Color(1, 1, 1, 0.42))
 	for i in range(15):
@@ -976,9 +1029,11 @@ func _draw_title() -> void:
 func _draw_story() -> void:
 	if story_cg:
 		draw_texture_rect(story_cg, Rect2(0, 70, VIEW.x, 580), false, Color(1, 1, 1, 0.84))
+	elif story_cmd.get("t", "") == "cg" and story_cmd.get("label", "") == "法环陷阱":
+		_draw_trap_cg()
 	if story_cmd.get("t", "") != "card":
-		_draw_portrait(story_left, Vector2(340, 520), 0.62, _portrait_speaking(story_left), false)
-		_draw_portrait(story_right, Vector2(940, 520), 0.62, _portrait_speaking(story_right), true)
+		_draw_portrait(story_left, Vector2(340, 580), 0.62, _portrait_speaking(story_left), false)
+		_draw_portrait(story_right, Vector2(940, 580), 0.62, _portrait_speaking(story_right), true)
 	# A scene can stay black during narration (the prologue reads a letter).
 	# Fade the scenery and portraits before drawing text and continue prompts.
 	if story_fade > 0:
@@ -1005,8 +1060,19 @@ func _draw_story() -> void:
 		var shown := story_text.substr(0, int(story_reveal))
 		draw_string(ThemeDB.fallback_font, Vector2(82, 605), shown, HORIZONTAL_ALIGNMENT_LEFT, 1110, 24, WHITE)
 		draw_string(ThemeDB.fallback_font, Vector2(1000, 652), "ENTER / SPACE 继续    TAB 跳过", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, GREY)
-	if story_flash > 0:
-		draw_rect(Rect2(Vector2.ZERO, VIEW), Color(1, 1, 1, story_flash))
+	if not story_flash_seq.is_empty():
+		draw_rect(Rect2(Vector2.ZERO, VIEW), _flash_color())
+
+func _draw_trap_cg() -> void:
+	draw_set_transform(Vector2(925, 285), elapsed * 0.18, Vector2(1, 0.72))
+	for radius in [130.0, 178.0, 218.0]:
+		draw_arc(Vector2.ZERO, radius, 0, TAU, 96, Color(RED, 0.8), 3.0)
+	for i in range(12):
+		var angle := float(i) * TAU / 12.0
+		var direction := Vector2.from_angle(angle)
+		draw_line(direction * 178.0, direction * 218.0, Color(WHITE, 0.75), 2.0)
+		draw_line(direction * 130.0, Vector2.from_angle(angle + TAU / 3.0) * 130.0, Color(RED, 0.18), 1.0)
+	draw_set_transform(Vector2.ZERO, 0, Vector2.ONE)
 
 func _draw_portrait(id: String, center: Vector2, scale: float, active: bool, flipped: bool) -> void:
 	if id == "":
@@ -1169,7 +1235,7 @@ func _draw_dash_trail() -> void:
 	for item in trail:
 		var pos: Vector2 = item["pos"] - Vector2(camera_x, 0)
 		var alpha := clampf(float(item["life"]) / float(item["max"]), 0.0, 1.0) * 0.28
-		_draw_player_at(pos, Color(1, 0, 0, alpha))
+		character_art.draw_player(self, textures, pos + Vector2(0, 20), float(item["facing"]), str(item["state"]), Vector2(float(item["facing"]), 0), Color(1, 0, 0, alpha))
 
 func _draw_player_at(pos: Vector2, tint: Color) -> void:
 	var mirrored := player_facing < 0.0

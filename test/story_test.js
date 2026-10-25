@@ -91,6 +91,53 @@ function playThrough(maxFrames) {
 }
 
 // ---------------- 1. 章节表完整性 ----------------
+// 与 Godot 共用的醒来脚本：闪屏/昏迷不被 Tab 打断，旧对话者离场。
+const flashIndex = STORY.ambush.cmds.findIndex(c => c.t === 'flash');
+STORY._wake_regression = { cmds: [
+  { t: 'say', who: 'marysue', show: true, text: '……' },
+  ...STORY.ambush.cmds.slice(flashIndex)
+] };
+Cutscene.start('_wake_regression');
+for (let tick = 0; tick < 100 && !Cutscene.state.flash; tick++) {
+  Cutscene.forceAdvance = true;
+  Cutscene.update(1 / 60);
+  Input.tick();
+}
+pressKey('Tab');
+Cutscene.update(1 / 60);
+Input.tick();
+releaseKey('Tab');
+check('昏迷闪屏不会被 Tab 打断', Game.mode === 'story' && !!Cutscene.state.flash);
+for (let tick = 0; tick < 37; tick++) {
+  Cutscene.update(1 / 60);
+  Input.tick();
+}
+check('最后一次闪黑无缝进入昏迷黑场', !Cutscene.state.flash && Cutscene.state.black === 1);
+pressKey('Tab');
+Cutscene.update(1 / 60);
+Input.tick();
+releaseKey('Tab');
+check('闪黑接黑场的下一帧也不能被 Tab 跳过', Game.mode === 'story' && Cutscene.state.framesLeft >= 149 && Cutscene.state.black === 1);
+let blackoutTicks = 1;
+let reachedWake = false;
+for (let tick = 0; tick < 300 && Game.mode === 'story'; tick++) {
+  if (Cutscene.state.black > .98 && Cutscene.state.framesLeft > 0) {
+    blackoutTicks++;
+    if (blackoutTicks === 1) pressKey('Tab');
+  }
+  Cutscene.forceAdvance = true;
+  Cutscene.update(1 / 60);
+  Input.tick();
+  releaseKey('Tab');
+  if (Cutscene.state.text && Cutscene.state.text.text.includes('哪里')) {
+    reachedWake = true;
+    break;
+  }
+}
+check('昏迷黑场停留 150 帧', blackoutTicks >= 149, 'frames=' + blackoutTicks);
+check('醒来前屏幕亮起且旧对话者离场', reachedWake && Cutscene.state.black === 0 && !Cutscene.state.lastOther);
+delete STORY._wake_regression;
+
 const ids = Object.keys(STORY);
 check('章节表非空', ids.length >= 5, 'chapters=' + ids.length);
 

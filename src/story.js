@@ -87,11 +87,16 @@ const STORY = {
       // CG：玛丽苏身后浮现法环陷阱（art/cg/trap.png；没有图就画占位法环）
       { t: 'cg', art: 'art/cg/trap.png', label: '法环陷阱', frames: 130 },
 
-      // 一白、一黑、一白
-      { t: 'flash', seq: [{ c: 'white', f: 7 }, { c: 'black', f: 10 }, { c: 'white', f: 7 }, { c: 'black', f: 14 }] },
+      // 闪屏昏迷，停留黑场后逐渐醒来；此段演出不能被继续键打断。
+      { t: 'flash', locked: true, seq: [{ c: 'white', f: 7 }, { c: 'black', f: 10 }, { c: 'white', f: 7 }, { c: 'black', f: 14 }] },
+      { t: 'fade', to: 'black', frames: 1, locked: true },
+      { t: 'scene', bg: 'void', clear: true },
+      { t: 'wait', frames: 150, locked: true },
+      { t: 'fade', to: 'clear', frames: 60, locked: true },
+      { t: 'say', who: 'rek', expr: 'wary', show: true, text: '……这是哪里？' },
 
-      // 醒来：一片空白，只有地面和诺登；玩家自己走过去，靠近按 W 交互
-      { t: 'walk', bg: 'void', target: { kind: 'norden', x: 980 }, next: 'wake_talk' }
+      // 起点看不到诺登，向右走、镜头延伸后才遇见她。
+      { t: 'walk', bg: 'void', cam: true, playerX: 180, target: { kind: 'norden', x: 1700 }, next: 'wake_talk' }
     ]
   },
 

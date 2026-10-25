@@ -147,6 +147,13 @@ const Cutscene = (function () {
 
     switch (c.t) {
       case 'fade':
+        if (c.frames != null && c.frames <= 1) {
+          S.black = c.to === 'black' ? 1 : 0;
+          S.fade = null;
+          S.text = null;
+          step();
+          return;
+        }
         S.fade = {
           from: S.black,
           to: c.to === 'black' ? 1 : 0,
@@ -217,9 +224,16 @@ const Cutscene = (function () {
         break;
       case 'scene':
         S.bg = c.bg || 'night';
+        if (c.clear) {
+          S.lastOther = null;
+          S.heroExpr = '';
+          S.text = null;
+          S.cg = null;
+        }
         // 场景主题同步给战斗渲染：进了镜中世界，战斗背景也换成黑白森林
         Game.theme = (S.bg === 'mirror') ? 'mirror' : 'normal';
-        break;
+        step();
+        return;
       case 'walk':
         // 交给玩家操控走一段，走到 untilX（或靠近 target 按 W）后回演出
         if (c.playerX != null && Game.player) Game.player.x = c.playerX;
@@ -352,7 +366,9 @@ const Cutscene = (function () {
     const adv = wantsAdvance(Cutscene.forceAdvance);
     Cutscene.forceAdvance = false;
 
-    if (Input.pressed('skip')) { skip(); return; }
+    const command = current();
+    const locked = command && (command.locked || command.t === 'flash');
+    if (Input.pressed('skip') && !locked) { skip(); return; }
 
     // 退出动画优先：播完才进入下一条
     if (S.leaving) {

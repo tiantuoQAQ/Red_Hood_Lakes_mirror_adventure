@@ -5,6 +5,7 @@ var bounds_cache: Dictionary = {}
 const PLAYER_SCALE := 0.34
 const PLAYER_FOOT := Vector2(550, 730)
 const PLAYER_NECK := Vector2(610, 320)
+const DASH_FRAMES := 20
 
 func visible_bounds(texture: Texture2D) -> Rect2:
 	if texture == null:
@@ -29,7 +30,7 @@ func draw_ground(canvas: CanvasItem, texture: Texture2D, foot: Vector2, height: 
 
 func player_state(dash_frames: int, dash_out: int, shooting: bool) -> String:
 	if dash_frames > 0:
-		return "dash_%02d" % clampi((12 - dash_frames) / 4 + 1, 1, 3)
+		return "dash_%02d" % clampi((DASH_FRAMES - dash_frames) * 3 / DASH_FRAMES + 1, 1, 3)
 	if dash_out > 0:
 		return "dash_03"
 	return "body_charge" if shooting else "body_move"

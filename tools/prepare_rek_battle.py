@@ -7,7 +7,7 @@ runtime frames share a 768px canvas and explicit neck/feet anchors.
 from pathlib import Path
 import json
 import numpy as np
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter, ImageOps
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / 'art/ref/rek_battle_2026-10-25'
@@ -80,11 +80,13 @@ def main():
         result.save(OUTPUT / (key + '.png'))
         manifest['source_bounds'][key] = bounds
     head, bounds = cutout('rek-head-source-white-bg.png', 228)
+    head = ImageOps.mirror(head)
     # Hood opening sits at the neck; overlay it onto the body's collar.
     scale = 290 / head.height
     result = paste_scaled(head, scale, (head.width * .53, head.height * .92), NECK)
     result.save(OUTPUT / 'head.png')
     manifest['source_bounds']['head'] = bounds
+    manifest['head_flipped'] = True
     for index, threshold in [(1, 228), (2, 190), (3, 220)]:
         key = f'dash_{index:02}'
         crop, bounds = cutout(f'rek-dash-keyframe-{index:02}.png', threshold)

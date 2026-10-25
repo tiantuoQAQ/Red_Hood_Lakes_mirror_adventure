@@ -235,6 +235,7 @@
       },
       {
         "t": "flash",
+        "locked": true,
         "seq": [
           {
             "c": "white",
@@ -255,11 +256,42 @@
         ]
       },
       {
+        "t": "fade",
+        "to": "black",
+        "frames": 1,
+        "locked": true
+      },
+      {
+        "t": "scene",
+        "bg": "void",
+        "clear": true
+      },
+      {
+        "t": "wait",
+        "frames": 150,
+        "locked": true
+      },
+      {
+        "t": "fade",
+        "to": "clear",
+        "frames": 60,
+        "locked": true
+      },
+      {
+        "t": "say",
+        "who": "rek",
+        "expr": "wary",
+        "show": true,
+        "text": "……这是哪里？"
+      },
+      {
         "t": "walk",
         "bg": "void",
+        "cam": true,
+        "playerX": 180,
         "target": {
           "kind": "norden",
-          "x": 980
+          "x": 1700
         },
         "next": "wake_talk"
       }
