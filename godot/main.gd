@@ -2097,13 +2097,14 @@ func _draw_boss() -> void:
 			tex = seq[int(frame / 4) % seq.size()]
 	if tex:
 		var tint := WHITE if boss_hit_flash == 0 or frame % 4 < 2 else Color(1, 1, 1, 0.4)
-		# 按「可见内容高度」换算，动作帧/关键帧四周的透明边不会把角色缩成小点
+		# 等比缩放（宽高同一比例，绝不压扁）：按参考身体高度换算
 		var vb: Rect2 = character_art.visible_bounds(tex)
-		var is_anim := (boss_id == "crimson" and boss_state != BossState.IDLE) or boss_id == "marysue"
-		var ref_h: float = ANIM_BODY_H.get(boss_id, vb.size.y)
+		var ref_h: float = float(ANIM_BODY_H.get(boss_id, vb.size.y))
 		var scale := BOSS_HEIGHT / maxf(1.0, ref_h)
-		var draw_pos := center - (vb.get_center() * scale if not is_anim else tex.get_size() * scale * 0.5)
-		draw_texture_rect(tex, Rect2(draw_pos, tex.get_size() * scale), false, tint)
+		var draw_size := tex.get_size() * scale
+		var draw_pos := Vector2(center.x - (vb.position.x + vb.size.x * 0.5) * scale,
+			center.y + float(BOSS_HEIGHT) * 0.5 - (vb.position.y + vb.size.y) * scale)
+		draw_texture_rect(tex, Rect2(draw_pos, draw_size), false, tint)
 	else:
 		draw_circle(center, 48, Color(GREY, 0.9))
 		draw_circle(center + Vector2(-16, -10), 7, RED if boss_id == "crimson" else HAZARD)
