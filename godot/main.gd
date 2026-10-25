@@ -49,6 +49,7 @@ var story_index := 0
 var story_cmd: Dictionary = {}
 var story_timer := 0.0
 var story_reveal := 0.0
+var story_text_alpha := 0.0   # 台词淡入（0→1，12 帧）
 var story_text := ""
 var story_who := ""
 var story_expr := ""
@@ -457,6 +458,7 @@ func _start_say(command: Dictionary) -> void:
 	story_expr = str(command.get("expr", ""))
 	story_text = str(command.get("text", ""))
 	story_reveal = 0.0
+	story_text_alpha = 0.0
 	if story_who != "":
 		_set_portrait(story_who, story_expr)
 	story_timer = 0.0
@@ -523,6 +525,7 @@ func _update_story() -> void:
 			mode = Mode.END
 			return
 	if story_cmd.get("t", "") == "say" or story_cmd.get("t", "") == "duel":
+		story_text_alpha = minf(1.0, story_text_alpha + 1.0 / 12.0)
 		story_reveal = minf(float(story_text.length()), story_reveal + 1.9)
 		if _just("confirm"):
 			if story_reveal < story_text.length():
@@ -1544,7 +1547,9 @@ func _draw_story() -> void:
 		if story_title_sub != "":
 			draw_string(ThemeDB.fallback_font, Vector2(440, 320), story_title_sub, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, GREY)
 	if story_cmd.get("t", "") == "say" or story_cmd.get("t", "") == "duel":
-		draw_rect(Rect2(50, 520, 1180, 150), Color(0.02, 0.02, 0.02, 0.9))
+		var slide := (1.0 - story_text_alpha) * 10.0
+		var box_alpha := 0.9 * clampf(story_text_alpha * 1.4, 0.0, 1.0)
+		draw_rect(Rect2(50, 520 + slide, 1180, 150), Color(0.02, 0.02, 0.02, box_alpha))
 		# Name plate color by speaker: rek/crimson #FF0000, marysue #82FF00, norden #FFFFFF, mabel #00BAFF
 		var name_color := WHITE  # Default
 		match story_who:
@@ -1561,9 +1566,13 @@ func _draw_story() -> void:
 			# 黑影/未识别的说话者显示「？？？」
 			var shown_name := "？？？" if story_expr == "shadow" else _display_name(story_who)
 			var plate_color := Color(0.75, 0.75, 0.75) if story_expr == "shadow" else name_color
-			draw_string(ThemeDB.fallback_font, Vector2(82, 555), shown_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, plate_color)
+			var name_a := plate_color
+			name_a.a *= clampf(story_text_alpha * 1.3, 0.0, 1.0)
+			draw_string(ThemeDB.fallback_font, Vector2(82, 555 + slide), shown_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, name_a)
 		var shown := story_text.substr(0, int(story_reveal))
-		draw_string(ThemeDB.fallback_font, Vector2(82, 605), shown, HORIZONTAL_ALIGNMENT_LEFT, 1110, 24, WHITE)
+		var text_col := WHITE
+		text_col.a = clampf(story_text_alpha * 1.35, 0.0, 1.0)
+		draw_string(ThemeDB.fallback_font, Vector2(82, 605 + slide), shown, HORIZONTAL_ALIGNMENT_LEFT, 1110, 24, text_col)
 		draw_string(ThemeDB.fallback_font, Vector2(1000, 652), "ENTER / SPACE 继续    TAB 跳过", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, GREY)
 	# Flash moved to top-level _draw() final layer (after mirror shards)
 
