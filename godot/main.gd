@@ -136,7 +136,8 @@ var lock_target := Vector2.ZERO
 var lock_cooldown := 0
 var lock_state := ""          # "", "aim", "spike"
 var spikes: Array = []        # 突刺锋 {pos, life, max}
-var green_flash_t := 0.0      # 全屏绿闪剩余秒数
+var green_flash_t := 0.0      # 半透明绿闪
+var flash_green_t := 0.0      # 完全不透明绿幕遮挡
 var mirror_flip := false      # 第六阶段：左右交换
 var boss_hit_flash := 0
 var boss_prev_pos := Vector2.ZERO
@@ -1242,6 +1243,7 @@ func _update_boss() -> void:
 		if absf(boss_pos.x - boss_slide_to) < 4.0:
 			boss_pos.x = boss_slide_to
 			boss_slide_to = -1.0
+	_update_beam_warnings()
 	_update_death()
 	_update_boss_extras()
 	_update_fx_rings()
@@ -1629,8 +1631,9 @@ func _update_victory() -> void:
 		_start_story(boss_after)
 
 func _update_end() -> void:
+	# 结局停留，不再重跑游戏（用户要求）
 	if _just("confirm"):
-		mode = Mode.TITLE
+		pass
 		_start_story("prologue")
 
 func _update_fx() -> void:
@@ -2063,6 +2066,9 @@ func _draw_mirror_gate(pos: Vector2) -> void:
 	draw_line(pos + Vector2(30, -135), pos + Vector2(-8, -70), Color(1, 1, 1, 0.6), 2.0)
 
 func _draw_battle() -> void:
+	# 六阶段镜像翻转：整层世界水平镜像
+	if mirror_flip:
+		draw_set_transform(Vector2(VIEW.x, 0), 0.0, Vector2(-1, 1))
 	_draw_world_grid()
 	_draw_boss_fx()
 	_draw_projectiles()
@@ -2071,10 +2077,13 @@ func _draw_battle() -> void:
 	_draw_dash_trail()
 	_draw_boss()
 	_draw_boss_extras()
+	_draw_beam_warnings()
 	_draw_battle_bounds_fx()
 	_draw_fx_rings()
 	_draw_player_at(player_pos - Vector2(camera_x, 0), WHITE)
 	_draw_particles_world()
+	if mirror_flip:
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	if tragedy_buff_t > 0.0:
 		tragedy_buff_t = maxf(0.0, tragedy_buff_t - FIXED_DT)
 	if ball_hint_t > 0.0 and mode == Mode.WALK:
@@ -2572,10 +2581,11 @@ func _draw_victory() -> void:
 	draw_string(ThemeDB.fallback_font, Vector2(410, 370), "ENTER / SPACE 继续剧情", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, CYAN)
 
 func _draw_end() -> void:
-	draw_rect(Rect2(Vector2.ZERO, VIEW), Color(0, 0, 0, 0.5))
-	draw_string(ThemeDB.fallback_font, Vector2(430, 300), "主线 · 终", HORIZONTAL_ALIGNMENT_LEFT, -1, 48, WHITE)
-	draw_string(ThemeDB.fallback_font, Vector2(370, 370), "镜面碎成了千万片，每一片里都有她", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, CYAN)
-	draw_string(ThemeDB.fallback_font, Vector2(450, 500), "ENTER / SPACE 重新开始", HORIZONTAL_ALIGNMENT_LEFT, -1, 20, GREY)
+	draw_rect(Rect2(Vector2.ZERO, VIEW), Color(0, 0, 0, 0.78))
+	draw_string(ThemeDB.fallback_font, Vector2(300, 300), "THANKS FOR PLAYING", HORIZONTAL_ALIGNMENT_LEFT, -1, 46, WHITE)
+	draw_string(ThemeDB.fallback_font, Vector2(330, 372), "红之镜 · DEMO", HORIZONTAL_ALIGNMENT_LEFT, -1, 26, RED)
+	draw_string(ThemeDB.fallback_font, Vector2(352, 418), "镜面碎成了千万片，每一片里都有她", HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color(0.85, 0.85, 0.85))
+	draw_string(ThemeDB.fallback_font, Vector2(430, 540), "感谢试玩", HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color(0.6, 0.6, 0.6))
 
 func _draw_fx_overlay() -> void:
 	# Draw mirror shards ONLY when fade/flash are not blocking (no blackout)
@@ -2934,6 +2944,9 @@ func _patterns_marysue() -> void:
 					var a2 := -TAU * float(k) / 6.0 + elapsed * 0.9
 					_spawn_bullet(boss_pos, Vector2(cos(a2), sin(a2)) * 170.0, HAZARD, "yinyang", 5.5, 0.25)
 		2:  # 叁 · 镜廊：符纸雨（稀疏）+ 阴阳球
+			if frame % 200 == 0:
+				var lx0 := clampf(player_pos.x + randf_range(-200.0, 200.0), _battle_left() + 90.0, _battle_right() - 90.0)
+				_beam_warning(lx0)
 			if frame % 34 == 0:
 				_spawn_bullet(Vector2(randf_range(_battle_left() + 60.0, _battle_right() - 60.0), 60.0),
 					Vector2(0, 210.0), HAZARD, "talisman", 5.0, 0.0)
@@ -2958,7 +2971,8 @@ func _patterns_marysue() -> void:
 						_spawn_beam(float(w["x"]), 0.9)
 					skill_warnings.clear()
 		4:  # 伍 · 狂言：绿闪 + 符纸环（无激光）
-			green_flash_t = 1.0
+			if flash_green_t <= 0.0 and frame % 180 == 0:
+				flash_green_t = 2.2
 			if frame % 70 == 0:
 				for k in range(10):
 					var a5 := TAU * float(k) / 10.0 + elapsed
@@ -2970,6 +2984,9 @@ func _patterns_marysue() -> void:
 				for k in range(8):
 					var a6 := TAU * float(k) / 8.0 + elapsed * 1.3
 					_spawn_bullet(boss_pos, Vector2(cos(a6), sin(a6)) * 165.0, HAZARD, "yinyang", 5.5, 0.2)
+			if frame % 220 == 0:
+				var lx1 := clampf(player_pos.x + randf_range(-160.0, 160.0), _battle_left() + 90.0, _battle_right() - 90.0)
+				_beam_warning(lx1)
 			if frame % 34 == 0:
 				for k in range(6):
 					var a7 := TAU * float(k) / 6.0 - elapsed
@@ -3031,6 +3048,8 @@ func _update_boss_extras() -> void:
 	# 绿闪衰减
 	if green_flash_t > 0.0:
 		green_flash_t = maxf(0.0, green_flash_t - FIXED_DT)
+	if flash_green_t > 0.0:
+		flash_green_t = maxf(0.0, flash_green_t - FIXED_DT)
 
 func _draw_boss_extras() -> void:
 	# 刀光弹/激光拖尾
@@ -3096,6 +3115,10 @@ func _draw_battle_overlays() -> void:
 	if green_flash_t > 0.0:
 		var ga := 0.28 + 0.22 * absf(sin(elapsed * 9.0))
 		draw_rect(Rect2(0, 0, VIEW.x, VIEW.y), Color(0.51, 1.0, 0.0, ga * clampf(green_flash_t, 0.0, 1.0)))
+	if flash_green_t > 0.0:
+		# 完全不透明的绿幕：彻底挡住视野
+		var fa := 1.0 if flash_green_t > 0.25 else flash_green_t / 0.25
+		draw_rect(Rect2(0, 0, VIEW.x, VIEW.y), Color(0.51, 1.0, 0.0, fa))
 	# 镜像翻转提示
 	if mirror_flip:
 		draw_string(ThemeDB.fallback_font, Vector2(430, 150), "镜中世界 · 左右交换", HORIZONTAL_ALIGNMENT_LEFT, -1, 30, HAZARD)
@@ -3611,3 +3634,24 @@ func _spawn_beam(x: float, seconds: float) -> void:
 	for k in range(6):
 		_spawn_particle(Vector2(x + randf_range(-18, 18), GROUND_Y - 30.0), Color(0.51, 1, 0, 0.9),
 			0.5, Vector2(randf_range(-40, 40), randf_range(-150, -50)), 4.0)
+
+
+## 激光预警：先亮 0.7 秒（画线 + 地面光圈），再落柱
+var beam_warning_list: Array = []
+
+func _beam_warning(x: float) -> void:
+	beam_warning_list.append({"x": x, "t": 0.7})
+
+func _update_beam_warnings() -> void:
+	for w in beam_warning_list:
+		w["t"] = float(w["t"]) - FIXED_DT
+		if float(w["t"]) <= 0.0:
+			_spawn_beam(float(w["x"]), 0.9)
+	beam_warning_list = beam_warning_list.filter(func(w): return float(w["t"]) > 0.0)
+
+func _draw_beam_warnings() -> void:
+	for w in beam_warning_list:
+		var bx: float = float(w["x"]) - camera_x
+		var k: float = clampf(float(w["t"]) / 0.7, 0.0, 1.0)
+		draw_line(Vector2(bx, 40), Vector2(bx, GROUND_Y), Color(0.51, 1, 0, 0.30 + 0.45 * (1.0 - k)), 3.0)
+		draw_circle(Vector2(bx, GROUND_Y - 12), 28.0 + 10.0 * (1.0 - k), Color(0.51, 1, 0, 0.22))
