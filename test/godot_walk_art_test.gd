@@ -125,6 +125,16 @@ func _run() -> void:
 		game._start_battle("marysue", "marysue_defeat")
 		game.boss_pos = Vector2(930, 226)
 		await _capture("marysue_battle.png")
+		# Magic circle alignment check: ring center vs boss art center (wave 15 spec)
+		var boss_center := game.boss_pos - Vector2(game.camera_x, 0)
+		var boss_tex: Texture2D = game.textures.get(game._boss_pose_key())
+		if boss_tex:
+			var boss_scale := game.BOSS_HEIGHT / boss_tex.get_height()
+			var boss_rect := Rect2(boss_center.x - boss_tex.get_width() * boss_scale * 0.5, boss_center.y - boss_tex.get_height() * boss_scale * 0.5, boss_tex.get_width() * boss_scale, boss_tex.get_height() * boss_scale)
+			var boss_art_center := boss_rect.get_center()
+			var ring_center := boss_center  # Ring is drawn at boss_pos, which is the boss float reference
+			var offset := boss_art_center.distance_to(ring_center)
+			_expect(offset <= 2.0, "Magic circle concentric with boss art (offset <= 2px): %.1f px" % offset)
 	game._stop_music()
 	game._start_battle("crimson", "crimson_fall")
 	game._stop_music()

@@ -1754,23 +1754,108 @@ func _draw_projectiles() -> void:
 		var p: Vector2 = warning["pos"] - Vector2(camera_x, 0)
 		var dir := Vector2(cos(warning["angle"]), sin(warning["angle"]))
 		draw_line(p - dir * 700.0, p + dir * 700.0, Color(WHITE, 0.3), 2.0)
+	
+	# Player shots: red tapered blade with white core
 	for shot in shots:
 		var p: Vector2 = shot["pos"] - Vector2(camera_x, 0)
 		var d: Vector2 = shot["vel"].normalized()
 		draw_line(p - d * 22.0, p + d * 9.0, Color(RED, 0.3), 8.0)
 		draw_line(p - d * 12.0, p + d * 12.0, WHITE, 3.0)
 		draw_circle(p, 5, RED)
+	
+	# Enemy bullets: redesigned primitive shapes
 	for bullet in bullets:
 		var p: Vector2 = bullet["pos"] - Vector2(camera_x, 0)
 		var color: Color = bullet["color"]
-		var radius := 9.0 if bullet["kind"] == "laser" else 6.0
+		var kind := str(bullet.get("kind", "ring"))
 		var angle: float = bullet["angle"]
-		var points := PackedVector2Array([Vector2(radius * 2.2, 0), Vector2(0, radius * 0.55), Vector2(-radius * 1.2, 0), Vector2(0, -radius * 0.55)])
-		for i in range(points.size()):
-			points[i] = p + points[i].rotated(angle)
-		draw_colored_polygon(points, Color(color, 0.9))
-		draw_line(p - Vector2(cos(angle), sin(angle)) * radius * 2.0, p, WHITE, 1.5)
-		draw_circle(p, radius * 1.5, Color(color, 0.12))
+		
+		match kind:
+			"lance", "blade":
+				# Lance/blade: tapered blade polygon (pointed both ends), white core, red glow
+				var length := 68.0  # Blade visual length
+				var width := 10.0   # Blade width at center
+				var dir := Vector2(cos(angle), sin(angle))
+				var perp := Vector2(-sin(angle), cos(angle))
+				# Blade body: tapered diamond (pointed both ends)
+				var front := p + dir * length * 0.5
+				var back := p - dir * length * 0.5
+				var blade_points := PackedVector2Array([
+					back,
+					p + perp * width * 0.5,
+					front,
+					p - perp * width * 0.5
+				])
+				# Outer glow (pale red, 12% alpha)
+				var glow_width := width * 1.8
+				var glow_points := PackedVector2Array([
+					back - dir * 2.0,
+					p + perp * glow_width * 0.5,
+					front + dir * 2.0,
+					p - perp * glow_width * 0.5
+				])
+				draw_colored_polygon(glow_points, Color(color, 0.12))
+				# Main blade body (red)
+				draw_colored_polygon(blade_points, color)
+				# White core line (hot edge)
+				draw_line(back + dir * 4.0, front - dir * 4.0, WHITE, 1.5)
+				# Trail particles (stored in bullet, spawn on move)
+				if not bullet.has("trail_timer"):
+					bullet["trail_timer"] = 0
+				bullet["trail_timer"] = int(bullet["trail_timer"]) + 1
+				if bullet["trail_timer"] % 2 == 0 and bullet["trail_timer"] < 10:
+					_spawn_particle(bullet["pos"] - dir * 20.0, color, 0.25, -dir * 30.0, 2.5)
+			
+			"homing":
+				# Homing: red diamond/arrow pointing forward, short trail
+				var size := 7.0
+				var dir := Vector2(cos(angle), sin(angle))
+				var perp := Vector2(-sin(angle), cos(angle))
+				var arrow_points := PackedVector2Array([
+					p + dir * size * 1.5,         # Front tip
+					p + perp * size * 0.6,        # Right wing
+					p - dir * size * 0.8,         # Back tail
+					p - perp * size * 0.6         # Left wing
+				])
+				# Glow
+				draw_circle(p, size * 1.6, Color(color, 0.12))
+				# Body
+				draw_colored_polygon(arrow_points, color)
+				# White tip
+				draw_circle(p + dir * size, 2.5, WHITE)
+			
+			"laser":
+				# Laser: wide tapered beam, white hot core, red gradient sides
+				var length := 32.0
+				var width := 12.0
+				var dir := Vector2(cos(angle), sin(angle))
+				var perp := Vector2(-sin(angle), cos(angle))
+				var front := p + dir * length * 0.5
+				var back := p - dir * length * 0.5
+				# Red outer beam (tapered)
+				var beam_points := PackedVector2Array([
+					back,
+					back + perp * width * 0.3,
+					front + perp * width * 0.5,
+					front,
+					front - perp * width * 0.5,
+					back - perp * width * 0.3
+				])
+				draw_colored_polygon(beam_points, Color(color, 0.75))
+				# White core line (hot center)
+				draw_line(back, front, WHITE, 2.5)
+				# Glow halo
+				draw_circle(p, width * 1.2, Color(color, 0.12))
+			
+			_:
+				# Default: ring bullet (circular, red + white core + pale glow)
+				var radius := 6.0
+				# Outer glow (pale red, 12% alpha, radius ~6 + glow)
+				draw_circle(p, radius * 1.8, Color(color, 0.12))
+				# Main body (red circle)
+				draw_circle(p, radius, color)
+				# White core (small bright center)
+				draw_circle(p, radius * 0.4, WHITE)
 
 func _draw_dash_trail() -> void:
 	# Draw dash trail as tapered red polygons (not full character silhouettes)
