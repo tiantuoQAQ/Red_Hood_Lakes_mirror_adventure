@@ -471,7 +471,7 @@ func _read_inputs() -> Dictionary:
 		"jump": Input.is_key_pressed(KEY_SPACE),
 		"dash": Input.is_key_pressed(KEY_SHIFT) or Input.is_key_pressed(KEY_K) or Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT),
 		"shoot": Input.is_key_pressed(KEY_J) or Input.is_key_pressed(KEY_Z) or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT),
-		"skill": Input.is_key_pressed(KEY_L) or Input.is_key_pressed(KEY_X),
+		"skill": Input.is_key_pressed(KEY_E),
 		"gunfire": Input.is_key_pressed(KEY_C),
 		"hellfire": Input.is_key_pressed(KEY_V),
 		"confirm": Input.is_key_pressed(KEY_ENTER) or Input.is_key_pressed(KEY_SPACE) or Input.is_key_pressed(KEY_W) or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT),
@@ -1147,7 +1147,13 @@ func _update_boss() -> void:
 			var drift_x := sin(float(frame) * 0.017 * 0.5) * 40.0
 			boss_pos.x += drift_x * 0.016  # Accumulate drift slowly
 			# Clamp to arena bounds
-			boss_pos.x = clampf(boss_pos.x, 1250.0, 2180.0)
+			# 不再硬钳制（会瞬移），改用平滑滑回战场内
+			var bx_min := _battle_left() + 140.0
+			var bx_max := _battle_right() - 140.0
+			if boss_pos.x < bx_min:
+				boss_pos.x = move_toward(boss_pos.x, bx_min, 420.0 * FIXED_DT)
+			elif boss_pos.x > bx_max:
+				boss_pos.x = move_toward(boss_pos.x, bx_max, 420.0 * FIXED_DT)
 			
 			# Phase 2+: add orbiting drift (sin x + cos y overlapping)
 			if boss_phase >= 2:
@@ -1243,6 +1249,9 @@ func _update_boss() -> void:
 		if absf(boss_pos.x - boss_slide_to) < 4.0:
 			boss_pos.x = boss_slide_to
 			boss_slide_to = -1.0
+	# 非硬直状态缓慢回到悬空高度（避免瞬移）
+	if boss_skill_state == "" and str(boss_id) == "crimson":
+		boss_pos.y = move_toward(boss_pos.y, 226.0, 220.0 * FIXED_DT)
 	_update_beam_warnings()
 	_update_death()
 	_update_boss_extras()
@@ -1566,9 +1575,11 @@ func _check_graze_and_hits() -> void:
 			return
 
 func _use_red_skill() -> void:
-	if player_courage < 100.0:
+	# 用户要求：击败魔姬解锁后即可用，消耗 2 MP（不再要求满勇气）
+	if not skill_red_tragedy:
 		return
-	player_courage = 0.0
+	if player_energy < 2:
+		return
 	sfx_player.play("skill")
 	if skill_red_tragedy:
 		bullets.clear()
@@ -2214,6 +2225,8 @@ func _boss_pose_key() -> String:
 func _draw_projectiles() -> void:
 	# Draw skill warnings (telegraph visual: lines/circles for special moves)
 	for warn in skill_warnings:
+		if not warn.has("pos"):
+			continue
 		var p: Vector2 = warn["pos"] - Vector2(camera_x, 0)
 		var kind := str(warn.get("kind", "line"))
 		var alpha := clampf(float(warn.get("life", 0.0)) * 2.0, 0.0, 1.0) * 0.45
@@ -2847,6 +2860,13 @@ func _patterns_crimson() -> void:
 	# 参考用户截图：满屏火焰弹（弱追踪、会自动消散）、落地追击斩、新月剑气
 	match boss_phase:
 		0:  # 一：火焰弹幕（弱追踪，3 秒后消散）
+			if frame % 150 == 0:
+				# 环形剑阵：先收缩再向外炸开
+				for k in range(14):
+					var a0 := TAU * float(k) / 14.0 + elapsed * 0.4
+					_spawn_bullet(boss_pos + Vector2(cos(a0), sin(a0)) * 30.0,
+						Vector2(cos(a0), sin(a0)) * 180.0, RED, "blade", 3.2, 0.0)
+				_spawn_fx_ring(boss_pos, Color(1, 0.3, 0.2, 0.85), 220.0, 0.4, 4.0)
 			if frame % 18 == 0:
 				for k in range(2):
 					var a := (player_pos - boss_pos).angle() + randf_range(-0.55, 0.55)
@@ -2862,7 +2882,12 @@ func _patterns_crimson() -> void:
 			_crimson_rush_attack(false)
 			if boss_skill_state == "" and frame % 52 == 0:
 				_crimson_crescent_volley(1)
-		3:  # 四：火焰弹雨 + 新月剑气
+		3:  # 四：地刺追击 + 火焰弹雨 + 新月剑气
+			if frame % 90 == 0:
+				for k in range(2):
+					var sx0 := player_pos.x + (float(k) - 0.5) * 220.0
+					spikes.append({"pos": Vector2(clampf(sx0, _battle_left() + 70.0, _battle_right() - 70.0), GROUND_Y - 20.0), "life": 0.5, "max": 0.5})
+				sfx_player.play("spike")
 			_crimson_rush_attack(false)
 			if frame % 16 == 0:
 				var rx := 150.0 + randf() * 2100.0
@@ -2909,7 +2934,7 @@ func _crimson_rush_attack(finish_crescent: bool) -> void:
 		# 追着小红帽砍：向玩家方向加速冲
 		var target_x: float = player_pos.x - boss_rush_side * 60.0
 		boss_pos.x = move_toward(boss_pos.x, target_x, 9.0)
-		boss_pos.y = 420.0
+		boss_pos.y = move_toward(boss_pos.y, 420.0, 300.0 * FIXED_DT)
 		# 冲刺拖尾（帅气）
 		for k in range(2):
 			_spawn_particle(Vector2(boss_pos.x - boss_rush_side * (20.0 + float(k) * 26.0), boss_pos.y - 30.0 + randf_range(-20, 20)),
@@ -2928,7 +2953,6 @@ func _crimson_rush_attack(finish_crescent: bool) -> void:
 		boss_skill_timer -= 1
 		if boss_skill_timer <= 0:
 			boss_skill_state = ""
-			boss_pos.y = 226.0
 
 func _patterns_marysue() -> void:
 	# 重做：符纸环 + 阴阳球 + 激光，全部有预警、低频率、可躲
@@ -3430,6 +3454,8 @@ func _draw_tutorial() -> void:
 func _draw_signboard() -> void:
 	# 只在有交互目标的走位段显示
 	if walk_target.size() == 0 or story_chapter == "":
+		return
+	if story_chapter not in ["wake_talk", "enter_mirror", "mirror"]:
 		return
 	var tx := float(walk_target.get("x", 0.0))
 	if tx <= 0.0:
