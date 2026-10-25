@@ -22,15 +22,13 @@ driver/enable_input=true
 
 window/size/viewport_width=1280
 window/size/viewport_height=720
-window/size/window_width_override=1280
-window/size/window_height_override=720
+window/size/window_width_override=1600
+window/size/window_height_override=900
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
+window/size/resizable=true
+window/stretch/scale_mode="fractional"
 window/handheld/orientation=1
-
-[physics]
-
-common/physics_ticks_per_second=60
 
 [input]
 

@@ -235,6 +235,7 @@ var last_land_frame := -999  # Frame of last land SFX to enforce min interval
 var debug_player_only := false
 
 func _ready() -> void:
+	_setup_window_stretch()
 	map_bgm_player = AudioStreamPlayer.new()
 	map_bgm_player.bus = "Master"
 	map_bgm_player.volume_db = -10.0
@@ -3260,3 +3261,28 @@ func _boss_move_particles() -> void:
 			_spawn_particle(boss_pos + Vector2(cos(a), sin(a)) * randf_range(20.0, 60.0),
 				Color(1, 1, 1, 0.55) if boss_id == "crimson" else Color(0.51, 1.0, 0.0, 0.7),
 				randf_range(0.2, 0.4), Vector2(randf_range(-60, 60), randf_range(-60, 60)), 2.0)
+
+
+## 让窗口放大时画面等比放大（1280×720 逻辑分辨率）
+func _setup_window_stretch() -> void:
+	var win := get_window()
+	if win == null:
+		return
+	win.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
+	win.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
+	win.content_scale_size = Vector2i(1280, 720)
+	win.min_size = Vector2i(960, 540)
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		# F11 全屏切换
+		if event.keycode == KEY_F11:
+			var win := get_window()
+			win.mode = Window.MODE_WINDOWED if win.mode == Window.MODE_FULLSCREEN else Window.MODE_FULLSCREEN
+			get_viewport().set_input_as_handled()
+		# F10 放大窗口到 1600×900
+		elif event.keycode == KEY_F10:
+			var win2 := get_window()
+			win2.mode = Window.MODE_WINDOWED
+			win2.size = Vector2i(1600, 900)
+			get_viewport().set_input_as_handled()
