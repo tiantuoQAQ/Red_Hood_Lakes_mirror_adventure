@@ -706,8 +706,9 @@ func _finish_walk() -> void:
 		mode = Mode.TITLE
 
 func _start_walk(command: Dictionary, long_map: bool = false) -> void:
-	if last_left != "" or last_right != "":
-		portrait_fade = 1.0
+	last_left = ""
+	last_right = ""
+	portrait_fade = 0.0
 	var walk_bgm := _chapter_bgm(story_chapter)
 	if walk_bgm == "":
 		walk_bgm = "norden_bgm" if story_bg == "forest" else "mirrorworld_bgm"
@@ -1928,10 +1929,7 @@ func _draw_walk() -> void:
 	_draw_dash_trail()
 	_draw_player_at(player_pos - Vector2(camera_x, 0), WHITE)
 	_draw_particles_world()
-	# 对话结束后立绘淡出（用户要求：否则会瞬间消失）
-	if portrait_fade > 0.0:
-		_draw_portrait(last_left, Vector2(340, 580), 0.62, false, false, portrait_fade)
-		_draw_portrait(last_right, Vector2(940, 580), 0.62, false, true, portrait_fade)
+	# 走位段不画对话立绘（用户要求：对话结束立即消失）
 	draw_string(ThemeDB.fallback_font, Vector2(40, 48), "A / D 移动    SPACE 跳跃    SHIFT / K / 右键 冲刺    W 靠近并交互", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, WHITE)
 
 func _npc_rect(id: String, foot: Vector2) -> Rect2:
