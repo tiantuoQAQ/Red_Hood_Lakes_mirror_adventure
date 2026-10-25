@@ -20,8 +20,8 @@ const ARENA_TOP := 48.0
 const PLAYER_HEIGHT := 70.0   # Player displayed at 70px in battle
 const BOSS_HEIGHT := 70.0     # Boss matches player height
 # NPC map display heights (scaled proportionally: 70/100 ratio)
-const NPC_NORDEN_HEIGHT := 85.0  # Was 120, now 120 × 70/100 ≈ 85
-const NPC_MABEL_HEIGHT := 95.0   # Was 135, now 135 × 70/100 ≈ 95
+const NPC_NORDEN_HEIGHT := 110.0  # Was 120, now 120 × 70/100 ≈ 85
+const NPC_MABEL_HEIGHT := 124.0   # Was 135, now 135 × 70/100 ≈ 95
 # Ring animation: new circular rune (3.1 × character height = 3.1 × 70)
 const RING_DISPLAY_DIAMETER := 217.0
 const RED := Color("#ff0000")
@@ -66,6 +66,7 @@ var story_title := ""
 var story_title_sub := ""
 var story_intro := ""
 var intro_hold := 0.0      # 竖幅在下一句仍停留的秒数
+var seen_speakers: Array = []  # 本章已登场过的角色（首次说话时弹称号）
 var portrait_fade := 0.0      # 对话结束后立绘淡出（1 → 0）
 var last_left := ""
 var last_right := ""
@@ -354,7 +355,7 @@ func _read_inputs() -> Dictionary:
 		"skill": Input.is_key_pressed(KEY_L) or Input.is_key_pressed(KEY_X),
 		"gunfire": Input.is_key_pressed(KEY_C),
 		"hellfire": Input.is_key_pressed(KEY_V),
-		"confirm": Input.is_key_pressed(KEY_ENTER) or Input.is_key_pressed(KEY_SPACE) or Input.is_key_pressed(KEY_W),
+		"confirm": Input.is_key_pressed(KEY_ENTER) or Input.is_key_pressed(KEY_SPACE) or Input.is_key_pressed(KEY_W) or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT),
 		"skip": Input.is_key_pressed(KEY_TAB),
 		"pause": Input.is_key_pressed(KEY_P),
 		"restart": Input.is_key_pressed(KEY_R),
@@ -369,6 +370,7 @@ func _update_title() -> void:
 		_start_story("prologue")
 
 func _start_story(id: String) -> void:
+	seen_speakers.clear()
 	if not story_data.has(id):
 		mode = Mode.END
 		return
@@ -503,6 +505,11 @@ func _start_say(command: Dictionary) -> void:
 	story_text_alpha = 0.0
 	if story_who != "":
 		_set_portrait(story_who, story_expr)
+		var speaker_key := _portrait_base(story_who)
+		if not seen_speakers.has(speaker_key) and CHAR_TITLES.has(speaker_key):
+			seen_speakers.append(speaker_key)
+			story_intro = speaker_key
+			intro_hold = 2.4
 	story_timer = 0.0
 
 func _start_duel(command: Dictionary) -> void:
@@ -1652,7 +1659,7 @@ func _draw_portrait(id: String, center: Vector2, scale: float, active: bool, fli
 	if not tex:
 		return
 	var size := Vector2(tex.get_width(), tex.get_height()) * scale
-	var tint := Color(1, 1, 1, (1.0 if active else 0.78) * alpha_mul)
+	var tint := Color(1, 1, 1, alpha_mul)   # 立绘始终不透明（用户要求）
 	if flipped:
 		draw_set_transform(center, 0.0, Vector2(-1, 1))
 		draw_texture_rect(tex, Rect2(-size.x * 0.5, -size.y, size.x, size.y), false, tint)
@@ -1785,7 +1792,12 @@ func _draw_walk() -> void:
 			var height := NPC_MABEL_HEIGHT if kind == "mabel" else NPC_NORDEN_HEIGHT
 			_draw_npc_glow(p, height)
 			character_art.draw_npc_breathe(self, kind, p, height, elapsed, fallback_tex)
-			draw_string(ThemeDB.fallback_font, p + Vector2(-52, -330), str(walk_target.get("label", "按 W 交互")), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, WHITE)
+			# 头顶交互徽章（显眼）
+			var tip: String = str(walk_target.get("label", "按 W 交互"))
+			var tip_pos := p + Vector2(-58, -height - 30.0)
+			draw_rect(Rect2(tip_pos, Vector2(116, 26)), Color(0, 0, 0, 0.72))
+			draw_rect(Rect2(tip_pos, Vector2(116, 26)), Color(1, 1, 1, 0.75), false, 1.5)
+			draw_string(ThemeDB.fallback_font, tip_pos + Vector2(10, 19), tip, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, WHITE)
 		elif kind == "mirror":
 			_draw_mirror_gate(p)
 	_draw_walk_dust()
@@ -1813,7 +1825,9 @@ func _draw_mirror_gate(pos: Vector2) -> void:
 	# 新镜子立绘（gpt-image-2 生成，三色合规）；缺图时退回程序绘制
 	var mtex: Texture2D = textures.get("mirror_stand")
 	if mtex:
-		character_art.draw_ground(self, mtex, pos, 420.0)
+		# 镜面底部光晕，暗场景里更醒目
+		draw_circle(Vector2(pos.x, pos.y - 10), 90.0, Color(0, 0.73, 1, 0.10))
+		character_art.draw_ground(self, mtex, pos, 460.0)
 		return
 	draw_rect(Rect2(pos.x - 74, pos.y - 260, 148, 260), Color(CYAN, 0.12))
 	draw_rect(Rect2(pos.x - 62, pos.y - 248, 124, 236), Color(CYAN, 0.16), false, 3.0)
