@@ -1654,6 +1654,9 @@ func _draw_battle() -> void:
 	_draw_hud()
 
 func _draw_boss_fx() -> void:
+	# Defensive transform reset before boss rendering (prevents stale transform from previous draw calls)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	
 	var center := boss_pos - Vector2(camera_x, 0)
 	var color := RED if boss_id == "crimson" else HAZARD
 	
