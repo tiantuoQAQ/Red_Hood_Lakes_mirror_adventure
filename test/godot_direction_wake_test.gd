@@ -112,7 +112,7 @@ func _run() -> void:
 	_expect(game.camera_x == 0 and npc_x > 1450, "Norden starts beyond the first screen")
 	await _capture("01_wake_exploration.png")
 	game.scripted_input = {"right": true}
-	for tick in range(190):
+	for tick in range(420):
 		game._physics_process(1.0/60.0)
 	_expect(game.camera_x > 500 and npc_x - game.camera_x < 1250, "Walking right extends the camera and reveals Norden")
 	await _capture("02_norden_revealed.png")

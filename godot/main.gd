@@ -6,7 +6,8 @@ extends Node2D
 ## so it remains easy to tune against the Web reference.
 
 const VIEW := Vector2(1280.0, 720.0)
-const WORLD_W := 2400.0
+const WORLD_W := 4800.0           # 用户要求：地图加长，初始看不到 NPC，要往右走才遇到
+const WALK_SHIFT := 1200.0        # 走位段的 NPC/道具整体右移，避免一进图就看见
 const GROUND_Y := 574.0
 const ARENA_LEFT := 48.0
 const ARENA_RIGHT := WORLD_W - 48.0
@@ -369,7 +370,7 @@ func _story_advance() -> void:
 				_start_battle(str(command.get("boss", "crimson")), str(command.get("after", "ending")))
 				return
 			"walk":
-				_start_walk(command)
+				_start_walk(command, true)
 				return
 			"say":
 				_start_say(command)
@@ -500,7 +501,7 @@ func _update_story() -> void:
 				if skip_kind == "battle":
 					_start_battle(str(story_cmd.get("boss", "crimson")), str(story_cmd.get("after", "ending")))
 				else:
-					_start_walk(story_cmd)
+					_start_walk(story_cmd, true)
 				return
 		if story_index >= story_commands.size():
 			mode = Mode.END
@@ -550,7 +551,7 @@ func _finish_walk() -> void:
 	else:
 		mode = Mode.TITLE
 
-func _start_walk(command: Dictionary) -> void:
+func _start_walk(command: Dictionary, long_map: bool = false) -> void:
 	# Mirror shards transition (from any mode → walk)
 	if mode != Mode.WALK:
 		_spawn_mirror_shards(20, 0.8)
@@ -583,8 +584,15 @@ func _start_walk(command: Dictionary) -> void:
 	trail.clear()
 	particles.clear()
 	walk_dust.clear()
-	walk_target = command.get("target", {})
-	walk_props = command.get("props", [])
+	walk_target = (command.get("target", {}) as Dictionary).duplicate(true)
+	walk_props = (command.get("props", []) as Array).duplicate(true)
+	# 地图加长：走位段的 NPC/道具整体右移，玩家要先往右走才会遇到
+	if long_map:
+		if walk_target.has("x"):
+			walk_target["x"] = float(walk_target["x"]) + WALK_SHIFT
+		for prop in walk_props:
+			if prop is Dictionary and prop.has("x"):
+				prop["x"] = float(prop["x"]) + WALK_SHIFT
 	walk_camera = bool(command.get("cam", false))
 	if command.has("bg"):
 		story_bg = str(command.get("bg", story_bg))
@@ -961,7 +969,11 @@ func _update_boss() -> void:
 				boss_state_timer = 45
 	
 	# Attack pattern timer (independent of movement)
-	if boss_attack_timer <= 0:
+	# 修：带状态的招式（预警→发射）必须每帧推进，否则一招要等几十秒才出弹
+	if boss_skill_state != "":
+		_spawn_boss_pattern()
+		boss_attack_timer = 40
+	elif boss_attack_timer <= 0:
 		boss_attack_timer = 78 if boss_id == "crimson" else 64
 		_spawn_boss_pattern()
 	
@@ -1214,8 +1226,8 @@ func _update_shots() -> void:
 			boss_hp = maxf(0.0, boss_hp - 3.0)
 			boss_hit_flash = 8
 			boss_ring_flash = 10  # Hit reaction ring flash
-			hitstop = 4
-			screen_shake = maxf(screen_shake, 2.5)
+			hitstop = 0  # 用户要求：命中 Boss 不顿帧
+			screen_shake = 0.0
 			_spawn_burst(shot["pos"], RED, 5)
 			shot["life"] = 0.0
 	shots = shots.filter(func(shot): return float(shot.get("life", 0.0)) > 0.0 and shot["pos"].x > -80.0 and shot["pos"].x < WORLD_W + 80.0 and shot["pos"].y > 0.0 and shot["pos"].y < VIEW.y)
@@ -1550,7 +1562,7 @@ func _draw_portrait(id: String, center: Vector2, scale: float, active: bool, fli
 	if not tex:
 		return
 	var size := Vector2(tex.get_width(), tex.get_height()) * scale
-	var tint := Color(1, 1, 1, 1.0 if active else 0.6)
+	var tint := Color(1, 1, 1, 1.0 if active else 0.78)
 	if flipped:
 		draw_set_transform(center, 0.0, Vector2(-1, 1))
 		draw_texture_rect(tex, Rect2(-size.x * 0.5, -size.y, size.x, size.y), false, tint)
@@ -2018,7 +2030,7 @@ func _draw_fx_overlay() -> void:
 ## Start dash FX: trigger screen flash and initial burst
 func _start_dash_fx() -> void:
 	dash_fx_active = true
-	dash_screen_fx = 4
+	dash_screen_fx = 0  # 用户要求：冲刺不要闪屏
 	sfx_player.play("dash")
 	# Burst: 8 red + 1 white center dot
 	for i in range(8):
