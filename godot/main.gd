@@ -148,6 +148,11 @@ var player_stamina := 100.0
 var player_stamina_display := 100.0  # Smooth lerp display value for stamina bar
 var player_courage := 0.0
 var player_energy := 4
+const ENERGY_MAX := 4.0
+const ENERGY_PER_GRAZE := 0.28   # 擦弹回复能量
+const ENERGY_PER_HIT := 0.06     # 子弹命中回复能量
+var energy_flash := 0            # 能量满/消耗时的闪动
+var fx_rings: Array = []         # 冲击环 {pos, r, max, life, color, width}
 var player_dash_frames := 0
 var player_dash_buffer := 0
 var player_dash_ramp := 0
@@ -227,7 +232,10 @@ func _load_assets() -> void:
 		"marysue_03": "res://art/battle/marysue/marysue-battle-03.png",
 		"cutin_crimson": "res://art/cg/cutin_crimson.png",
 		"cutin_marysue": "res://art/cg/cutin_marysue.png",
-		"logo_hongzhijing": "res://art/logo/hongzhijing_logo.png"
+		"logo_hongzhijing": "res://art/logo/hongzhijing_logo.png",
+		"skill_icon_red": "res://art/ui/skill_red_tragedy.png",
+		"skill_icon_gun": "res://art/ui/skill_gunfire.png",
+		"skill_icon_hell": "res://art/ui/skill_hellfire.png"
 	}
 	for key in paths:
 		var tex = _load_texture(paths[key])
@@ -1044,6 +1052,7 @@ func _update_boss() -> void:
 		_spawn_boss_pattern()
 	
 	_update_boss_extras()
+	_update_fx_rings()
 	if cutin_active:
 		cutin_timer -= FIXED_DT
 		if cutin_timer <= 0.0:
@@ -1064,6 +1073,8 @@ func _update_boss() -> void:
 			boss_hp = boss_max_hp
 			bullets.clear()
 			warnings.clear()
+			_spawn_fx_ring(boss_pos, Color(1, 1, 1, 0.9), 420.0, 0.5, 6.0)
+			_spawn_mirror_shards(10, 0.8)
 			banner = "PHASE %d" % (boss_phase + 1)
 			banner_timer = 85
 			if boss_phase == boss_phase_count - 1:
@@ -1280,7 +1291,9 @@ func _update_shots() -> void:
 		if mode == Mode.BATTLE and shot["pos"].distance_to(boss_pos) < 52.0:
 			boss_hp = maxf(0.0, boss_hp - 3.0)
 			boss_hit_flash = 8
-			boss_ring_flash = 10  # Hit reaction ring flash
+			boss_ring_flash = 10
+			_fx_boss_hit(shot["pos"])
+			player_energy = minf(ENERGY_MAX, player_energy + ENERGY_PER_HIT)  # Hit reaction ring flash
 			hitstop = 0  # 用户要求：命中 Boss 不顿帧
 			screen_shake = 0.0
 			_spawn_burst(shot["pos"], RED, 5)
@@ -1313,6 +1326,9 @@ func _check_graze_and_hits() -> void:
 			player_graze_age = 80
 			var multiplier := minf(3.0, 1.0 + floor(float(player_graze_chain) / 5.0) * 0.5)
 			player_courage = minf(100.0, player_courage + multiplier)
+			player_energy = minf(ENERGY_MAX, player_energy + ENERGY_PER_GRAZE)
+			_fx_graze(Vector2(bullet["pos"]))
+			energy_flash = 8
 			player_dash_cd = maxi(0, player_dash_cd - 2)
 			_spawn_burst(center, WHITE, 4)
 			# Graze SFX: play once per frame even if multiple grazes
@@ -1371,6 +1387,7 @@ func _use_gunfire() -> void:
 	boss_hp = maxf(0.0, boss_hp - 70.0)
 	_spawn_burst(blast, RED, 42)
 	_spawn_particle(blast, WHITE, 0.4, Vector2.ZERO, 30.0)
+	_fx_skill_cast(blast, RED)
 	banner = "枪火击溃"
 	banner_timer = 55
 	hitstop = 6
@@ -1381,6 +1398,7 @@ func _use_hellfire() -> void:
 	player_energy -= 2
 	hellfire_timer = 180
 	hellfire_tick = 1
+	_fx_skill_cast(boss_pos, RED)
 	banner = "业火"
 	banner_timer = 55
 	_spawn_burst(boss_pos, RED, 34)
@@ -1803,6 +1821,7 @@ func _draw_battle() -> void:
 	_draw_dash_trail()
 	_draw_boss()
 	_draw_boss_extras()
+	_draw_fx_rings()
 	_draw_player_at(player_pos - Vector2(camera_x, 0), WHITE)
 	_draw_particles_world()
 	_draw_battle_overlays()
@@ -2136,7 +2155,39 @@ func _draw_hud() -> void:
 	draw_string(ThemeDB.fallback_font, Vector2(226, 675), "%d" % int(player_stamina), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, WHITE)
 	# Courage bar
 	draw_string(ThemeDB.fallback_font, Vector2(280, 675), "勇气 %03d" % int(player_courage), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, WHITE)
-	draw_string(ThemeDB.fallback_font, Vector2(460, 675), "能量 %d/4" % player_energy, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, RED)
+	# ---- 能量条（血条旁边）----
+	draw_string(ThemeDB.fallback_font, Vector2(400, 675), "能量", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, WHITE)
+	draw_rect(Rect2(442, 665, 160, 10), Color(0.35, 0.35, 0.35, 1))
+	var e_ratio := clampf(player_energy / ENERGY_MAX, 0.0, 1.0)
+	var e_color := Color("#FF0000") if player_energy >= 2.0 else Color("#8a2a2a")
+	draw_rect(Rect2(442, 665, 160 * e_ratio, 10), e_color)
+	for seg in range(1, int(ENERGY_MAX)):
+		var sx := 442.0 + 160.0 * float(seg) / ENERGY_MAX
+		draw_line(Vector2(sx, 663), Vector2(sx, 677), Color(0, 0, 0, 0.75), 2.0)
+	if energy_flash > 0:
+		draw_rect(Rect2(442, 663, 160, 14), Color(1, 1, 1, 0.25 * float(energy_flash) / 8.0))
+		energy_flash -= 1
+	# ---- 技能图标（血条旁边，标注能量与按键）----
+	var slots := [
+		{"tex": "skill_icon_red", "cost": 2, "key": "L", "name": "红之惨剧"},
+		{"tex": "skill_icon_gun", "cost": 2, "key": "C", "name": "枪火击溃"},
+		{"tex": "skill_icon_hell", "cost": 2, "key": "V", "name": "业火"}
+	]
+	var sx0 := 620.0
+	for si in range(slots.size()):
+		var slot: Dictionary = slots[si]
+		var rect := Rect2(sx0 + float(si) * 62.0, 640, 52, 52)
+		var can := player_energy >= float(slot["cost"])
+		draw_rect(rect, Color(0.05, 0.05, 0.06, 0.85))
+		draw_rect(rect, Color(1, 1, 1, 0.55 if can else 0.18), false, 2.0)
+		var itex: Texture2D = textures.get(slot["tex"])
+		if itex:
+			draw_texture_rect(itex, Rect2(rect.position + Vector2(4, 4), Vector2(44, 44)), false,
+				Color(1, 1, 1, 1.0 if can else 0.32))
+		# 能量消耗（左下角）
+		draw_string(ThemeDB.fallback_font, rect.position + Vector2(4, 48), str(slot["cost"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1, 0.25, 0.25) if can else GREY)
+		# 按键（右上角）
+		draw_string(ThemeDB.fallback_font, rect.position + Vector2(30, 14), str(slot["key"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, WHITE if can else GREY)
 	draw_string(ThemeDB.fallback_font, Vector2(640, 675), "冲刺 %s" % ("READY" if player_dash_cd <= 0 else "%02d" % player_dash_cd), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, RED if player_dash_cd <= 0 else GREY)
 	draw_string(ThemeDB.fallback_font, Vector2(840, 675), "擦弹链 %d" % player_graze_chain, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, WHITE)
 	if banner_timer > 0 and banner != "":
@@ -2638,3 +2689,36 @@ func _draw_battle_overlays() -> void:
 	# 镜像翻转提示
 	if mirror_flip:
 		draw_string(ThemeDB.fallback_font, Vector2(430, 150), "镜中世界 · 左右交换", HORIZONTAL_ALIGNMENT_LEFT, -1, 30, HAZARD)
+
+
+# ======================= 战斗特效强化 =======================
+func _spawn_fx_ring(pos: Vector2, color: Color, max_r: float, life: float = 0.35, width: float = 3.0) -> void:
+	fx_rings.append({"pos": pos, "r": 8.0, "max": max_r, "life": life, "max_life": life, "color": color, "width": width})
+
+func _update_fx_rings() -> void:
+	for r in fx_rings:
+		r["life"] = float(r["life"]) - FIXED_DT
+		var k: float = 1.0 - clampf(float(r["life"]) / maxf(0.01, float(r["max_life"])), 0.0, 1.0)
+		r["r"] = 8.0 + (float(r["max"]) - 8.0) * k
+	fx_rings = fx_rings.filter(func(x): return float(x.get("life", 0.0)) > 0.0)
+
+func _draw_fx_rings() -> void:
+	for r in fx_rings:
+		var k: float = clampf(float(r["life"]) / maxf(0.01, float(r["max_life"])), 0.0, 1.0)
+		var col: Color = r["color"]
+		col.a *= k
+		draw_arc(Vector2(r["pos"]) - Vector2(camera_x, 0), float(r["r"]), 0.0, TAU, 48, col, float(r["width"]) * (0.4 + 0.6 * k))
+
+func _fx_boss_hit(pos: Vector2) -> void:
+	_spawn_fx_ring(pos, Color(1, 1, 1, 0.85), 46.0, 0.22, 2.5)
+	_spawn_burst(pos, WHITE, 3)
+
+func _fx_graze(pos: Vector2) -> void:
+	_spawn_fx_ring(pos, Color(0, 0.73, 1, 0.7), 26.0, 0.18, 1.5)
+
+func _fx_skill_cast(pos: Vector2, color: Color) -> void:
+	_spawn_fx_ring(pos, color, 260.0, 0.45, 5.0)
+	_spawn_fx_ring(pos, Color(1, 1, 1, 0.9), 150.0, 0.3, 3.0)
+	for i in range(24):
+		var a := TAU * float(i) / 24.0
+		_spawn_particle(pos + Vector2(cos(a), sin(a)) * 20.0, color, 0.5, Vector2(cos(a), sin(a)) * 260.0, 5.0)
