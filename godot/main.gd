@@ -236,6 +236,13 @@ func _load_assets() -> void:
 				frames.append(ftex)
 		if frames.size() > 0:
 			boss_anim[anim_name] = frames
+	var ms_frames: Array = []
+	for fi in range(16):
+		var mtex := _load_texture("res://art/battle/marysue/anim/idle/frame_%02d.png" % fi)
+		if mtex:
+			ms_frames.append(mtex)
+	if ms_frames.size() > 0:
+		boss_anim["marysue_idle"] = ms_frames
 
 func _load_texture(path: String) -> Texture2D:
 	if ResourceLoader.exists(path):
@@ -1035,10 +1042,26 @@ func _spawn_boss_pattern() -> void:
 	# Special skill pattern: use phase-specific signature moves
 	if boss_id == "crimson":
 		match boss_phase:
-			0:  # Stage 1: 赤线突刺 (Telegraph 24 frames → thrust 900px/s)
+			0:  # Stage 1: 赤线突刺 + 环形齐射
 				_crimson_thrust_lines()
-			2:  # Stage 3: 扇形斩击 (5-7 blades, safe gap)
+				if boss_skill_state == "" and frame % 3 == 0:
+					for i in range(12):
+						var a0 := TAU * float(i) / 12.0 + float(frame) * 0.02
+						_spawn_bullet(boss_pos, Vector2(cos(a0), sin(a0)) * 230.0, RED, "hazard")
+			1:  # Stage 2: 突刺 + 扇形
+				_crimson_thrust_lines()
+				if boss_skill_state == "":
+					_crimson_fan_slash()
+			2:  # Stage 3: 扇形斩击 + 双侧刀光
 				_crimson_fan_slash()
+				if boss_skill_state == "" and frame % 4 == 0:
+					for i in range(6):
+						var a1 := PI * (0.15 + 0.14 * float(i))
+						_spawn_bullet(boss_pos, Vector2(cos(a1), sin(a1)) * 300.0, RED, "blade")
+			3:  # Stage 4: 激光 + 突刺
+				_crimson_laser_sweep()
+				if boss_skill_state == "":
+					_crimson_thrust_lines()
 			4:  # Stage 5: 赤月终式 (12 waves @ 30° intervals, warning 42 frames)
 				_crimson_red_moon_finale()
 			_:  # Fallback: legacy circle pattern
@@ -1047,10 +1070,21 @@ func _spawn_boss_pattern() -> void:
 					_spawn_bullet(boss_pos, Vector2(cos(a), sin(a)) * 215.0, color, "hazard")
 	elif boss_id == "marysue":
 		match boss_phase:
-			0:  # Stage 1: 法环收束 (12 bullets, 96px gap, 260px/s)
+			0:  # Stage 1: 法环收束 + 绿色游星
 				_marysue_ring_collapse()
-			2:  # Stage 3: 光翼裁切 (left/right fan, 6 each, 380px/s)
+				if boss_skill_state == "" and frame % 5 == 0:
+					for i in range(8):
+						var g0 := TAU * float(i) / 8.0 + elapsed * 0.8
+						_spawn_bullet(boss_pos, Vector2(cos(g0), sin(g0)) * 200.0, HAZARD, "hazard")
+			1:  # Stage 2: 双环花旋
+				if frame % 3 == 0:
+					for i in range(10):
+						var g1 := TAU * float(i) / 10.0 + elapsed * 1.6
+						_spawn_bullet(boss_pos, Vector2(cos(g1), sin(g1)) * 240.0, HAZARD, "hazard")
+			2:  # Stage 3: 光翼裁切 + 落雨
 				_marysue_wing_sweep()
+			3:  # Stage 4: 翡翠贯射
+				_marysue_laser_beam()
 			5:  # Stage 6: 倒置终稿 (16 bullets, 340px/s, 128px gap, warning 60 frames)
 				_marysue_inverted_finale()
 			_:  # Fallback: legacy homing pattern
@@ -1810,13 +1844,18 @@ func _draw_boss_fx() -> void:
 		draw_texture_rect(ring_tex, Rect2(-ring_size * 0.5, ring_size), false, Color(1, 1, 1, alpha))
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
+const ANIM_BODY_H := {"crimson": 150.0, "marysue": 360.0}
+
 func _draw_boss() -> void:
 	var center := boss_pos - Vector2(camera_x, 0)
 	# Select boss pose based on state
 	var key := _boss_pose_key()
 	var tex: Texture2D = textures.get(key)
 	# 猩红魔姬：优先播动作序列（待机/移动/突刺/斩击）
-	if boss_id == "crimson" and boss_anim.size() > 0:
+	if boss_id == "marysue" and boss_anim.has("marysue_idle"):
+		var msf: Array = boss_anim["marysue_idle"]
+		tex = msf[int(frame / 5) % msf.size()]
+	elif boss_id == "crimson" and boss_anim.size() > 0:
 		var anim_name := "idle"
 		match boss_state:
 			BossState.LUNGE:
@@ -1836,8 +1875,10 @@ func _draw_boss() -> void:
 		var tint := WHITE if boss_hit_flash == 0 or frame % 4 < 2 else Color(1, 1, 1, 0.4)
 		# 按「可见内容高度」换算，动作帧/关键帧四周的透明边不会把角色缩成小点
 		var vb: Rect2 = character_art.visible_bounds(tex)
-		var scale := BOSS_HEIGHT / maxf(1.0, vb.size.y)
-		var draw_pos := center - (vb.get_center() * scale)
+		var is_anim := (boss_id == "crimson" and boss_state != BossState.IDLE) or boss_id == "marysue"
+		var ref_h: float = ANIM_BODY_H.get(boss_id, vb.size.y)
+		var scale := BOSS_HEIGHT / maxf(1.0, ref_h)
+		var draw_pos := center - (vb.get_center() * scale if not is_anim else tex.get_size() * scale * 0.5)
 		draw_texture_rect(tex, Rect2(draw_pos, tex.get_size() * scale), false, tint)
 	else:
 		draw_circle(center, 48, Color(GREY, 0.9))
@@ -2314,3 +2355,52 @@ func _draw_npc_glow(foot: Vector2, height: float) -> void:
 		var r := radius * float(i) / 6.0
 		var a: float = base_alpha * (1.0 - float(i - 1) / 6.0) * 0.5
 		draw_circle(center, r, Color(CYAN, a))
+
+
+# 魔姬：横向激光扫射（预警 30 帧 → 三束激光）
+func _crimson_laser_sweep() -> void:
+	if boss_skill_state == "":
+		boss_skill_state = "telegraph"
+		boss_skill_timer = 30
+		var dir := (player_pos - boss_pos).normalized()
+		skill_warnings.clear()
+		for i in range(3):
+			var off := (float(i) - 1.0) * 0.12
+			var d2 := Vector2(cos(dir.angle() + off), sin(dir.angle() + off))
+			skill_warnings.append({"kind": "line", "pos": boss_pos, "dir": d2, "life": 30.0 / 60.0, "color": RED})
+	elif boss_skill_state == "telegraph":
+		boss_skill_timer -= 1
+		if boss_skill_timer <= 0:
+			boss_skill_state = "firing"
+			boss_skill_timer = 26
+			for w in skill_warnings:
+				_spawn_bullet(boss_pos, w["dir"] * 780.0, RED, "laser")
+	elif boss_skill_state == "firing":
+		boss_skill_timer -= 1
+		if boss_skill_timer <= 0:
+			boss_skill_state = ""
+			skill_warnings.clear()
+
+# 玛丽苏：翡翠贯射（预警 36 帧 → 5 束绿色激光扇形）
+func _marysue_laser_beam() -> void:
+	if boss_skill_state == "":
+		boss_skill_state = "telegraph"
+		boss_skill_timer = 36
+		var dir := (player_pos - boss_pos).normalized()
+		skill_warnings.clear()
+		for i in range(5):
+			var off := (float(i) - 2.0) * 0.09
+			var d2 := Vector2(cos(dir.angle() + off), sin(dir.angle() + off))
+			skill_warnings.append({"kind": "line", "pos": boss_pos, "dir": d2, "life": 36.0 / 60.0, "color": HAZARD})
+	elif boss_skill_state == "telegraph":
+		boss_skill_timer -= 1
+		if boss_skill_timer <= 0:
+			boss_skill_state = "firing"
+			boss_skill_timer = 30
+			for w in skill_warnings:
+				_spawn_bullet(boss_pos, w["dir"] * 700.0, HAZARD, "laser")
+	elif boss_skill_state == "firing":
+		boss_skill_timer -= 1
+		if boss_skill_timer <= 0:
+			boss_skill_state = ""
+			skill_warnings.clear()
