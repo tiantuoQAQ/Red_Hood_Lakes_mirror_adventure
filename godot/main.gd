@@ -1407,6 +1407,9 @@ func _draw() -> void:
 		Mode.END:
 			_draw_end()
 	_draw_fx_overlay()
+	# Story flash must be the final layer (above mirror shards and all FX)
+	if mode == Mode.STORY and not story_flash_seq.is_empty():
+		draw_rect(Rect2(Vector2.ZERO, VIEW), _flash_color())
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 func _draw_background() -> void:
@@ -1480,6 +1483,7 @@ func _draw_story() -> void:
 		_draw_portrait(story_right, Vector2(940, 580), 0.62, _portrait_speaking(story_right), true)
 	# A scene can stay black during narration (the prologue reads a letter).
 	# Fade the scenery and portraits before drawing text and continue prompts.
+	# All fade layers (partial and full blackout) are drawn here, before dialogue.
 	if story_fade > 0:
 		draw_rect(Rect2(Vector2.ZERO, VIEW), Color(0, 0, 0, story_fade))
 	if story_cmd.get("t", "") == "card":
@@ -1515,8 +1519,7 @@ func _draw_story() -> void:
 		var shown := story_text.substr(0, int(story_reveal))
 		draw_string(ThemeDB.fallback_font, Vector2(82, 605), shown, HORIZONTAL_ALIGNMENT_LEFT, 1110, 24, WHITE)
 		draw_string(ThemeDB.fallback_font, Vector2(1000, 652), "ENTER / SPACE 继续    TAB 跳过", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, GREY)
-	if not story_flash_seq.is_empty():
-		draw_rect(Rect2(Vector2.ZERO, VIEW), _flash_color())
+	# Flash moved to top-level _draw() final layer (after mirror shards)
 
 func _draw_trap_cg() -> void:
 	draw_set_transform(Vector2(925, 285), elapsed * 0.18, Vector2(1, 0.72))
@@ -1921,19 +1924,19 @@ func _update_dash_fx() -> void:
 	var speed_ratio := clampf(absf(player_vel.x) / 1020.0, 0.0, 1.0)
 	var back_dir := Vector2(-signf(player_vel.x), 0) if absf(player_vel.x) > 10.0 else Vector2(-player_dash_direction, 0)
 	
-	# Speed lines: 2 per frame
-	for i in range(2):
-		var length := lerpf(18.0, 72.0, speed_ratio)
-		var width := lerpf(2.0, 3.5, speed_ratio)
-		var offset := randf_range(-7.0, 7.0)
-		var start := player_pos + Vector2(0, offset)
-		dash_speed_lines.append({
-			"pos": start,
-			"vel": back_dir * length,
-			"life": 3.0 / 60.0,
-			"max_life": 3.0 / 60.0,
-			"width": width
-		})
+	# Speed lines: 1 per frame (reduced from 2 to prevent foot-level bar artifacts)
+	# Offset tightened to ±3px to avoid vertical clustering
+	var length := lerpf(18.0, 72.0, speed_ratio)
+	var width := lerpf(1.5, 2.5, speed_ratio)  # Reduced from 2.0-3.5 to prevent thick overlaps
+	var offset := randf_range(-3.0, 3.0)  # Tightened from ±7 to ±3
+	var start := player_pos + Vector2(0, offset)
+	dash_speed_lines.append({
+		"pos": start,
+		"vel": back_dir * length,
+		"life": 3.0 / 60.0,
+		"max_life": 3.0 / 60.0,
+		"width": width
+	})
 	
 	# Light dots: 1 per frame during dash
 	if frame % 2 == 0 and dash_dots.size() < 32:
@@ -1966,7 +1969,11 @@ func _draw_dash_fx() -> void:
 		var progress := 1.0 - float(line["life"]) / float(line["max_life"])
 		var alpha := 0.62 * pow(1.0 - progress, 0.75)
 		var start: Vector2 = line["pos"] - Vector2(camera_x, 0)
-		var end: Vector2 = start + line["vel"]
+		var vel: Vector2 = line["vel"]
+		# Safety: skip lines with abnormal length (prevent bar artifacts)
+		if vel.length() > 100.0:
+			continue
+		var end: Vector2 = start + vel
 		draw_line(start, end, Color(WHITE, alpha), line["width"], true)
 	
 	# Dash dots: red, additive
@@ -1995,6 +2002,9 @@ func _draw_walk_dust() -> void:
 	for dust in walk_dust:
 		var p: Vector2 = dust["pos"] - Vector2(camera_x, 0)
 		var radius: float = dust.get("radius", 2.0)
+		# Safety: skip dust with abnormal radius (prevent bar artifacts)
+		if radius > 4.0:
+			continue
 		draw_circle(p, radius, Color(GREY, dust["alpha"]))
 
 ## Trigger jump squash & stretch animation
