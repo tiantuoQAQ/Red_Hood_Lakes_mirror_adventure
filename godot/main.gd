@@ -65,6 +65,8 @@ var story_card := ["", ""]
 var story_title := ""
 var story_title_sub := ""
 var story_intro := ""
+var map_bgm_player: AudioStreamPlayer
+var map_bgm_started := false
 var intro_hold := 0.0      # 竖幅在下一句仍停留的秒数
 var seen_speakers: Array = []  # 本章已登场过的角色（首次说话时弹称号）
 var portrait_fade := 0.0      # 对话结束后立绘淡出（1 → 0）
@@ -202,6 +204,13 @@ var last_land_frame := -999  # Frame of last land SFX to enforce min interval
 var debug_player_only := false
 
 func _ready() -> void:
+	map_bgm_player = AudioStreamPlayer.new()
+	map_bgm_player.bus = "Master"
+	map_bgm_player.volume_db = -10.0
+	add_child(map_bgm_player)
+	if ResourceLoader.exists("res://audio/map_bgm.ogg"):
+		map_bgm_player.stream = load("res://audio/map_bgm.ogg")
+
 	_load_assets()
 	_load_story()
 	music_player = AudioStreamPlayer.new()
@@ -622,6 +631,7 @@ func _finish_walk() -> void:
 func _start_walk(command: Dictionary, long_map: bool = false) -> void:
 	if last_left != "" or last_right != "":
 		portrait_fade = 1.0
+	_start_map_bgm()
 	# Mirror shards transition (from any mode → walk)
 	if mode != Mode.WALK:
 		_spawn_mirror_shards(20, 0.8)
@@ -690,6 +700,7 @@ func _start_battle(id: String, after: String) -> void:
 		_spawn_mirror_shards(20, 0.9)
 	
 	mode = Mode.BATTLE
+	_stop_map_bgm()
 	battle_intro_t = 2.6
 	cutin_active = false
 	cutin_timer = 0.0
@@ -1632,6 +1643,12 @@ func _draw_story() -> void:
 		if story_who != "":
 			# 黑影/未识别的说话者显示「？？？」
 			var shown_name := "？？？" if story_expr == "shadow" else _display_name(story_who)
+			if story_expr != "shadow":
+				var skey := _portrait_base(story_who)
+				if CHAR_TITLES.has(skey):
+					var ttl := str(CHAR_TITLES[skey].get("title", ""))
+					if ttl != "":
+						shown_name = shown_name + "  ·  " + ttl
 			var plate_color := Color(0.75, 0.75, 0.75) if story_expr == "shadow" else name_color
 			var name_a := plate_color
 			name_a.a *= clampf(story_text_alpha * 1.3, 0.0, 1.0)
@@ -2779,3 +2796,18 @@ func _fx_skill_cast(pos: Vector2, color: Color) -> void:
 	for i in range(24):
 		var a := TAU * float(i) / 24.0
 		_spawn_particle(pos + Vector2(cos(a), sin(a)) * 20.0, color, 0.5, Vector2(cos(a), sin(a)) * 260.0, 5.0)
+
+
+## 地图/走位段 BGM：把音乐文件放 audio/map_bgm.ogg 即自动循环播放
+func _start_map_bgm() -> void:
+	if map_bgm_player == null:
+		return
+	if map_bgm_player.stream == null:
+		return
+	if not map_bgm_player.playing:
+		map_bgm_player.play()
+		map_bgm_started = true
+
+func _stop_map_bgm() -> void:
+	if map_bgm_player != null and map_bgm_player.playing:
+		map_bgm_player.stop()
