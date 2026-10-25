@@ -21,7 +21,7 @@ const CHAPTER_BGM := {
 }
 const BATTLE_LEFT := 1500.0
 const BATTLE_RIGHT := 2760.0
-const BATTLE_HALF := 700.0
+const BATTLE_HALF := 980.0
 const PHASE_NAMES := {
 	"crimson": ["壹 · 试锋", "贰 · 裂帛", "叁 · 血雨", "肆 · 镜刃", "伍 · 红之惨剧"],
 	"marysue": ["壹 · 箱庭", "贰 · 反语", "叁 · 镜廊", "肆 · 断线", "伍 · 狂言", "陆 · 天地倒悬"]
@@ -1612,16 +1612,17 @@ func _use_hellfire() -> void:
 	_spawn_burst(boss_pos, RED, 34)
 
 func _update_camera() -> void:
-	var target := clampf(player_pos.x - VIEW.x * 0.38, 0.0, WORLD_W - VIEW.x)
 	if mode == Mode.BATTLE:
-		var lo := minf(player_pos.x, boss_pos.x) - VIEW.x * 0.34
-		var hi := maxf(player_pos.x, boss_pos.x) - VIEW.x * 0.66
-		target = clampf(player_pos.x - VIEW.x * 0.38, lo, maxf(lo, hi))
-	var boss_left := minf(player_pos.x, boss_pos.x) - 160.0
-	var boss_right := maxf(player_pos.x, boss_pos.x) + 160.0
-	if boss_right - boss_left < VIEW.x:
-		target = clampf((boss_left + boss_right) * 0.5 - VIEW.x * 0.5, 0.0, WORLD_W - VIEW.x)
-	camera_x = lerpf(camera_x, target, 1.0 - pow(0.0001, FIXED_DT))
+		# 围绕 Boss 的稳定跟随：目标固定为 Boss 屏幕中心，缓慢插值，不做 min/max 反复钳制
+		var half := (BATTLE_HALF + 120.0)
+		var want := boss_pos.x - VIEW.x * 0.5
+		var lo := _battle_left() - 80.0
+		var hi := _battle_right() + 80.0 - VIEW.x
+		want = clampf(want, minf(lo, hi), maxf(lo, hi))
+		camera_x = lerpf(camera_x, want, 1.0 - pow(0.02, FIXED_DT))
+		return
+	var target := clampf(player_pos.x - VIEW.x * 0.38, 0.0, WORLD_W - VIEW.x)
+	camera_x = lerpf(camera_x, target, 1.0 - pow(0.0004, FIXED_DT))
 
 func _update_victory() -> void:
 	if _just("confirm"):
@@ -2883,12 +2884,12 @@ func _crimson_crescent_volley(count: int) -> void:
 func _crimson_rush_attack(finish_crescent: bool) -> void:
 	if boss_skill_state == "":
 		boss_skill_state = "leap"
-		boss_skill_timer = 30
+		boss_skill_timer = 40
 		boss_rush_side = signf(player_pos.x - boss_pos.x)
 		_spawn_fx_ring(boss_pos, Color(1, 0, 0, 0.7), 90.0, 0.25, 3.0)
 	elif boss_skill_state == "leap":
 		boss_skill_timer -= 1
-		boss_pos.y = lerpf(boss_pos.y, 420.0, 0.22)
+		boss_pos.y = lerpf(boss_pos.y, 420.0, 0.10)
 		if boss_skill_timer <= 0:
 			boss_skill_state = "rush"
 			boss_skill_timer = 34
@@ -2897,7 +2898,7 @@ func _crimson_rush_attack(finish_crescent: bool) -> void:
 		boss_skill_timer -= 1
 		# 追着小红帽砍：向玩家方向加速冲
 		var target_x: float = player_pos.x - boss_rush_side * 60.0
-		boss_pos.x = move_toward(boss_pos.x, target_x, 15.0)
+		boss_pos.x = move_toward(boss_pos.x, target_x, 9.0)
 		boss_pos.y = 420.0
 		# 冲刺拖尾（帅气）
 		for k in range(2):
@@ -2920,64 +2921,59 @@ func _crimson_rush_attack(finish_crescent: bool) -> void:
 			boss_pos.y = 226.0
 
 func _patterns_marysue() -> void:
-	# 用户要求：只用绿色激光类攻击（激光雨 / 横向扫射 / 追踪激光），不要魔姬的红色弹幕
+	# 重做：符纸环 + 阴阳球 + 激光，全部有预警、低频率、可躲
 	match boss_phase:
-		0:  # 一：绿色激光雨（从天而降的激光柱，间歇）
-			if frame % 45 == 0:
-				for k in range(2):
-					var lx := clampf(player_pos.x + randf_range(-260.0, 260.0), _battle_left(), _battle_right())
-					_spawn_beam(lx, 0.9)
-		1:  # 二：横向缓慢追踪激光
-			if frame % 40 == 0:
-				for k in range(3):
-					var d := (player_pos - boss_pos).normalized()
-					var off := (float(k) - 1.0) * 0.22
-					_spawn_bullet(boss_pos, Vector2(cos(d.angle() + off), sin(d.angle() + off)) * 150.0, HAZARD, "laser", 4.5, 0.05)
-		2:  # 三：激光雨 + 光球
-			if frame % 26 == 0:
-				var lx2 := clampf(player_pos.x + randf_range(-320.0, 320.0), _battle_left(), _battle_right())
-				_spawn_beam(lx2, 0.8)
+		0:  # 壹 · 箱庭：绿色符纸环（缓慢外扩）
 			if frame % 60 == 0:
+				for k in range(8):
+					var a := TAU * float(k) / 8.0 + elapsed * 0.5
+					_spawn_bullet(boss_pos, Vector2(cos(a), sin(a)) * 150.0, HAZARD, "talisman", 5.0, 0.02)
+		1:  # 贰 · 反语：阴阳球缓慢旋转外扩
+			if frame % 65 == 0:
+				for k in range(6):
+					var a2 := -TAU * float(k) / 6.0 + elapsed * 0.9
+					_spawn_bullet(boss_pos, Vector2(cos(a2), sin(a2)) * 170.0, HAZARD, "yinyang", 5.5, 0.25)
+		2:  # 叁 · 镜廊：符纸雨（稀疏）+ 阴阳球
+			if frame % 34 == 0:
+				_spawn_bullet(Vector2(randf_range(_battle_left() + 60.0, _battle_right() - 60.0), 60.0),
+					Vector2(0, 210.0), HAZARD, "talisman", 5.0, 0.0)
+			if frame % 90 == 0:
 				for k in range(5):
-					var a := -PI * 0.5 + (float(k) - 2.0) * 0.26
-					_spawn_bullet(boss_pos, Vector2(cos(a), sin(a)) * 210.0, HAZARD, "hazard", 4.0, 0.02)
-		3:  # 四：地图随机激光（持续 2 秒）
-			if frame % 55 == 0:
-				for k in range(3):
-					var rx := randf_range(_battle_left() + 80.0, _battle_right() - 80.0)
-					_spawn_beam(rx, 2.0)
-		4:  # 五：地面冲刺带绿激光 + 绿闪
-			green_flash_t = 1.2
-			if boss_skill_state == "":
-				boss_skill_state = "firing"
-				boss_skill_timer = 46
-				boss_pos.y = 420.0
-				boss_pos.x = clampf(player_pos.x + randf_range(-220.0, 220.0), _battle_left() + 120.0, _battle_right() - 120.0)
-				_spawn_bullet(boss_pos, Vector2(-1, 0) * 760.0, HAZARD, "laser", 1.1, 0.0)
-			elif boss_skill_state == "firing":
+					var a3 := -PI * 0.5 + (float(k) - 2.0) * 0.28
+					_spawn_bullet(boss_pos, Vector2(cos(a3), sin(a3)) * 200.0, HAZARD, "yinyang", 5.0, 0.3)
+		3:  # 肆 · 断线：预警激光（先亮线 0.6s，再落柱；落在玩家侧前方，不贴脸）
+			if boss_skill_state == "" and frame % 120 == 0:
+				boss_skill_state = "telegraph"
+				boss_skill_timer = 36
+				skill_warnings.clear()
+				for k in range(2):
+					var off := (float(k) - 0.5) * 320.0
+					var lx := clampf(player_pos.x + off, _battle_left() + 80.0, _battle_right() - 80.0)
+					skill_warnings.append({"kind": "beam", "x": lx, "life": 0.6, "color": HAZARD})
+			elif boss_skill_state == "telegraph":
 				boss_skill_timer -= 1
 				if boss_skill_timer <= 0:
 					boss_skill_state = ""
-					boss_pos.y = 226.0
-		5:  # 六：镜像翻转 + 密集绿色激光雨
+					for w in skill_warnings:
+						_spawn_beam(float(w["x"]), 0.9)
+					skill_warnings.clear()
+		4:  # 伍 · 狂言：绿闪 + 符纸环（无激光）
+			green_flash_t = 1.0
+			if frame % 70 == 0:
+				for k in range(10):
+					var a5 := TAU * float(k) / 10.0 + elapsed
+					_spawn_bullet(boss_pos, Vector2(cos(a5), sin(a5)) * 160.0, HAZARD, "talisman", 5.0, 0.02)
+		5:  # 陆 · 天地倒悬：镜像翻转 + 阴阳球 + 符纸
 			if not mirror_flip:
 				mirror_flip = true
-			if frame % 24 == 0:
-				for k in range(2):
-					var lx3 := clampf(player_pos.x + randf_range(-340.0, 340.0), _battle_left(), _battle_right())
-					_spawn_beam(lx3, 1.0)
-			if frame % 70 == 0:
+			if frame % 55 == 0:
+				for k in range(8):
+					var a6 := TAU * float(k) / 8.0 + elapsed * 1.3
+					_spawn_bullet(boss_pos, Vector2(cos(a6), sin(a6)) * 165.0, HAZARD, "yinyang", 5.5, 0.2)
+			if frame % 34 == 0:
 				for k in range(6):
-					var a6 := -PI * 0.5 + (float(k) - 2.5) * 0.2
-					_spawn_bullet(boss_pos, Vector2(cos(a6), sin(a6)) * 240.0, HAZARD, "laser", 3.0, 0.03)
-
-## 绿色激光柱（竖直向下，带预警后出现，持续 seconds 秒）
-func _spawn_beam(x: float, seconds: float) -> void:
-	_spawn_bullet(Vector2(x, GROUND_Y - 190.0), Vector2.ZERO, HAZARD, "beam", seconds, 0.0)
-	_spawn_fx_ring(Vector2(x, GROUND_Y - 40.0), Color(0.51, 1, 0, 0.8), 120.0, 0.35, 3.0)
-	for k in range(6):
-		_spawn_particle(Vector2(x + randf_range(-18, 18), GROUND_Y - 30.0), Color(0.51, 1, 0, 0.9),
-			0.5, Vector2(randf_range(-40, 40), randf_range(-150, -50)), 4.0)
+					var a7 := TAU * float(k) / 6.0 - elapsed
+					_spawn_bullet(boss_pos, Vector2(cos(a7), sin(a7)) * 140.0, HAZARD, "talisman", 5.0, 0.02)
 
 func _spawn_two_whirls() -> void:
 	if whirls.size() >= 2:
@@ -3592,3 +3588,26 @@ func _battle_left() -> float:
 
 func _battle_right() -> float:
 	return clampf(boss_pos.x + BATTLE_HALF, 120.0 + 400.0, WORLD_W - 120.0)
+
+
+## 玩家扣血（统一入口，带无敌帧与红晕）
+func _apply_player_damage() -> void:
+	if player_hurt_invuln > 0 or player_dash_invuln > 0 or player_ball:
+		return
+	player_hp -= 1
+	player_hurt_invuln = 80
+	hurt_vignette = 18
+	sfx_player.play("hurt")
+	screen_shake = 0.6
+	if player_hp <= 0:
+		player_hp = 0
+		_start_death()
+
+
+## 绿色激光柱（竖直，从天空落到地面；持续 seconds 秒）
+func _spawn_beam(x: float, seconds: float) -> void:
+	_spawn_bullet(Vector2(x, (40.0 + GROUND_Y) * 0.5), Vector2.ZERO, HAZARD, "beam", seconds, 0.0)
+	_spawn_fx_ring(Vector2(x, GROUND_Y - 30.0), Color(0.51, 1, 0, 0.8), 120.0, 0.35, 3.0)
+	for k in range(6):
+		_spawn_particle(Vector2(x + randf_range(-18, 18), GROUND_Y - 30.0), Color(0.51, 1, 0, 0.9),
+			0.5, Vector2(randf_range(-40, 40), randf_range(-150, -50)), 4.0)
