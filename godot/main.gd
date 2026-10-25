@@ -69,6 +69,7 @@ var map_bgm_player: AudioStreamPlayer
 var map_bgm_started := false
 var intro_hold := 0.0      # 竖幅在下一句仍停留的秒数
 var seen_speakers: Array = []  # 本章已登场过的角色（首次说话时弹称号）
+var known_names: Array = ["rek", "norden", "mabel", "crimson", "rek_crimson"]  # 已自报姓名（玛丽苏靠 reveal）
 var portrait_fade := 0.0      # 对话结束后立绘淡出（1 → 0）
 var last_left := ""
 var last_right := ""
@@ -461,6 +462,15 @@ func _story_advance() -> void:
 				if command.has("who"):
 					_set_portrait(str(command.get("who", "")), str(command.get("expr", "")))
 				story_timer = float(command.get("frames", 30)) / 60.0
+				return
+			"reveal":
+				var rw := str(command.get("who", ""))
+				var rkey := _portrait_base(rw)
+				if rkey != "" and not known_names.has(rkey):
+					known_names.append(rkey)
+				story_intro = rkey
+				intro_hold = 2.4
+				story_timer = 0.6
 				return
 			"intro":
 				story_intro = str(command.get("id", ""))
@@ -1645,14 +1655,16 @@ func _draw_story() -> void:
 		draw_line(Vector2(50, 520 + slide), Vector2(1230, 520 + slide), line_col, 2.0)
 		if story_who != "":
 			# 黑影/未识别的说话者显示「？？？」
-			var shown_name := "？？？" if story_expr == "shadow" else _display_name(story_who)
-			if story_expr != "shadow":
+			var who_key := _portrait_base(story_who)
+			var is_unknown := (not known_names.has(who_key)) or story_expr == "shadow"
+			var shown_name := "？？？" if is_unknown else _display_name(story_who)
+			if not is_unknown:
 				var skey := _portrait_base(story_who)
 				if CHAR_TITLES.has(skey):
 					var ttl := str(CHAR_TITLES[skey].get("title", ""))
 					if ttl != "":
 						shown_name = shown_name + "  ·  " + ttl
-			var plate_color := Color(0.75, 0.75, 0.75) if story_expr == "shadow" else name_color
+			var plate_color := Color(0.75, 0.75, 0.75) if is_unknown else name_color
 			var name_a := plate_color
 			name_a.a *= clampf(story_text_alpha * 1.3, 0.0, 1.0)
 			draw_string(ThemeDB.fallback_font, Vector2(82, 555 + slide), shown_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, name_a)

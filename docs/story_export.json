@@ -167,7 +167,7 @@
         "style": "red",
         "shake": true,
         "show": true,
-        "text": "玛丽苏……"
+        "text": "……你到底是什么东西。"
       },
       {
         "t": "say",
@@ -186,14 +186,34 @@
       {
         "t": "say",
         "who": "marysue",
+        "expr": "shadow",
         "show": true,
         "text": "哎呀呀，人家真是怕极了呢～"
       },
       {
         "t": "say",
         "who": "marysue",
+        "expr": "shadow",
         "show": true,
         "text": "人家可是……从来没有把你当成敌人哦。"
+      },
+      {
+        "t": "say",
+        "who": "marysue",
+        "expr": "shadow",
+        "show": true,
+        "text": "不过，告诉你也无妨。"
+      },
+      {
+        "t": "reveal",
+        "who": "marysue"
+      },
+      {
+        "t": "say",
+        "who": "marysue",
+        "expr": "tease",
+        "show": true,
+        "text": "人家叫玛丽苏，是写故事的人。"
       },
       {
         "t": "say",

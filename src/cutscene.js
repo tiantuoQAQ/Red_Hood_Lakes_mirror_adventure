@@ -84,6 +84,8 @@ const Cutscene = (function () {
 
   // 表情差分：有 art/portrait/<id>_<expr>.png 就用它，没有就继续用基础立绘 / 占位块
   // 约定的 expr：eyes_closed（闭眼） / eyes_open（睁眼） / ready（备战） / shock（震惊） / shadow（黑影）
+  const KNOWN = Object.create(null);   // 已自报姓名的角色
+  ['rek', 'norden', 'mabel', 'rek_crimson'].forEach(function (k) { KNOWN[k] = true; });
   const EXPR_LABEL = {
     '': '', eyes_closed: '闭眼', eyes_open: '睁眼', ready: '备战', shock: '震惊', shadow: '黑影',
     seated_closed: '坐·闭眼', seated_open: '坐·睁眼', stand_ready: '备战', stand: '起身',
@@ -261,6 +263,13 @@ const Cutscene = (function () {
       case 'battle':
         startBattle(c.boss || 'marysue', c.after || null);
         return;
+      case 'reveal':
+        if (c.who) {
+          KNOWN[c.who] = true;
+          S.intro = { id: c.who };
+          S.framesLeft = 120;
+        }
+        break;
       case 'music':
         // 战斗曲：进 Boss 战之前的对话里就开始放
         if (typeof Music !== 'undefined') {
@@ -729,7 +738,8 @@ const Cutscene = (function () {
       const c = charOf(S.text.who);
       const ex = EXPR_LABEL[S.text.expr || ''] || S.text.expr || '';
       // 黑影 / 尚未识别的说话者：只显示「？？？」
-      const tag = S.text.expr === 'shadow' ? '？？？' : c.name + (ex ? ' · ' + ex : '');
+      const unknown = !KNOWN[S.text.who] || S.text.expr === 'shadow';
+      const tag = unknown ? '？？？' : c.name + (ex ? ' · ' + ex : '');
       ctx.font = '22px "Segoe UI", "Microsoft YaHei", system-ui, sans-serif';
       const tagW = Math.max(140, ctx.measureText(tag).width + 36);
       roundRectPath(ctx, x + 24, y - 20, tagW, 40, 10);

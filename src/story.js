@@ -70,13 +70,16 @@ const STORY = {
       { t: 'say', who: 'rek', show: true, text: '……真让人恶心。' },
       { t: 'say', who: 'rek', expr: 'eyes_closed', show: true, text: '你的故事里，主角等来的永远是悲惨结局。' },
       { t: 'say', who: 'rek', expr: 'eyes_open', show: true, text: '我，不认可这样的结局。' },
-      { t: 'say', who: 'rek', style: 'red', shake: true, show: true, text: '玛丽苏……' },
+      { t: 'say', who: 'rek', style: 'red', shake: true, show: true, text: '……你到底是什么东西。' },
       { t: 'say', who: 'rek', style: 'red', shake: true, show: true, text: '在砍下你的头颅前，我绝不会倒下。' },
 
       { t: 'pose', who: 'rek', expr: 'ready', frames: 40 },
 
-      { t: 'say', who: 'marysue', show: true, text: '哎呀呀，人家真是怕极了呢～' },
-      { t: 'say', who: 'marysue', show: true, text: '人家可是……从来没有把你当成敌人哦。' },
+      { t: 'say', who: 'marysue', expr: 'shadow', show: true, text: '哎呀呀，人家真是怕极了呢～' },
+      { t: 'say', who: 'marysue', expr: 'shadow', show: true, text: '人家可是……从来没有把你当成敌人哦。' },
+      { t: 'say', who: 'marysue', expr: 'shadow', show: true, text: '不过，告诉你也无妨。' },
+      { t: 'reveal', who: 'marysue' },
+      { t: 'say', who: 'marysue', expr: 'tease', show: true, text: '人家叫玛丽苏，是写故事的人。' },
       { t: 'say', who: 'marysue', expr: 'eyes_closed', show: true, text: '而且……你真觉得……' },
       { t: 'say', who: 'marysue', expr: 'eyes_open', show: true, text: '你能碰到我吗？' },
 
