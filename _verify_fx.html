@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>verify-fx</title>
+<style>html,body{margin:0;background:#0b0e13}canvas{display:block}</style>
+</head>
+<body>
+<canvas id="game" width="1280" height="720"></canvas>
+<script src="src/config.js"></script>
+<script src="src/input.js"></script>
+<script src="src/gfx.js"></script>
+<script src="src/patterns.js"></script>
+<script src="src/sprites.js"></script>
+<script src="src/fx.js"></script>
+<script src="src/audio.js"></script>
+<script src="src/game.js"></script>
+<script src="src/render.js"></script>
+<script>
+  // 离线校验页：只验证「光球形态 + 粒子拖尾」的渲染，不走输入。
+  var c = document.getElementById('game');
+  var cx = c.getContext('2d', { alpha: false });
+  Sprites.load(CFG.sprite.id, CFG.sprite.dir);
+  resetGame();
+
+  var p = Game.player;
+  p.ball = true;
+  p.stamina = 100;
+  p.ballLaunch = 0;
+
+  // 沿一条弧线拖动光球，每两帧在身后撒一颗粒子（与 game.js 里同一套参数）
+  var N = 90;
+  for (var i = 0; i < N; i++) {
+    Game.frame++;
+    var ang = i * 0.11;
+    p.x = 460 + Math.cos(ang) * 210;
+    p.y = 300 + Math.sin(ang) * 150;
+    p.vx = -Math.sin(ang) * 210 * 0.11 * 60;
+    p.vy = Math.cos(ang) * 150 * 0.11 * 60;
+
+    if (Game.frame % 2 === 0) {
+      var back = Math.atan2(-p.vy, -p.vx || 0.0001);
+      var a = back + (Math.random() - 0.5) * 0.9;
+      var sp = 40 + Math.random() * 90;
+      var life = 16 + Math.random() * 10;
+      Game.particles.push({
+        kind: 'fx',
+        x: p.x + (Math.random() - 0.5) * 12,
+        y: p.y + (Math.random() - 0.5) * 12,
+        vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+        life: life, max: life, r: 2,
+        size: 56 + Math.random() * 44,
+        rot: Math.random() * 6.283,
+        spin: (Math.random() - 0.5) * 0.22,
+        color: COLORS.player
+      });
+    }
+    updateParticles(STEP);
+  }
+
+  render(cx);
+
+  var done = false;
+  function repaintWhenReady(tries) {
+    if (Fx.ready() && (Sprites.ready(CFG.sprite.id) || tries < 30)) { render(cx); done = true; return; }
+    if (tries <= 0) { render(cx); done = true; return; }
+    setTimeout(function () { repaintWhenReady(tries - 1); }, 60);
+  }
+  setTimeout(function () { repaintWhenReady(40); }, 120);
+
+  window.__fx = { particles: Game.particles.length, fxReady: Fx.ready() };
+  document.title = 'particles=' + Game.particles.length + ' fxReady=' + Fx.ready();
+</script>
+</body>
+</html>

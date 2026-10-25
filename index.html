@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>镜 / MIRROR — 弹幕闪避原型</title>
+<style>
+  /* 必杀技名用的毛笔体（随包分发，保证任何机器都能加载） */
+  @font-face {
+    font-family: 'CutinBrush';
+    src: url('art/font/cutin_brush.ttf') format('truetype');
+    font-display: swap;
+  }
+  :root {
+    --ice: #5fd8ff;
+    --hazard: #ff3fa4;
+    --self: #ffa53f;
+    --ink: #e8eef6;
+    --dim: #6f7d90;
+    --bg: #0b0e13;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    overflow: hidden;
+  }
+  #wrap {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  canvas {
+    display: block;
+    max-width: 100vw;
+    max-height: 100vh;
+    aspect-ratio: 16 / 9;
+    width: 100vw;
+    height: auto;
+    background: var(--bg);
+    image-rendering: auto;
+  }
+  #panel {
+    position: fixed; top: 12px; right: 12px; width: 268px;
+    max-height: calc(100vh - 24px); overflow-y: auto;
+    background: rgba(16, 22, 30, 0.94);
+    border: 1px solid #2a3542; border-radius: 8px;
+    padding: 10px 12px 14px;
+    font-size: 12px; line-height: 1.5;
+    z-index: 10;
+    backdrop-filter: blur(6px);
+  }
+  #panel.hidden { display: none; }
+  #panel h3 {
+    margin: 0 0 8px; font-size: 12px; letter-spacing: 1px;
+    color: var(--dim); font-weight: 600; text-transform: uppercase;
+  }
+  #panel .row { margin-bottom: 7px; }
+  #panel .row label {
+    display: flex; justify-content: space-between;
+    color: #a8b6c6; margin-bottom: 2px;
+  }
+  #panel .row label output { color: var(--ice); font-variant-numeric: tabular-nums; }
+  #panel input[type=range] {
+    width: 100%; height: 4px; -webkit-appearance: none; appearance: none;
+    background: #2a3542; border-radius: 2px; outline: none;
+  }
+  #panel input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%;
+    background: var(--ice); cursor: pointer;
+  }
+  #panel .btns { display: flex; gap: 6px; margin-top: 10px; }
+  #panel button {
+    flex: 1; padding: 5px 6px; font-size: 11px; cursor: pointer;
+    background: #1c2632; color: var(--ink); border: 1px solid #2f3d4d;
+    border-radius: 5px;
+  }
+  #panel button:hover { border-color: var(--ice); color: var(--ice); }
+  #panel .hint { color: #556273; font-size: 11px; margin-top: 8px; }
+</style>
+</head>
+<body>
+  <div id="wrap"><canvas id="game"></canvas></div>
+
+  <div id="panel" class="hidden">
+    <h3>手感调参 · 实时生效</h3>
+    <div class="row">
+      <label>移动速度 <output data-out="player.speed"></output></label>
+      <input type="range" data-cfg="player.speed" min="140" max="700" step="10">
+    </div>
+    <div class="row">
+      <label>跳跃初速 <output data-out="player.jumpVel"></output></label>
+      <input type="range" data-cfg="player.jumpVel" min="-1100" max="-400" step="10">
+    </div>
+    <div class="row">
+      <label>判定点半径 <output data-out="player.hitR"></output></label>
+      <input type="range" data-cfg="player.hitR" min="1" max="16" step="0.5">
+    </div>
+    <div class="row">
+      <label>冲刺无敌帧 <output data-out="player.dashIFrames"></output></label>
+      <input type="range" data-cfg="player.dashIFrames" min="4" max="40" step="1">
+    </div>
+    <div class="row">
+      <label>冲刺持续帧 <output data-out="player.dashFrames"></output></label>
+      <input type="range" data-cfg="player.dashFrames" min="4" max="30" step="1"></div>
+    <div class="row">
+      <label>球形态速度 <output data-out="player.ballSpeed"></output></label>
+      <input type="range" data-cfg="player.ballSpeed" min="200" max="900" step="10">
+    </div>
+    <div class="row">
+      <label>球形态体力消耗/秒 <output data-out="player.ballDrain"></output></label>
+      <input type="range" data-cfg="player.ballDrain" min="8" max="90" step="1">
+    </div>
+    <div class="row">
+      <label>球形态起手上冲帧 <output data-out="player.ballLaunchFrames"></output></label>
+      <input type="range" data-cfg="player.ballLaunchFrames" min="0" max="20" step="1">
+    </div>
+    <div class="row">
+      <label>加速度 <output data-out="player.accel"></output></label>
+      <input type="range" data-cfg="player.accel" min="1000" max="12000" step="200">
+    </div>
+    <div class="row">
+      <label>摩擦（松手减速） <output data-out="player.friction"></output></label>
+      <input type="range" data-cfg="player.friction" min="800" max="12000" step="200">
+    </div>
+    <div class="row">
+      <label>冲刺冷却帧 <output data-out="player.dashCd"></output></label>
+      <input type="range" data-cfg="player.dashCd" min="0" max="60" step="1">
+    </div>
+    <div class=row>
+      <label>冲刺起步加速帧 <output data-out="player.dashRampFrames"></output></label>
+      <input type=range data-cfg="player.dashRampFrames" min=0 max=10 step=1>
+    </div>
+    <div class=row>
+      <label>冲刺滑行帧 <output data-out="player.dashOutFrames"></output></label>
+      <input type=range data-cfg="player.dashOutFrames" min=0 max=20 step=1>
+    </div>
+    <div class=row>
+      <label>滑行速度保留率 <output data-out="player.dashOutKeep"></output></label>
+      <input type=range data-cfg="player.dashOutKeep" min=0.3 max=0.95 step=0.05>
+    </div>
+    <div class=row>
+      <label>输入缓冲帧 <output data-out="player.inputBuffer"></output></label>
+      <input type=range data-cfg="player.inputBuffer" min=0 max=20 step=1>
+    </div>
+    <div class=row>
+      <label>后发对齐 X <output data-out="sprite.hairDx"></output></label>
+      <input type=range data-cfg="sprite.hairDx" min=-60 max=60 step=1>
+    </div>
+    <div class=row>
+      <label>后发对齐 Y <output data-out="sprite.hairDy"></output></label>
+      <input type=range data-cfg="sprite.hairDy" min=-60 max=60 step=1>
+    </div>
+    <div class=row>
+      <label>头部对齐 X <output data-out="sprite.headDx"></output></label>
+      <input type=range data-cfg="sprite.headDx" min=-60 max=60 step=1>
+    </div>
+    <div class=row>
+      <label>头部对齐 Y <output data-out="sprite.headDy"></output></label>
+      <input type=range data-cfg="sprite.headDy" min=-60 max=60 step=1>
+    </div>
+    <div class=row>
+      <label>斗篷对齐 X <output data-out="sprite.capeDx"></output></label>
+      <input type=range data-cfg="sprite.capeDx" min=-60 max=60 step=1>
+    </div>
+    <div class=row>
+      <label>斗篷对齐 Y <output data-out="sprite.capeDy"></output></label>
+      <input type=range data-cfg="sprite.capeDy" min=-60 max=60 step=1>
+    </div>
+    <div class="row">
+      <label>擦弹判定半径 <output data-out="player.grazeR"></output></label>
+      <input type="range" data-cfg="player.grazeR" min="10" max="60" step="1">
+    </div>
+    <div class="row">
+      <label>擦弹连击窗口帧 <output data-out="player.grazeChainWindow"></output></label>
+      <input type="range" data-cfg="player.grazeChainWindow" min="20" max="180" step="5">
+    </div>
+    <div class="row">
+      <label>每 N 次擦弹升档 <output data-out="player.grazeChainCourageStep"></output></label>
+      <input type="range" data-cfg="player.grazeChainCourageStep" min="1" max="10" step="1">
+    </div>
+    <div class="row">
+      <label>连击勇气倍率上限 <output data-out="player.grazeChainMaxMult"></output></label>
+      <input type="range" data-cfg="player.grazeChainMaxMult" min="1" max="6" step="0.5">
+    </div>
+    <div class="row">
+      <label>擦弹返还冲刺冷却 <output data-out="player.grazeDashRefund"></output></label>
+      <input type="range" data-cfg="player.grazeDashRefund" min="0" max="10" step="1">
+    </div>
+    <div class="row">
+      <label>射击间隔帧 <output data-out="player.fireInterval"></output></label>
+      <input type="range" data-cfg="player.fireInterval" min="4" max="30" step="1">
+    </div>
+    <div class="row">
+      <label>每发命中的勇气 <output data-out="player.couragePerHit"></output></label>
+      <input type="range" data-cfg="player.couragePerHit" min="0" max="10" step="1">
+    </div>
+    <div class="row">
+      <label>受伤无敌帧 <output data-out="player.hurtIFrames"></output></label>
+      <input type="range" data-cfg="player.hurtIFrames" min="20" max="160" step="5">
+    </div>
+    <div class="row">
+      <label>弹速倍率 <output data-out="bullets.speedScale"></output></label>
+      <input type="range" data-cfg="bullets.speedScale" min="0.4" max="2.2" step="0.05">
+    </div>
+    <div class="row">
+      <label>BOSS 血量 <output data-out="boss.hp"></output></label>
+      <input type="range" data-cfg="boss.hp" min="120" max="1200" step="20">
+    </div>
+    <div class="btns">
+      <button id="btn-restart">重开</button>
+      <button id="btn-json">导出 JSON</button>
+    </div>
+    <div class="hint">F1 判定点 · F2 面板 · P 暂停 · R 重开</div>
+  </div>
+
+  <script src="src/config.js"></script>
+  <script src="src/input.js"></script>
+  <script src="src/gfx.js"></script>
+  <script src="src/patterns.js"></script>
+  <script src="src/sprites.js"></script>
+  <script src="src/boss_art.js"></script>
+  <script src="src/fx.js"></script>
+<script src="src/mirrorfx.js"></script>
+  <script src="src/audio.js"></script>
+  <script src="src/game.js"></script>
+  <script src="src/story.js"></script>
+  <script src="src/cutscene.js"></script>
+  <script src="src/render.js"></script>
+  <script src="src/main.js"></script>
+</body>
+</html>

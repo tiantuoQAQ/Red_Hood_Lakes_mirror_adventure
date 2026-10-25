@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>verify</title>
+<style>html,body{margin:0;background:#0b0e13}canvas{display:block}</style>
+</head>
+<body>
+<canvas id="game" width="1280" height="720"></canvas>
+<script src="src/config.js"></script>
+<script src="src/input.js"></script>
+<script src="src/gfx.js"></script>
+<script src="src/patterns.js"></script>
+<script src="src/sprites.js"></script>
+<script src="src/audio.js"></script>
+<script src="src/game.js"></script>
+<script src="src/render.js"></script>
+<script>
+  // 离线校验页：不加载 main.js，手动推进固定帧数后绘制一帧，用于截图检查渲染。
+  var c = document.getElementById('game');
+  var cx = c.getContext('2d', { alpha: false });
+  Sprites.load(CFG.sprite.id, CFG.sprite.dir);
+  resetGame();
+  Game.player.x = 420;
+  var FRAMES = parseInt((location.search.match(/ff=(\d+)/) || [])[1] || '200', 10);
+  for (var i = 0; i < FRAMES; i++) { update(STEP); Input.tick(); }
+
+  // 进入第三阶段并强制打出激光与穿刺，方便截图检查光束/预警线渲染
+  Game.boss.hp = Game.boss.maxHp * 0.3;
+  update(STEP);
+  PATTERNS.lances.fire(Game, Game.boss, 0);
+  PATTERNS.laser.fire(Game, Game.boss, 0);
+  for (var j = 0; j < 52; j++) { update(STEP); Input.tick(); }
+  PATTERNS.lances.fire(Game, Game.boss, 0);
+
+  // 制造一次命中与一次擦弹，验证飘字与反馈渲染
+  Game.shots.push({ x: Game.boss.x, y: Game.boss.y, vx: 0, vy: 0, r: 5, dmg: 3 });
+  Game.bullets.push({
+    x: Game.player.x + CFG.player.grazeR - 2, y: Game.player.y,
+    vx: 0, vy: -260, r: CFG.bullets.r, kind: 'hazard', grazed: false, life: 40
+  });
+  update(STEP);
+  update(STEP);
+
+  render(cx);
+
+  // 贴图异步加载：加载完再重画一次，否则截图拿到的是退回的菱形
+  (function repaintWhenReady(tries) {
+    if (Sprites.ready(CFG.sprite.id)) { render(cx); return; }
+    if (tries <= 0) return;
+    setTimeout(function () { repaintWhenReady(tries - 1); }, 60);
+  })(40);
+
+  window.__stats = {
+    mode: Game.mode,
+    lives: Game.lives,
+    bullets: Game.bullets.length,
+    shots: Game.shots.length,
+    bossHp: Game.boss.hp,
+    phase: Game.boss.phase
+  };
+  document.title = JSON.stringify(window.__stats);
+</script>
+</body>
+</html>

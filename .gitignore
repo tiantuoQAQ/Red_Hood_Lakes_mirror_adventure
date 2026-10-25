@@ -1,0 +1,34 @@
+# 依赖与构建产物（本项目无依赖，保留以防后续引入）
+node_modules/
+dist/
+build/
+
+# 编辑器与系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 日志与临时文件
+*.log
+*.tmp
+*.bak
+
+# 截图与调试产物
+screenshots/
+*.png
+*.jpg
+# 但美术资产与文档配图要进仓库
+!docs/**/*.png
+!art/**/*.png
+
+# 本地覆盖配置
+config.local.js
+
+# ��ʱĿ¼����ͼ/����� profile��
+tmp/
+
+# Godot editor cache and import metadata (local paths, not for repo)
+.godot/
+*.import

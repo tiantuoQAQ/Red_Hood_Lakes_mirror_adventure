@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>verify-portrait</title>
+<style>html,body{margin:0;background:#000}canvas{display:block}</style>
+</head>
+<body>
+<canvas id="c" width="1280" height="720"></canvas>
+<script src="src/config.js"></script>
+<script src="src/input.js"></script>
+<script src="src/gfx.js"></script>
+<script src="src/patterns.js"></script>
+<script src="src/sprites.js"></script>
+<script src="src/fx.js"></script>
+<script src="src/audio.js"></script>
+<script src="src/story.js"></script>
+<script src="src/game.js"></script>
+<script src="src/cutscene.js"></script>
+<script src="src/render.js"></script>
+<script>
+  // 立绘在对话框里的实际观感：固定状态，每帧重画，等图片加载完就自然显示
+  var c = document.getElementById('c');
+  var cx = c.getContext('2d');
+  resetGame('marysue');
+  Game.mode = 'story';
+  var S = Cutscene.state;
+  Cutscene.start('ambush');
+  S.bg = 'forest';
+  S.black = 0;
+  S.t = 60;
+  S.cg = null;
+  S.flash = null;
+  S.title = null;
+  S.card = null;
+  S.intro = null;
+  S.portrait = { who: 'rek', expr: '' };
+  S.text = {
+    mode: 'say', who: 'rek', shown: 9999, acc: 0, pause: 0, t: 40,
+    expr: '', style: '', shake: false, bump: false,
+    text: '在你写的故事里，主角等到的，永远只有悲惨结局。'
+  };
+  function loop() { Cutscene.draw(cx); requestAnimationFrame(loop); }
+  loop();
+</script>
+</body>
+</html>
