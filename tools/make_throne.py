@@ -12,7 +12,7 @@ from collections import deque
 import numpy as np
 from PIL import Image
 
-KEY = 'REDACTED-API-KEY'
+KEY = os.environ.get('A6API_KEY', '')  # 从环境变量读取，勿硬编码
 URL = 'https://api.a6api.com/v1/images/generations'
 PROMPT = ('Game background prop, centered on pure black background: an empty gothic throne seen from the front, '
           'tall blackened-iron backrest with thin thorn-like points, worn dark red velvet cushion, subtle red rim light, '

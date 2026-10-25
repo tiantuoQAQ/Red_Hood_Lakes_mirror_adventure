@@ -7,7 +7,7 @@ import time
 import urllib.request
 import uuid
 
-KEY = 'REDACTED-API-KEY'
+KEY = os.environ.get('A6API_KEY', '')  # 从环境变量读取，勿硬编码
 URL = 'https://api.a6api.com/v1/images/edits'
 SRC = 'art/portrait/crimson_stand.png'
 OUT = 'art/portrait/crimson_mature_raw.png'

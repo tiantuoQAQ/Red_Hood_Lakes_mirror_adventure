@@ -12,7 +12,7 @@ import time
 import urllib.request
 
 API_URL = 'https://api.a6api.com/v1/chat/completions'
-API_KEY = 'REDACTED-API-KEY'
+API_KEY = os.environ.get('A6API_KEY', '')  # 从环境变量读取，勿硬编码
 
 # (显示名, 模型, 超时秒, max_tokens)
 PANEL = [
