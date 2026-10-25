@@ -3013,8 +3013,8 @@ func _patterns_marysue() -> void:
 					_spawn_bullet(boss_pos, Vector2(cos(sp_a), sin(sp_a)) * (120.0 + float(k) * 14.0), HAZARD, "yinyang", 5.5, 0.15)
 			
 			if frame % 40 == 0:
-				for k in range(10):
-					var a := TAU * float(k) / 10.0 + elapsed * 0.5
+				for k in range(7):
+					var a := TAU * float(k) / 7.0 + elapsed * 0.5
 					_spawn_bullet(boss_pos, Vector2(cos(a), sin(a)) * 150.0, HAZARD, "talisman", 5.0, 0.02)
 			if frame % 75 == 0:
 				for k in range(6):
@@ -3022,10 +3022,12 @@ func _patterns_marysue() -> void:
 					_spawn_bullet(boss_pos, Vector2(cos(a_s), sin(a_s)) * 190.0, HAZARD, "yinyang", 5.0, 0.15)
 		1:  # 贰 · 反语：阴阳球缓慢旋转外扩
 			if frame % 45 == 0:
-				for k in range(8):
-					var a2 := -TAU * float(k) / 8.0 + elapsed * 0.9
+				for k in range(6):
+					var a2 := -TAU * float(k) / 6.0 + elapsed * 0.9
 					_spawn_bullet(boss_pos, Vector2(cos(a2), sin(a2)) * 170.0, HAZARD, "yinyang", 5.5, 0.25)
-		2:  # 叁 · 镜廊：符纸雨 + 阴阳球 + 箱庭囚笼
+		2:  # 叁 · 镜廊：符纸雨 + 阴阳球 + 箱庭囚笼 + 缩圈
+			if frame % 260 == 0:
+				_wall_shrink_pattern()
 			if frame % 160 == 0:
 				var gap := randf_range(0.0, TAU)
 				var ccx := clampf(player_pos.x, _battle_left() + 120.0, _battle_right() - 120.0)
@@ -3040,14 +3042,16 @@ func _patterns_marysue() -> void:
 			if frame % 200 == 0:
 				var lx0 := clampf(player_pos.x + randf_range(-200.0, 200.0), _battle_left() + 90.0, _battle_right() - 90.0)
 				_beam_warning(lx0)
-			if frame % 34 == 0:
+			if frame % 48 == 0:
 				_spawn_bullet(Vector2(randf_range(_battle_left() + 60.0, _battle_right() - 60.0), 60.0),
 					Vector2(0, 210.0), HAZARD, "talisman", 5.0, 0.0)
 			if frame % 90 == 0:
 				for k in range(5):
 					var a3 := -PI * 0.5 + (float(k) - 2.0) * 0.28
 					_spawn_bullet(boss_pos, Vector2(cos(a3), sin(a3)) * 200.0, HAZARD, "yinyang", 5.0, 0.3)
-		3:  # 肆 · 断线：预警激光 + 镜面反弹符纸 + 光轮切割
+		3:  # 肆 · 断线：预警激光 + 镜面反弹符纸 + 光轮切割 + 缩圈
+			if frame % 300 == 0:
+				_wall_shrink_pattern(110.0, 66.0)
 			if frame % 26 == 0:
 				# 光轮切割：两臂反向旋转，逐圈扩散（像锯齿光轮）
 				var arm := elapsed * 3.4
@@ -3805,3 +3809,21 @@ func _use_cheat_tragedy() -> void:
 	_spawn_mirror_shards(30, 1.3)
 	_spawn_fx_ring(boss_pos, Color(1, 0.2, 0.2, 0.9), 420.0, 0.5, 6.0)
 	sfx_player.play("skill")
+
+
+## 缩圈弹幕：从战场外框向内缓慢收拢（玩家必须往中间挤）
+func _wall_shrink_pattern(spacing: float = 96.0, speed: float = 78.0) -> void:
+	var left := _battle_left() - 90.0
+	var right := _battle_right() + 90.0
+	var y := 80.0
+	while y < GROUND_Y - 20.0:
+		# 左右两侧墙
+		_spawn_bullet(Vector2(left, y), Vector2(speed, 0), HAZARD, "talisman", 8.0, 0.0)
+		_spawn_bullet(Vector2(right, y), Vector2(-speed, 0), HAZARD, "talisman", 8.0, 0.0)
+		y += spacing
+	# 顶部下压
+	var x := left
+	while x < right:
+		_spawn_bullet(Vector2(x, 40.0), Vector2(0, speed * 0.85), HAZARD, "yinyang", 8.0, 0.0)
+		x += spacing * 1.35
+	_spawn_fx_ring(Vector2((left + right) * 0.5, GROUND_Y - 120.0), Color(0.51, 1, 0, 0.5), 340.0, 0.6, 3.0)
