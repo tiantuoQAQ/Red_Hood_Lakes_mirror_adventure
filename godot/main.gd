@@ -26,7 +26,7 @@ const PHASE_NAMES := {
 	"marysue": ["壹 · 箱庭", "贰 · 反语", "叁 · 镜廊", "肆 · 断线", "伍 · 狂言", "陆 · 天地倒悬"]
 }
 const VIEW := Vector2(1280.0, 720.0)
-const WORLD_W := 4800.0           # 用户要求：地图加长，初始看不到 NPC，要往右走才遇到
+const WORLD_W := 6400.0           # 用户要求：地图加长，初始看不到 NPC，要往右走才遇到
 const WALK_SHIFT := 1200.0        # 走位段的 NPC/道具整体右移，避免一进图就看见
 const GROUND_Y := 574.0
 const ARENA_LEFT := 48.0
@@ -181,7 +181,7 @@ const PLAYER_MAX_HP := 5
 var player_stamina := 100.0
 var player_stamina_display := 100.0  # Smooth lerp display value for stamina bar
 var player_courage := 0.0
-var player_energy := 4
+var player_energy: float = 4.0
 const ENERGY_MAX := 4.0
 const ENERGY_PER_GRAZE := 0.45   # 擦弹回复能量
 const ENERGY_PER_HIT := 0.16     # 子弹命中回复能量（明显可见）
@@ -495,9 +495,6 @@ func _start_story(id: String) -> void:
 			battle_cmd_boss = str(cmds[i].get("boss", "crimson"))
 			break
 	story_chapter = id
-	if CHAPTER_BATTLE_BGM.has(id):
-		_start_battle_bgm_for(str(CHAPTER_BATTLE_BGM[id]))
-		battle_bgm_started = true
 	var want_bgm := _chapter_bgm(id)
 	if want_bgm != "":
 		_play_bgm(want_bgm)
@@ -526,7 +523,7 @@ func _story_advance() -> void:
 		story_index += 1
 		var kind := str(command.get("t", ""))
 		# 战斗 BGM 提前两句话进（用户要求）
-		if battle_cmd_index >= 0 and not battle_bgm_started and story_index >= battle_cmd_index - 2:
+		if battle_cmd_index >= 0 and not battle_bgm_started and story_index >= battle_cmd_index - 4:
 			battle_bgm_started = true
 			_start_battle_bgm_for(battle_cmd_boss)
 		story_cmd = command
@@ -596,7 +593,7 @@ func _story_advance() -> void:
 				if rkey != "" and not known_names.has(rkey):
 					known_names.append(rkey)
 				story_intro = rkey
-				intro_hold = 2.4
+				intro_hold = 3.2
 				story_timer = 0.6
 				return
 			"intro":
@@ -655,7 +652,7 @@ func _start_say(command: Dictionary) -> void:
 		if not seen_speakers.has(speaker_key) and CHAR_TITLES.has(speaker_key):
 			seen_speakers.append(speaker_key)
 			story_intro = speaker_key
-			intro_hold = 2.4
+			intro_hold = 3.2
 	story_timer = 0.0
 
 func _start_duel(command: Dictionary) -> void:
@@ -833,7 +830,7 @@ func _update_walk() -> void:
 	_update_player()
 	_update_ball_fx()
 	_update_shots()
-	if not tutorial_shown and story_chapter in ["wake_talk", "enter_mirror", "mirror"] and mode == Mode.WALK:
+	if not tutorial_shown and mode == Mode.WALK:
 		tutorial_shown = true
 		tutorial_timer = 20.0
 	_update_npc_glow()
@@ -1472,7 +1469,7 @@ func _update_shots() -> void:
 			boss_hit_flash = 8
 			boss_ring_flash = 10
 			_fx_boss_hit(shot["pos"])
-			player_energy = minf(ENERGY_MAX, player_energy + ENERGY_PER_HIT)  # Hit reaction ring flash
+			player_energy = minf(ENERGY_MAX, player_energy + ENERGY_PER_HIT)
 			hitstop = 0  # 用户要求：命中 Boss 不顿帧
 			screen_shake = 0.0
 			_spawn_burst(shot["pos"], RED, 5)
@@ -2015,6 +2012,8 @@ func _draw_walk() -> void:
 	_draw_dash_fx()
 	_draw_dash_trail()
 	_draw_player_at(player_pos - Vector2(camera_x, 0), WHITE)
+	_draw_signboard()
+	_draw_tutorial()
 	_draw_particles_world()
 	# 走位段不画对话立绘（用户要求：对话结束立即消失）
 	draw_string(ThemeDB.fallback_font, Vector2(40, 48), "A / D 移动    SPACE 跳跃    SHIFT / K / 右键 冲刺    W 靠近并交互", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, WHITE)
@@ -3380,3 +3379,27 @@ func _draw_tutorial() -> void:
 	draw_string(ThemeDB.fallback_font, Vector2(150, 558), "· 红之惨剧：回复 2 HP，并强化剑气 20 秒", HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color(0.9, 0.9, 0.9, a))
 	draw_string(ThemeDB.fallback_font, Vector2(150, 594), "MP 回复：命中敌人 + 擦弹（贴近弹幕但不被击中）", HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color(1, 0.8, 0.4, a))
 	draw_string(ThemeDB.fallback_font, Vector2(930, 624), "ENTER 继续", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.75, 0.75, 0.75, a))
+
+
+## 镜子旁的告示牌：木质牌面 + 操作说明（不需要弹窗也能看到）
+func _draw_signboard() -> void:
+	# 只在有交互目标的走位段显示
+	if walk_target.size() == 0:
+		return
+	var tx := float(walk_target.get("x", 0.0))
+	if tx <= 0.0:
+		return
+	var sx := tx - camera_x - 150.0
+	var base_y := GROUND_Y
+	# 木桩
+	draw_rect(Rect2(sx + 52, base_y - 96, 10, 96), Color(0.24, 0.2, 0.18))
+	# 牌面
+	var board := Rect2(sx, base_y - 190, 128, 106)
+	draw_rect(board, Color(0.13, 0.11, 0.10, 0.96))
+	draw_rect(board, Color(1, 1, 1, 0.55), false, 2.0)
+	draw_line(board.position + Vector2(6, 8), board.position + Vector2(board.size.x - 6, 8), Color(1, 0.3, 0.3, 0.8), 2.0)
+	var tips := ["A / D  移动", "SPACE 跳跃", "SHIFT 冲刺", "空中W+冲刺 = 光球", "J / Z  射击", "C / V  技能"]
+	var ty := board.position.y + 26.0
+	for t in tips:
+		draw_string(ThemeDB.fallback_font, Vector2(board.position.x + 8, ty), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.92, 0.92, 0.92))
+		ty += 15.0
