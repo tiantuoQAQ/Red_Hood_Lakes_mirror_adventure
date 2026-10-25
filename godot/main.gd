@@ -995,6 +995,9 @@ func _update_player() -> void:
 		item["life"] = float(item.get("life", 0.0)) - FIXED_DT
 	trail = trail.filter(func(item): return float(item.get("life", 0.0)) > 0.0)
 	var axis := float(int(input_state.get("right", false)) - int(input_state.get("left", false)))
+	# 六阶段「天地倒悬」：左右输入彻底反转
+	if mirror_flip:
+		axis = -axis
 	var vertical := float(int(input_state.get("down", false)) - int(input_state.get("up", false)))
 	if axis != 0.0:
 		player_move_facing = signf(axis)
@@ -2118,6 +2121,8 @@ func _draw_battle() -> void:
 	_draw_fx_rings()
 	if mirror_world:
 		draw_set_transform(Vector2(VIEW.x, 0), 0.0, Vector2(-1, 1))
+	if mirror_world:
+		draw_set_transform(Vector2(VIEW.x, 0), 0.0, Vector2(-1, 1))
 	_draw_player_at(player_pos - Vector2(camera_x, 0), WHITE)
 	_draw_particles_world()
 	if tragedy_buff_t > 0.0:
@@ -2136,6 +2141,8 @@ func _draw_battle() -> void:
 		draw_rect(Rect2(0, 0, 14, VIEW.y), Color(1, 0, 0, 0.45 * hv))
 		draw_rect(Rect2(VIEW.x - 14, 0, 14, VIEW.y), Color(1, 0, 0, 0.45 * hv))
 		hurt_vignette -= 1
+	if mirror_world:
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	if mirror_world:
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	_draw_battle_overlays()
@@ -3040,7 +3047,19 @@ func _patterns_marysue() -> void:
 				for k in range(5):
 					var a3 := -PI * 0.5 + (float(k) - 2.0) * 0.28
 					_spawn_bullet(boss_pos, Vector2(cos(a3), sin(a3)) * 200.0, HAZARD, "yinyang", 5.0, 0.3)
-		3:  # 肆 · 断线：预警激光 + 镜面反弹符纸
+		3:  # 肆 · 断线：预警激光 + 镜面反弹符纸 + 光轮切割
+			if frame % 26 == 0:
+				# 光轮切割：两臂反向旋转，逐圈扩散（像锯齿光轮）
+				var arm := elapsed * 3.4
+				for k in range(3):
+					var ra := arm + float(k) * TAU / 3.0
+					var rb := -arm + float(k) * TAU / 3.0 + PI
+					var rad := 60.0 + float(frame % 130) * 1.6
+					_spawn_bullet(boss_pos + Vector2(cos(ra), sin(ra)) * rad,
+						Vector2(cos(ra + PI * 0.5), sin(ra + PI * 0.5)) * 210.0, HAZARD, "yinyang", 4.0, 0.0)
+					_spawn_bullet(boss_pos + Vector2(cos(rb), sin(rb)) * rad,
+						Vector2(cos(rb - PI * 0.5), sin(rb - PI * 0.5)) * 210.0, HAZARD, "talisman", 4.0, 0.0)
+				_spawn_fx_ring(boss_pos, Color(0.51, 1, 0, 0.25), 180.0, 0.4, 2.0)
 			if frame % 110 == 0:
 				for k in range(4):
 					var ba := randf_range(0.0, TAU)
