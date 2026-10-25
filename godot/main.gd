@@ -66,6 +66,7 @@ var story_title := ""
 var story_title_sub := ""
 var story_intro := ""
 var map_bgm_player: AudioStreamPlayer
+var mirror_bgm_player: AudioStreamPlayer
 var map_bgm_started := false
 var intro_hold := 0.0      # 竖幅在下一句仍停留的秒数
 var seen_speakers: Array = []  # 本章已登场过的角色（首次说话时弹称号）
@@ -213,6 +214,15 @@ func _ready() -> void:
 	add_child(map_bgm_player)
 	if ResourceLoader.exists("res://audio/map_bgm.ogg"):
 		map_bgm_player.stream = load("res://audio/map_bgm.ogg")
+	mirror_bgm_player = AudioStreamPlayer.new()
+	mirror_bgm_player.bus = "Master"
+	mirror_bgm_player.volume_db = -12.0
+	add_child(mirror_bgm_player)
+	if ResourceLoader.exists("res://audio/mirrorworld_bgm.ogg"):
+		var ms: AudioStream = load("res://audio/mirrorworld_bgm.ogg")
+		if ms is AudioStreamOggVorbis:
+			ms.loop = true
+		mirror_bgm_player.stream = ms
 
 	_load_assets()
 	_load_story()
@@ -654,7 +664,13 @@ func _finish_walk() -> void:
 func _start_walk(command: Dictionary, long_map: bool = false) -> void:
 	if last_left != "" or last_right != "":
 		portrait_fade = 1.0
-	_start_map_bgm()
+	if story_bg == "forest":
+		_start_map_bgm()
+		_stop_mirror_bgm()
+	else:
+		_start_mirror_bgm()
+		if map_bgm_player != null and map_bgm_player.playing:
+			map_bgm_player.stop()
 	ball_hint_t = 6.0
 	# Mirror shards transition (from any mode → walk)
 	if mode != Mode.WALK:
@@ -2911,3 +2927,15 @@ func _draw_ball_fx() -> void:
 		var ph := fmod(elapsed * 0.9 + float(i) * 0.25, 1.0)
 		var smoke_pos := center - dir * (30.0 + ph * 90.0) + Vector2(0, sin(float(i) * 2.1 + elapsed) * 10.0)
 		draw_circle(smoke_pos, 10.0 + ph * 22.0, Color(0.55, 0.55, 0.55, 0.16 * (1.0 - ph)))
+
+
+## 镜中世界 BGM（循环）
+func _start_mirror_bgm() -> void:
+	if mirror_bgm_player == null or mirror_bgm_player.stream == null:
+		return
+	if not mirror_bgm_player.playing:
+		mirror_bgm_player.play()
+
+func _stop_mirror_bgm() -> void:
+	if mirror_bgm_player != null and mirror_bgm_player.playing:
+		mirror_bgm_player.stop()
