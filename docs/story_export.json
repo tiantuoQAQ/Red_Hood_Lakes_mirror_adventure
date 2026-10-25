@@ -124,6 +124,13 @@
         "who": "marysue",
         "expr": "shadow",
         "show": true,
+        "text": "……"
+      },
+      {
+        "t": "say",
+        "who": "marysue",
+        "expr": "shadow",
+        "show": true,
         "text": "库嘻嘻……"
       },
       {
@@ -476,6 +483,7 @@
       {
         "t": "walk",
         "bg": "void",
+        "cam": true,
         "target": {
           "kind": "mirror",
           "x": 1040

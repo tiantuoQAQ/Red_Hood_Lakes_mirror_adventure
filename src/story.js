@@ -63,6 +63,7 @@ const STORY = {
   //   art/portrait/rek_eyes_closed.png 等；没有图时代码自动退回基础立绘或占位块。
   ambush: {
     cmds: [
+      { t: 'say', who: 'marysue', expr: 'shadow', show: true, text: '……' },
       { t: 'say', who: 'marysue', expr: 'shadow', show: true, text: '库嘻嘻……' },
       { t: 'say', who: 'marysue', expr: 'shadow', show: true, text: '沉浸在人家赐你的美好里，走向注定的结局，不好吗？' },
       { t: 'say', who: 'marysue', expr: 'shadow', show: true, text: '为什么这么急着，跳出人家的童话呢～' },
@@ -141,7 +142,7 @@ const STORY = {
       { t: 'say', who: 'norden', show: true, text: '祝您好运。' },
 
       // 说完才出现镜子：玩家自己走过去，按 W 交互
-      { t: 'walk', bg: 'void', target: { kind: 'mirror', x: 1040 }, next: 'enter_mirror' }
+      { t: 'walk', bg: 'void', cam: true, target: { kind: 'mirror', x: 1040 }, next: 'enter_mirror' }
     ]
   },
 

@@ -676,7 +676,7 @@ func _start_walk(command: Dictionary, long_map: bool = false) -> void:
 		for prop in walk_props:
 			if prop is Dictionary and prop.has("x"):
 				prop["x"] = float(prop["x"]) + WALK_SHIFT
-	walk_camera = bool(command.get("cam", false))
+	walk_camera = bool(command.get("cam", walk_target.size() > 0))   # 有交互目标时默认跟随（否则目标可能在屏幕外）
 	if command.has("bg"):
 		story_bg = str(command.get("bg", story_bg))
 	camera_x = 0.0
