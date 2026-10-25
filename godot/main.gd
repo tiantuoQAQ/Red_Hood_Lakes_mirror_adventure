@@ -300,6 +300,7 @@ func _load_assets() -> void:
 		"bg_mirrorworld": "res://art/bg/bg_mirrorworld.png",
 		"mirror_alt": "res://art/bg/mirror_alt.jpg",
 		"throne": "res://art/obj/throne.png",
+		"throne_new": "res://art/obj/throne_new.png",
 		"mirror_stand": "res://art/obj/mirror_stand.png",
 		"norden": "res://art/char/norden_idle.png",
 		"mabel": "res://art/char/mabel_idle.png",
@@ -1944,9 +1945,13 @@ func _draw_walk() -> void:
 	for prop in walk_props:
 		var kind := str(prop.get("kind", ""))
 		var pos := Vector2(float(prop.get("x", 0.0)) - camera_x, GROUND_Y)
-		if kind == "throne" and textures.get("throne"):
-			# 用户反馈王座贴图难看：改成"镜面之门"，与主题一致，王座不再出现在地图里
-			_draw_mirror_gate(pos)
+		if kind == "throne":
+			# 地图王座：新生成的低调暗铁王座（压暗过，不抢画面）
+			var ttex: Texture2D = textures.get("throne_new")
+			if ttex:
+				character_art.draw_ground(self, ttex, pos, 330.0)
+			else:
+				_draw_mirror_gate(pos)
 		elif kind == "norden" or kind == "mabel":
 			var fallback_tex: Texture2D = textures.get(kind)
 			var height := NPC_MABEL_HEIGHT if kind == "mabel" else NPC_NORDEN_HEIGHT
