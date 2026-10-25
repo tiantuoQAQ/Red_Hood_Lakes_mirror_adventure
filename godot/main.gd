@@ -434,7 +434,7 @@ func _physics_process(_delta: float) -> void:
 		_respawn_after_death()
 	if tutorial_timer > 0.0:
 		tutorial_timer = maxf(0.0, tutorial_timer - FIXED_DT)
-		if _just("confirm") or _just("skip") or _just("shoot"):
+		if _just("confirm") or _just("shoot"):
 			tutorial_timer = 0.0
 	if _just("restart") and mode != Mode.TITLE:
 		mode = Mode.TITLE
@@ -489,7 +489,6 @@ func _read_inputs() -> Dictionary:
 		"gunfire": Input.is_key_pressed(KEY_C),
 		"hellfire": Input.is_key_pressed(KEY_V),
 		"confirm": Input.is_key_pressed(KEY_ENTER) or Input.is_key_pressed(KEY_SPACE) or Input.is_key_pressed(KEY_W) or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT),
-		"skip": Input.is_key_pressed(KEY_TAB),
 		"pause": Input.is_key_pressed(KEY_P) or Input.is_key_pressed(KEY_ESCAPE),
 		"restart": Input.is_key_pressed(KEY_R),
 		"mute": Input.is_key_pressed(KEY_M)
@@ -1924,7 +1923,7 @@ func _draw_story() -> void:
 		var text_col := WHITE
 		text_col.a = clampf(story_text_alpha * 1.35, 0.0, 1.0)
 		draw_string(ThemeDB.fallback_font, Vector2(82, 605 + slide), shown, HORIZONTAL_ALIGNMENT_LEFT, 1110, 24, text_col)
-		draw_string(ThemeDB.fallback_font, Vector2(1000, 652), "ENTER / SPACE 继续    TAB 跳过", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, GREY)
+		draw_string(ThemeDB.fallback_font, Vector2(1000, 652), "ENTER / SPACE 继续", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, GREY)
 	# Flash moved to top-level _draw() final layer (after mirror shards)
 
 func _draw_trap_cg() -> void:

@@ -382,7 +382,7 @@ const Cutscene = (function () {
 
     const command = current();
     const locked = command && (command.locked || command.t === 'flash');
-    if (Input.pressed('skip') && !locked) { skip(); return; }
+    // TAB 一键跳过已移除（反馈有 bug，先关闭该功能）
 
     // 退出动画优先：播完才进入下一条
     if (S.leaving) {
@@ -1147,7 +1147,7 @@ const Cutscene = (function () {
     // 镜之碎片（主题「镜」）：盖在角色之上、UI 之下
     if (typeof MirrorFx !== 'undefined') MirrorFx.draw(ctx);
 
-    label(ctx, 'Enter / 空格 继续    Tab 跳过', W - 30, H - 16, 13,
+    label(ctx, 'Enter / 空格 继续', W - 30, H - 16, 13,
           'rgba(255,255,255,0.35)', 'right', 400);
 
     if (S.black > 0.001) {

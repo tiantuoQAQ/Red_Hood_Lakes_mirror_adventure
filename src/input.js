@@ -13,8 +13,7 @@ const Input = (function () {
     skill: ['KeyL', 'KeyX'],
     start: ['Enter'],
     restart: ['KeyR'],
-    skip: ['Tab'],
-    pause: ['KeyP'],
+      pause: ['KeyP'],
     toggleHitbox: ['F1'],
     togglePanel: ['F2'],
     mute: ['KeyM']
