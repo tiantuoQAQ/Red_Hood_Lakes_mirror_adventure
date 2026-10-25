@@ -1017,7 +1017,7 @@ func _update_player() -> void:
 			player_dash_frames = DASH_FRAMES
 			player_dash_ramp = 3
 			player_dash_cd = DASH_FRAMES + 16  # Dash CD: 20 frames dash + 16 frames cooldown
-			player_dash_invuln = DASH_FRAMES + 4  # Dash invuln: 24 frames (20 dash + 4 extra, from Web規格)
+			player_dash_invuln = maxi(DASH_FRAMES + 4, 12)  # 冲刺无敌：至少 0.2 秒（12 帧）
 			_spawn_burst(player_pos, RED, 8)
 			_start_dash_fx()
 		elif player_dash_cd <= 0 and player_stamina < DASH_STAMINA_COST:
@@ -1051,14 +1051,14 @@ func _update_player() -> void:
 			player_grounded = false
 			player_jump_buffer = 0
 			_trigger_jump_squash("jump")
-		var target_speed := axis * 340.0
+		var target_speed := axis * 510.0   # 用户要求：左右移速 ×1.5
 		var control := 4600.0 if axis != 0.0 else 3800.0
 		player_vel.x = move_toward(player_vel.x, target_speed, control * FIXED_DT)
 		if not player_grounded:
 			player_vel.y += 2000.0 * FIXED_DT
 		player_pos += player_vel * FIXED_DT
 		if player_grounded:
-			player_stamina = minf(100.0, player_stamina + 52.0 * FIXED_DT)  # Ground stamina recovery: +26 stamina/s (允许连续冲刺)
+			player_stamina = minf(100.0, player_stamina + 78.0 * FIXED_DT)   # 体力回复 ×1.5  # Ground stamina recovery: +26 stamina/s (允许连续冲刺)
 			# Walk dust (grounded, moving)
 			if absf(player_vel.x) > 80.0:
 				walk_dust_timer -= 1
@@ -2754,13 +2754,13 @@ func _patterns_crimson() -> void:
 	# 参考用户截图：满屏火焰弹（弱追踪、会自动消散）、落地追击斩、新月剑气
 	match boss_phase:
 		0:  # 一：火焰弹幕（弱追踪，3 秒后消散）
-			if frame % 10 == 0:
+			if frame % 18 == 0:
 				for k in range(2):
 					var a := (player_pos - boss_pos).angle() + randf_range(-0.55, 0.55)
 					_spawn_bullet(boss_pos + Vector2(randf_range(-16, 16), randf_range(-16, 16)),
 						Vector2(cos(a), sin(a)) * randf_range(170.0, 260.0), RED, "flame", 3.0, 0.05)
-			if frame % 90 == 0:
-				for k in range(10):
+			if frame % 150 == 0:
+				for k in range(8):
 					var a2 := TAU * float(k) / 10.0 + elapsed
 					_spawn_bullet(boss_pos, Vector2(cos(a2), sin(a2)) * 210.0, RED, "flame", 3.4, 0.03)
 		1:  # 二：落地追击斩 + 火焰弹
@@ -2778,7 +2778,7 @@ func _patterns_crimson() -> void:
 				_crimson_crescent_volley(2)
 		4:  # 五：高频追击斩 + 火焰弹幕 + 锁定突刺锋
 			_crimson_rush_attack(true)
-			if frame % 6 == 0:
+			if frame % 12 == 0:
 				for k in range(2):
 					var a5 := (player_pos - boss_pos).angle() + randf_range(-0.4, 0.4)
 					_spawn_bullet(boss_pos, Vector2(cos(a5), sin(a5)) * 240.0, RED, "flame", 2.8, 0.06)
@@ -2801,7 +2801,7 @@ func _crimson_crescent_volley(count: int) -> void:
 func _crimson_rush_attack(finish_crescent: bool) -> void:
 	if boss_skill_state == "":
 		boss_skill_state = "leap"
-		boss_skill_timer = 22
+		boss_skill_timer = 30
 		boss_rush_side = signf(player_pos.x - boss_pos.x)
 		_spawn_fx_ring(boss_pos, Color(1, 0, 0, 0.7), 90.0, 0.25, 3.0)
 	elif boss_skill_state == "leap":
@@ -2821,7 +2821,7 @@ func _crimson_rush_attack(finish_crescent: bool) -> void:
 		for k in range(2):
 			_spawn_particle(Vector2(boss_pos.x - boss_rush_side * (20.0 + float(k) * 26.0), boss_pos.y - 30.0 + randf_range(-20, 20)),
 				Color(1, 0.15, 0.15, 0.85), 0.28, Vector2(-boss_rush_side * 260.0, randf_range(-30, 30)), 7.0)
-		if frame % 6 == 0:
+		if frame % 14 == 0:
 			var d := (player_pos - boss_pos).normalized()
 			_spawn_bullet(boss_pos + d * 30.0, d * 620.0, RED, "crescent", 2.2, 0.0)
 		if boss_skill_timer <= 0:
