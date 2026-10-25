@@ -1398,8 +1398,8 @@ function drawOverlay(ctx) {
   if (Game.mode === 'title') {
     dim(ctx, 0.78);
 
-    label(ctx, '镜', W / 2, 196, 88, COLORS.ink, 'center', 700);
-    label(ctx, 'M I R R O R   ·   弹幕闪避原型', W / 2, 236, 16, COLORS.env, 'center', 500);
+    label(ctx, '红 之 镜', W / 2, 196, 78, COLORS.player, 'center', 700);
+    label(ctx, 'M I R R O R   O F   R E D   ·   D E M O', W / 2, 240, 15, COLORS.dim, 'center', 500);
 
     const lines = [
       ['移动', 'A / D  或  ← / →'],
