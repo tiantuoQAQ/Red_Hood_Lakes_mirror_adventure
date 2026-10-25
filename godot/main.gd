@@ -1645,6 +1645,13 @@ func _update_camera() -> void:
 		var lo := _battle_left() - 80.0
 		var hi := _battle_right() + 80.0 - VIEW.x
 		want = clampf(want, minf(lo, hi), maxf(lo, hi))
+		# 玩家跑到屏幕边缘时把镜头拉一点，保证玩家始终可见
+		var px_scr := player_pos.x - want
+		if px_scr < VIEW.x * 0.18:
+			want = player_pos.x - VIEW.x * 0.18
+		elif px_scr > VIEW.x * 0.82:
+			want = player_pos.x - VIEW.x * 0.82
+		want = clampf(want, _battle_left() - 80.0, maxf(_battle_left() - 80.0, _battle_right() + 80.0 - VIEW.x))
 		camera_x = lerpf(camera_x, want, 1.0 - pow(0.02, FIXED_DT))
 		return
 	var target := clampf(player_pos.x - VIEW.x * 0.38, 0.0, WORLD_W - VIEW.x)
