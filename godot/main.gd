@@ -5,6 +5,16 @@ extends Node2D
 ## browser prototype's fixed 60 Hz numbers and is drawn in this single scene
 ## so it remains easy to tune against the Web reference.
 
+const CHAPTER_BGM := {
+	"prologue": "norden_bgm",
+	"ambush": "marysue_world_bgm",
+	"wake_talk": "norden_bgm",
+	"enter_mirror": "mirrorworld_bgm",
+	"mirror": "mirrorworld_bgm",
+	"mirror_meet": "mirrorworld_bgm",
+	"crimson_fall": "interlude_bgm",
+	"final": "interlude_bgm"
+}
 const PHASE_NAMES := {
 	"crimson": ["壹 · 试锋", "贰 · 裂帛", "叁 · 血雨", "肆 · 镜刃", "伍 · 红之惨剧"],
 	"marysue": ["壹 · 箱庭", "贰 · 反语", "叁 · 镜廊", "肆 · 断线", "伍 · 狂言", "陆 · 天地倒悬"]
@@ -65,9 +75,13 @@ var story_card := ["", ""]
 var story_title := ""
 var story_title_sub := ""
 var story_intro := ""
+var story_chapter := ""
 var map_bgm_player: AudioStreamPlayer
 var mirror_bgm_player: AudioStreamPlayer
 var norden_bgm_player: AudioStreamPlayer
+var marysue_world_bgm_player: AudioStreamPlayer
+var interlude_bgm_player: AudioStreamPlayer
+var bgm_tracks: Dictionary = {}
 var map_bgm_started := false
 var intro_hold := 0.0      # 竖幅在下一句仍停留的秒数
 var seen_speakers: Array = []  # 本章已登场过的角色（首次说话时弹称号）
@@ -219,6 +233,22 @@ func _ready() -> void:
 	mirror_bgm_player.bus = "Master"
 	mirror_bgm_player.volume_db = -12.0
 	add_child(mirror_bgm_player)
+	# BGM 池：id -> player（统一加载/循环）
+	for spec in [["norden_bgm", -12.0], ["mirrorworld_bgm", -12.0],
+			["marysue_world_bgm", -12.0], ["interlude_bgm", -12.0], ["map_bgm", -12.0]]:
+		var track_id := str(spec[0])
+		var path := "res://audio/%s.ogg" % track_id
+		if not ResourceLoader.exists(path):
+			continue
+		var pl := AudioStreamPlayer.new()
+		pl.bus = "Master"
+		pl.volume_db = float(spec[1])
+		add_child(pl)
+		var st: AudioStream = load(path)
+		if st is AudioStreamOggVorbis:
+			st.loop = true
+		pl.stream = st
+		bgm_tracks[track_id] = pl
 	norden_bgm_player = AudioStreamPlayer.new()
 	norden_bgm_player.bus = "Master"
 	norden_bgm_player.volume_db = -12.0
@@ -411,6 +441,10 @@ func _update_title() -> void:
 
 func _start_story(id: String) -> void:
 	seen_speakers.clear()
+	story_chapter = id
+	var want_bgm := _chapter_bgm(id)
+	if want_bgm != "":
+		_play_bgm(want_bgm)
 	if not story_data.has(id):
 		mode = Mode.END
 		return
@@ -674,13 +708,10 @@ func _finish_walk() -> void:
 func _start_walk(command: Dictionary, long_map: bool = false) -> void:
 	if last_left != "" or last_right != "":
 		portrait_fade = 1.0
-	if story_bg == "forest":
-		_start_norden_bgm()
-		_stop_mirror_bgm()
-	else:
-		_start_mirror_bgm()
-		if map_bgm_player != null and map_bgm_player.playing:
-			map_bgm_player.stop()
+	var walk_bgm := _chapter_bgm(story_chapter)
+	if walk_bgm == "":
+		walk_bgm = "norden_bgm" if story_bg == "forest" else "mirrorworld_bgm"
+	_play_bgm(walk_bgm)
 	ball_hint_t = 6.0
 	# Mirror shards transition (from any mode → walk)
 	if mode != Mode.WALK:
@@ -2877,6 +2908,7 @@ func _fx_skill_cast(pos: Vector2, color: Color) -> void:
 
 ## 地图/走位段 BGM：把音乐文件放 audio/map_bgm.ogg 即自动循环播放
 func _start_map_bgm() -> void:
+	_play_bgm("map_bgm")
 	if map_bgm_player == null:
 		return
 	if map_bgm_player.stream == null:
@@ -2941,10 +2973,7 @@ func _draw_ball_fx() -> void:
 
 ## 镜中世界 BGM（循环）
 func _start_mirror_bgm() -> void:
-	if mirror_bgm_player == null or mirror_bgm_player.stream == null:
-		return
-	if not mirror_bgm_player.playing:
-		mirror_bgm_player.play()
+	_play_bgm("mirrorworld_bgm")
 
 func _stop_mirror_bgm() -> void:
 	if mirror_bgm_player != null and mirror_bgm_player.playing:
@@ -2953,7 +2982,8 @@ func _stop_mirror_bgm() -> void:
 
 ## 诺登世界（森林）BGM（循环）
 func _start_norden_bgm() -> void:
-	if norden_bgm_player != null and norden_bgm_player.stream != null:
+	_play_bgm("norden_bgm")
+	if false:
 		if not norden_bgm_player.playing:
 			norden_bgm_player.play()
 		return
@@ -2962,3 +2992,25 @@ func _start_norden_bgm() -> void:
 func _stop_norden_bgm() -> void:
 	if norden_bgm_player != null and norden_bgm_player.playing:
 		norden_bgm_player.stop()
+
+
+## 切 BGM：只播目标曲目，其它全部停掉（淡出靠 volume 简单处理）
+func _play_bgm(track_id: String) -> void:
+	for key in bgm_tracks.keys():
+		var pl: AudioStreamPlayer = bgm_tracks[key]
+		if key == track_id:
+			if not pl.playing:
+				pl.play()
+		elif pl.playing:
+			pl.stop()
+	if track_id == "":
+		return
+	if not bgm_tracks.has(track_id):
+		# 兜底：旧的两个单独播放器
+		if track_id == "norden_bgm":
+			_start_norden_bgm()
+		elif track_id == "mirrorworld_bgm":
+			_start_mirror_bgm()
+
+func _chapter_bgm(chapter: String) -> String:
+	return str(CHAPTER_BGM.get(chapter, ""))
