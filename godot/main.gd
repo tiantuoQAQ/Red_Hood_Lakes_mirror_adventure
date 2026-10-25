@@ -101,6 +101,7 @@ var player_dash_direction := 1.0
 var player_dash_buffer_direction := 1.0
 var player_hp := 3
 var player_stamina := 100.0
+var player_stamina_display := 100.0  # Smooth lerp display value for stamina bar
 var player_courage := 0.0
 var player_energy := 4
 var player_dash_frames := 0
@@ -509,6 +510,7 @@ func _start_walk(command: Dictionary) -> void:
 	player_dash_invuln = 0
 	player_jump_buffer = 0
 	player_stamina = 100.0
+	player_stamina_display = 100.0
 	bullets.clear()
 	warnings.clear()
 	shots.clear()
@@ -563,6 +565,7 @@ func _start_battle(id: String, after: String) -> void:
 	player_dash_direction = 1.0
 	player_dash_buffer_direction = 1.0
 	player_stamina = 100.0
+	player_stamina_display = 100.0
 	player_courage = 0.0
 	player_energy = 4
 	player_dash_frames = 0
@@ -629,6 +632,8 @@ func _update_player() -> void:
 	player_graze_age = maxi(0, player_graze_age - 1)
 	if player_graze_age == 0:
 		player_graze_chain = 0
+	# Smooth lerp stamina display value for UI
+	player_stamina_display = lerpf(player_stamina_display, player_stamina, 0.18)
 	for item in trail:
 		item["life"] = float(item.get("life", 0.0)) - FIXED_DT
 	trail = trail.filter(func(item): return float(item.get("life", 0.0)) > 0.0)
@@ -644,7 +649,7 @@ func _update_player() -> void:
 		player_jump_buffer = 8
 	var dash_pressed := _just("dash")
 	if player_ball:
-		player_stamina = maxf(0.0, player_stamina - 32.0 * FIXED_DT)
+		player_stamina = maxf(0.0, player_stamina - 32.0 * FIXED_DT)  # Ball form continuous drain: 32 stamina/s (Web規格)
 		if not bool(input_state.get("dash", false)) or player_stamina <= 0.0:
 			_exit_ball()
 		else:
@@ -667,26 +672,35 @@ func _update_player() -> void:
 		player_dash_frames = 0
 		player_dash_out = 0
 		player_dash_buffer = 0
-		player_stamina = maxf(0.0, player_stamina - BALL_ENTRY_STAMINA_COST)
+		player_stamina = maxf(0.0, player_stamina - BALL_ENTRY_STAMINA_COST)  # Ball entry cost: 7 stamina
 		player_vel.x *= 0.4
 		player_vel.y = -450.0
 		player_ball_launch = 5
 		_spawn_burst(player_pos, RED, 14)
 		return
+	elif dash_pressed and not player_grounded and bool(input_state.get("up", false)) and player_stamina <= 20.0:
+		# Insufficient stamina for ball form feedback
+		banner = "体力不足"
+		banner_timer = 20
 	if dash_pressed:
 		player_dash_buffer = 8
 		player_dash_buffer_direction = player_move_facing
 	if player_dash_buffer > 0:
 		if player_dash_cd <= 0 and player_dash_frames == 0 and player_dash_out == 0 and player_stamina >= DASH_STAMINA_COST:
-			player_stamina -= DASH_STAMINA_COST
+			player_stamina -= DASH_STAMINA_COST  # Dash cost: 3 stamina
 			player_dash_buffer = 0
 			player_dash_direction = signf(axis) if axis != 0.0 else player_dash_buffer_direction
 			player_facing = player_dash_direction
 			player_dash_frames = DASH_FRAMES
 			player_dash_ramp = 3
-			player_dash_cd = DASH_FRAMES + 16
-			player_dash_invuln = DASH_FRAMES + 4
+			player_dash_cd = DASH_FRAMES + 16  # Dash CD: 20 frames dash + 16 frames cooldown
+			player_dash_invuln = DASH_FRAMES + 4  # Dash invuln: 24 frames (20 dash + 4 extra, from Web規格)
 			_spawn_burst(player_pos, RED, 8)
+		elif player_dash_cd <= 0 and player_stamina < DASH_STAMINA_COST:
+			# Insufficient stamina feedback: brief red flash
+			player_dash_buffer = 0
+			banner = "体力不足"
+			banner_timer = 20
 		else:
 			player_dash_buffer -= 1
 	if player_dash_frames > 0:
@@ -719,7 +733,7 @@ func _update_player() -> void:
 			player_vel.y += 2000.0 * FIXED_DT
 		player_pos += player_vel * FIXED_DT
 		if player_grounded:
-			player_stamina = minf(100.0, player_stamina + 26.0 * FIXED_DT)
+			player_stamina = minf(100.0, player_stamina + 26.0 * FIXED_DT)  # Ground stamina recovery: +26 stamina/s (允许连续冲刺)
 		if bool(input_state.get("shoot", false)) and player_fire_cd <= 0:
 			_fire_shot()
 	player_pos.x = clampf(player_pos.x, ARENA_LEFT, ARENA_RIGHT)
@@ -1286,13 +1300,20 @@ func _draw_hud() -> void:
 	for i in range(3):
 		var heart := Vector2(78 + i * 26, 644)
 		draw_colored_polygon(PackedVector2Array([heart + Vector2(0, 10), heart + Vector2(-9, -2), heart + Vector2(-6, -10), heart + Vector2(0, -5), heart + Vector2(6, -10), heart + Vector2(9, -2)]), RED if i < player_hp else Color(GREY, 0.25))
-	draw_string(ThemeDB.fallback_font, Vector2(180, 650), "体力", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, GREY)
-	draw_rect(Rect2(230, 638, 160, 12), Color(0.08, 0.08, 0.08, 1))
-	draw_rect(Rect2(230, 638, 160 * player_stamina / 100.0, 12), CYAN)
-	draw_string(ThemeDB.fallback_font, Vector2(410, 650), "勇气 %03d" % int(player_courage), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, WHITE)
-	draw_string(ThemeDB.fallback_font, Vector2(560, 650), "能量 %d/4" % player_energy, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, RED)
-	draw_string(ThemeDB.fallback_font, Vector2(760, 650), "冲刺 %s" % ("READY" if player_dash_cd <= 0 else "%02d" % player_dash_cd), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, RED if player_dash_cd <= 0 else GREY)
-	draw_string(ThemeDB.fallback_font, Vector2(960, 650), "擦弹链 %d" % player_graze_chain, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, WHITE)
+	# Stamina bar: below courage bar (lower left area), thin bar
+	# Base: neutral gray; Fill: cyan #00BAFF; < 7: red #FF0000
+	draw_string(ThemeDB.fallback_font, Vector2(40, 675), "体力", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, GREY)
+	draw_rect(Rect2(78, 665, 140, 10), Color(0.4, 0.4, 0.4, 1))  # Base: neutral gray
+	var stamina_fill_ratio := clampf(player_stamina_display / 100.0, 0.0, 1.0)
+	var stamina_color := Color("#FF0000") if player_stamina < 7.0 else Color("#00BAFF")  # Red when < 7, cyan otherwise
+	draw_rect(Rect2(78, 665, 140 * stamina_fill_ratio, 10), stamina_color)
+	# Optional: display stamina number
+	draw_string(ThemeDB.fallback_font, Vector2(226, 675), "%d" % int(player_stamina), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, WHITE)
+	# Courage bar
+	draw_string(ThemeDB.fallback_font, Vector2(280, 675), "勇气 %03d" % int(player_courage), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, WHITE)
+	draw_string(ThemeDB.fallback_font, Vector2(460, 675), "能量 %d/4" % player_energy, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, RED)
+	draw_string(ThemeDB.fallback_font, Vector2(640, 675), "冲刺 %s" % ("READY" if player_dash_cd <= 0 else "%02d" % player_dash_cd), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, RED if player_dash_cd <= 0 else GREY)
+	draw_string(ThemeDB.fallback_font, Vector2(840, 675), "擦弹链 %d" % player_graze_chain, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, WHITE)
 	if banner_timer > 0 and banner != "":
 		draw_string(ThemeDB.fallback_font, Vector2(510, 340), banner, HORIZONTAL_ALIGNMENT_LEFT, -1, 34, WHITE)
 	if paused:
