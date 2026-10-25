@@ -42,7 +42,7 @@ const GREY := Color("#9a9a9a")
 const BLACK := Color("#090909")
 const BG := Color("#111111")
 const FIXED_DT := 1.0 / 60.0
-const DASH_STAMINA_COST := 3.0
+const DASH_STAMINA_COST := 40.0   # 用户要求：一次冲刺消耗 40 体力
 const DASH_FRAMES := preload("res://godot/character_art.gd").DASH_FRAMES
 const BALL_ENTRY_STAMINA_COST := 7.0
 
@@ -165,17 +165,20 @@ var player_facing := 1.0
 var player_move_facing := 1.0
 var player_dash_direction := 1.0
 var player_dash_buffer_direction := 1.0
-var player_hp := 3
+var player_hp := 5
+const PLAYER_MAX_HP := 5
 var player_stamina := 100.0
 var player_stamina_display := 100.0  # Smooth lerp display value for stamina bar
 var player_courage := 0.0
 var player_energy := 4
 const ENERGY_MAX := 4.0
 const ENERGY_PER_GRAZE := 0.28   # 擦弹回复能量
-const ENERGY_PER_HIT := 0.06     # 子弹命中回复能量
+const ENERGY_PER_HIT := 0.035    # 子弹命中缓慢回复能量（用户要求：慢）
 var energy_flash := 0            # 能量满/消耗时的闪动
 var hurt_vignette := 0
 var ball_hint_t := 0.0
+var boss_bgm_pending := false
+var battle_bgm_player: AudioStreamPlayer
 var fx_rings: Array = []         # 冲击环 {pos, r, max, life, color, width}
 var player_dash_frames := 0
 var player_dash_buffer := 0
@@ -301,6 +304,10 @@ func _load_assets() -> void:
 		"cutin_marysue": "res://art/cg/cutin_marysue.png",
 		"logo_hongzhijing": "res://art/logo/hongzhijing_logo.png",
 		"skill_icon_red": "res://art/ui/skill_red_tragedy.png",
+		"bullet_blade": "res://art/fx/bullets/bullet_blade.png",
+		"bullet_orb": "res://art/fx/bullets/bullet_orb.png",
+		"bullet_laser": "res://art/fx/bullets/bullet_laser.png",
+		"bullet_rain": "res://art/fx/bullets/bullet_rain.png",
 		"skill_icon_gun": "res://art/ui/skill_gunfire.png",
 		"skill_icon_hell": "res://art/ui/skill_hellfire.png"
 	}
@@ -791,7 +798,9 @@ func _start_battle(id: String, after: String) -> void:
 	
 	mode = Mode.BATTLE
 	_stop_map_bgm()
+	_stop_mirror_bgm()
 	battle_intro_t = 2.6
+	boss_bgm_pending = true
 	cutin_active = false
 	cutin_timer = 0.0
 	whirls.clear()
@@ -832,7 +841,7 @@ func _start_battle(id: String, after: String) -> void:
 	player_pos = Vector2(350.0, GROUND_Y - 20.0)
 	player_vel = Vector2.ZERO
 	player_grounded = true
-	player_hp = 3
+	player_hp = PLAYER_MAX_HP
 	player_facing = 1.0
 	player_move_facing = 1.0
 	player_dash_direction = 1.0
@@ -1169,6 +1178,9 @@ func _update_boss() -> void:
 			cutin_active = false
 	if battle_intro_t > 0.0:
 		battle_intro_t = maxf(0.0, battle_intro_t - FIXED_DT)
+		if battle_intro_t <= 0.0 and boss_bgm_pending:
+			boss_bgm_pending = false
+			_start_battle_bgm()
 	if hellfire_timer > 0:
 		hellfire_timer -= 1
 		hellfire_tick -= 1
@@ -1967,7 +1979,7 @@ func _draw_battle() -> void:
 	_draw_fx_rings()
 	_draw_player_at(player_pos - Vector2(camera_x, 0), WHITE)
 	_draw_particles_world()
-	if ball_hint_t > 0.0:
+	if ball_hint_t > 0.0 and mode == Mode.WALK:
 		ball_hint_t = maxf(0.0, ball_hint_t - FIXED_DT)
 		var ha := minf(1.0, ball_hint_t / 1.0)
 		draw_string(ThemeDB.fallback_font, Vector2(360, 200), "空中 按住 W + 冲刺 → 球形态（无敌）", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color(1, 1, 1, 0.85 * ha))
@@ -2116,12 +2128,35 @@ func _draw_projectiles() -> void:
 		draw_line(p - d * 12.0, p + d * 12.0, WHITE, 3.0)
 		draw_circle(p, 5, RED)
 	
-	# Enemy bullets: redesigned primitive shapes
+	# Enemy bullets: 优先使用生成美术（贴图），无图时退回程序绘制
 	for bullet in bullets:
 		var p: Vector2 = bullet["pos"] - Vector2(camera_x, 0)
 		var color: Color = bullet["color"]
 		var kind := str(bullet.get("kind", "ring"))
 		var angle: float = bullet["angle"]
+		var btex_key := ""
+		var bsize := 0.0
+		var rot := angle
+		match kind:
+			"blade", "lance", "laser", "laser_down":
+				btex_key = "bullet_laser" if kind == "lance" else "bullet_blade"
+				bsize = 56.0 if kind != "lance" else 78.0
+			"hazard", "homing", "homing_laser":
+				btex_key = "bullet_orb"
+				bsize = 30.0 if kind == "hazard" else 34.0
+			"rain":
+				btex_key = "bullet_rain"
+				bsize = 42.0
+				rot = PI * 0.5
+			"bigorb":
+				btex_key = "bullet_orb"
+				bsize = 84.0
+		if btex_key != "" and textures.has(btex_key):
+			var bt: Texture2D = textures.get(btex_key)
+			draw_set_transform(p, rot, Vector2(1, 1))
+			draw_texture_rect(bt, Rect2(Vector2(-bsize * 0.5, -bsize * 0.5), Vector2(bsize, bsize)), false, Color(1, 1, 1, 1))
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+			continue
 		
 		match kind:
 			"lance", "blade":
@@ -2295,9 +2330,27 @@ func _draw_hud() -> void:
 	if boss_phase < pnames.size():
 		draw_string(ThemeDB.fallback_font, Vector2(1060, 92), str(pnames[boss_phase]), HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color(RED if boss_id == "crimson" else HAZARD))
 	draw_string(ThemeDB.fallback_font, Vector2(40, 650), "HP", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, GREY)
-	for i in range(3):
-		var heart := Vector2(78 + i * 26, 644)
-		draw_colored_polygon(PackedVector2Array([heart + Vector2(0, 10), heart + Vector2(-9, -2), heart + Vector2(-6, -10), heart + Vector2(0, -5), heart + Vector2(6, -10), heart + Vector2(9, -2)]), RED if i < player_hp else Color(GREY, 0.25))
+	# 血量图标：小镜子（完整的亮、破损的暗且带裂纹）
+	for i in range(PLAYER_MAX_HP):
+		var mir := Vector2(78 + i * 24, 644)
+		var alive: bool = i < player_hp
+		var frame_col := Color(1, 0, 0) if alive else Color(0.35, 0.35, 0.35)
+		var glass_col := Color(1, 1, 1, 0.85) if alive else Color(0.25, 0.25, 0.25, 0.9)
+		# 椭圆镜面 + 边框（用多边形近似，尺寸与旧心形相当）
+		var pts := PackedVector2Array()
+		for k in range(14):
+			var ang := TAU * float(k) / 14.0
+			pts.append(mir + Vector2(cos(ang) * 8.0, sin(ang) * 11.0))
+		draw_colored_polygon(pts, glass_col)
+		draw_polyline(pts + PackedVector2Array([pts[0]]), frame_col, 2.0)
+		if alive:
+			# 完整镜面：左上高光
+			draw_line(mir + Vector2(-4, -5), mir + Vector2(-1, 1), Color(1, 1, 1, 0.9), 1.5)
+		else:
+			# 破碎：几道裂纹
+			draw_line(mir + Vector2(-7, -8), mir + Vector2(1, 2), Color(0.8, 0.8, 0.8, 0.55), 1.2)
+			draw_line(mir + Vector2(1, 2), mir + Vector2(6, 9), Color(0.8, 0.8, 0.8, 0.55), 1.2)
+			draw_line(mir + Vector2(1, 2), mir + Vector2(7, -6), Color(0.8, 0.8, 0.8, 0.45), 1.0)
 	# Stamina bar: below courage bar (lower left area), thin bar
 	# Base: neutral gray; Fill: cyan #00BAFF; < 7: red #FF0000
 	draw_string(ThemeDB.fallback_font, Vector2(40, 675), "体力", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, GREY)
@@ -2322,11 +2375,11 @@ func _draw_hud() -> void:
 		draw_rect(Rect2(442, 663, 160, 14), Color(1, 1, 1, 0.25 * float(energy_flash) / 8.0))
 		energy_flash -= 1
 	# ---- 技能图标（血条旁边，标注能量与按键）----
-	var slots := [
-		{"tex": "skill_icon_red", "cost": 2, "key": "L", "name": "红之惨剧"},
-		{"tex": "skill_icon_gun", "cost": 2, "key": "C", "name": "枪火击溃"},
-		{"tex": "skill_icon_hell", "cost": 2, "key": "V", "name": "业火"}
-	]
+	var slots: Array = []
+	if skill_red_tragedy:
+		slots.append({"tex": "skill_icon_red", "cost": 2, "key": "L", "name": "红之惨剧"})
+	slots.append({"tex": "skill_icon_gun", "cost": 2, "key": "C", "name": "枪火击溃"})
+	slots.append({"tex": "skill_icon_hell", "cost": 2, "key": "V", "name": "业火"})
 	var sx0 := 620.0
 	for si in range(slots.size()):
 		var slot: Dictionary = slots[si]
@@ -2760,14 +2813,25 @@ func _spawn_two_whirls() -> void:
 	if whirls.size() >= 2:
 		return
 	var base := clampf(player_pos.x, 300.0, 2100.0)
-	whirls = [{"x": base - 320.0, "phase": 0.0}, {"x": base + 320.0, "phase": 1.7}]
+	whirls = [{"x": base - 320.0, "phase": 0.0, "mode": "chase", "dir": 1.0},
+	           {"x": base + 320.0, "phase": 1.7, "mode": "sweep", "dir": 1.0}]
 
 func _update_boss_extras() -> void:
 	# 旋风：转动 + 碰撞（贴地才伤害，带无敌帧判定）
 	for w in whirls:
 		w["phase"] = float(w.get("phase", 0.0)) + FIXED_DT * 3.0
+		# 移动：一个慢慢追玩家，一个在地上左右来回扫
+		if str(w.get("mode", "chase")) == "chase":
+			var to_x: float = player_pos.x - float(w["x"])
+			w["x"] = float(w["x"]) + signf(to_x) * minf(absf(to_x), 38.0 * FIXED_DT)
+		else:
+			w["x"] = float(w["x"]) + float(w.get("dir", 1.0)) * 30.0 * FIXED_DT
+			if float(w["x"]) < 200.0:
+				w["dir"] = 1.0
+			if float(w["x"]) > WORLD_W - 200.0:
+				w["dir"] = -1.0
 		var dx: float = absf(player_pos.x - float(w["x"]))
-		if dx < 36.0 and player_grounded and player_hurt_invuln <= 0 and player_dash_invuln <= 0 and not player_ball:
+		if dx < 70.0 and player_grounded and player_hurt_invuln <= 0 and player_dash_invuln <= 0 and not player_ball:
 			player_hp -= 1
 			player_hurt_invuln = 70
 			player_vel.x = signf(player_pos.x - float(w["x"])) * 420.0
@@ -2819,10 +2883,10 @@ func _draw_boss_extras() -> void:
 	for w in whirls:
 		var wx: float = float(w["x"]) - camera_x
 		var ph: float = float(w["phase"])
-		for k in range(4):
-			var rr := 14.0 + float(k) * 9.0
+		for k in range(5):
+			var rr := 30.0 + float(k) * 16.0
 			draw_arc(Vector2(wx, GROUND_Y - 26.0 - float(k) * 16.0), rr, ph + float(k), ph + float(k) + PI * 1.3, 18, Color(1, 0, 0, 0.55 - float(k) * 0.1), 3.0)
-		draw_circle(Vector2(wx, GROUND_Y - 8.0), 26.0, Color(1, 0, 0, 0.12))
+		draw_circle(Vector2(wx, GROUND_Y - 12.0), 62.0, Color(1, 0, 0, 0.15))
 	# 锁定瞄准特效
 	if lock_state == "aim":
 		var t := Vector2(lock_target.x - camera_x, lock_target.y)
@@ -3012,3 +3076,25 @@ func _play_bgm(track_id: String) -> void:
 
 func _chapter_bgm(chapter: String) -> String:
 	return str(CHAPTER_BGM.get(chapter, ""))
+
+
+## 战斗 BGM：延后到开场演出结束再响
+func _start_battle_bgm() -> void:
+	var path := "res://audio/crimson_bgm.ogg" if boss_id == "crimson" else "res://audio/marysue_bgm.ogg"
+	if not ResourceLoader.exists(path):
+		return
+	if battle_bgm_player == null:
+		battle_bgm_player = AudioStreamPlayer.new()
+		battle_bgm_player.bus = "Master"
+		battle_bgm_player.volume_db = -10.0
+		add_child(battle_bgm_player)
+	var st: AudioStream = load(path)
+	if st is AudioStreamOggVorbis:
+		st.loop = true
+	battle_bgm_player.stream = st
+	if not battle_bgm_player.playing:
+		battle_bgm_player.play()
+
+func _stop_battle_bgm() -> void:
+	if battle_bgm_player != null and battle_bgm_player.playing:
+		battle_bgm_player.stop()

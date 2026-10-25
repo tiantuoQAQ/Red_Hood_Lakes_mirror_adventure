@@ -47,7 +47,7 @@ func _run() -> void:
 	_expect(game.player_dash_frames > 0, "A dash pressed before cooldown ends is buffered")
 	game._start_walk({})
 	game.previous_input = {}
-	game.player_stamina = 4
+	game.player_stamina = 45
 	game.scripted_input = {"dash": true}
 	game._physics_process(1.0 / 60.0)
 	_expect(game.player_dash_frames > 0, "The remaining stamina can pay a normal dash")
