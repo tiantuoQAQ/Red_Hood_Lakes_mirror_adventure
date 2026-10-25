@@ -179,6 +179,10 @@ var energy_flash := 0            # 能量满/消耗时的闪动
 var hurt_vignette := 0
 var ball_hint_t := 0.0
 var boss_bgm_pending := false
+var battle_cmd_index := -1
+var battle_cmd_boss := ""
+var battle_bgm_started := false
+var tragedy_buff_t := 0.0
 var battle_bgm_player: AudioStreamPlayer
 var fx_rings: Array = []         # 冲击环 {pos, r, max, life, color, width}
 var player_dash_frames := 0
@@ -314,6 +318,10 @@ func _load_assets() -> void:
 		"bullet_yinyang": "res://art/fx/bullets/yinyang_orb.png",
 		"bullet_talisman": "res://art/fx/bullets/talisman.png",
 		"bullet_beam": "res://art/fx/bullets/beam_pillar.png",
+		"bullet_talisman_green": "res://art/fx/bullets/talisman_green.png",
+		"bullet_yinyang_green": "res://art/fx/bullets/yinyang_orb_green.png",
+		"bullet_beam_green": "res://art/fx/bullets/beam_pillar_green.png",
+		"bullet_crescent_green": "res://art/fx/bullets/crescent_green.png",
 		"skill_icon_gun": "res://art/ui/skill_gunfire.png",
 		"skill_icon_hell": "res://art/ui/skill_hellfire.png"
 	}
@@ -454,6 +462,22 @@ func _update_title() -> void:
 
 func _start_story(id: String) -> void:
 	seen_speakers.clear()
+	# 换章时清空对话立绘（否则上一章角色会残留）
+	story_left = ""
+	story_right = ""
+	last_left = ""
+	last_right = ""
+	portrait_fade = 0.0
+	_stop_battle_bgm()
+	# 预计算本章战斗命令位置（用于提前 2 句起战斗 BGM）
+	battle_cmd_index = -1
+	battle_cmd_boss = ""
+	var cmds: Array = story_data.get(id, {}).get("cmds", [])
+	for i in range(cmds.size()):
+		if str(cmds[i].get("t", "")) == "battle":
+			battle_cmd_index = i
+			battle_cmd_boss = str(cmds[i].get("boss", "crimson"))
+			break
 	story_chapter = id
 	var want_bgm := _chapter_bgm(id)
 	if want_bgm != "":
@@ -482,6 +506,10 @@ func _story_advance() -> void:
 		var command: Dictionary = story_commands[story_index]
 		story_index += 1
 		var kind := str(command.get("t", ""))
+		# 战斗 BGM 提前两句话进（用户要求）
+		if battle_cmd_index >= 0 and not battle_bgm_started and story_index >= battle_cmd_index - 2:
+			battle_bgm_started = true
+			_start_battle_bgm_for(battle_cmd_boss)
 		story_cmd = command
 		story_title = ""
 		story_title_sub = ""
@@ -511,7 +539,7 @@ func _story_advance() -> void:
 			"grant":
 				if str(command.get("skill", "")) == "red_tragedy":
 					skill_red_tragedy = true
-					banner = str(command.get("banner", "红之惨剧"))
+					banner = "习得技能「红之惨剧」"
 					banner_timer = 150
 				continue
 			"battle":
@@ -807,6 +835,7 @@ func _start_battle(id: String, after: String) -> void:
 	_stop_mirror_bgm()
 	battle_intro_t = 2.6
 	boss_bgm_pending = true
+	battle_bgm_started = true
 	cutin_active = false
 	cutin_timer = 0.0
 	whirls.clear()
@@ -855,7 +884,7 @@ func _start_battle(id: String, after: String) -> void:
 	player_stamina = 100.0
 	player_stamina_display = 100.0
 	player_courage = 0.0
-	player_energy = 4
+	player_energy = 0.0   # 从 0 起，方便看到擦弹/命中回复
 	player_dash_frames = 0
 	player_dash_buffer = 0
 	player_dash_ramp = 0
@@ -1023,7 +1052,7 @@ func _update_player() -> void:
 			player_vel.y += 2000.0 * FIXED_DT
 		player_pos += player_vel * FIXED_DT
 		if player_grounded:
-			player_stamina = minf(100.0, player_stamina + 26.0 * FIXED_DT)  # Ground stamina recovery: +26 stamina/s (允许连续冲刺)
+			player_stamina = minf(100.0, player_stamina + 52.0 * FIXED_DT)  # Ground stamina recovery: +26 stamina/s (允许连续冲刺)
 			# Walk dust (grounded, moving)
 			if absf(player_vel.x) > 80.0:
 				walk_dust_timer -= 1
@@ -1215,6 +1244,7 @@ func _update_boss() -> void:
 			boss_lunge_start = boss_pos
 		else:
 			mode = Mode.VICTORY
+			_stop_battle_bgm()
 			banner = ""
 			_spawn_burst(boss_pos, RED if boss_id == "crimson" else HAZARD, 58)
 			_stop_music()
@@ -1412,7 +1442,7 @@ func _update_shots() -> void:
 		shot["pos"] = pos + vel * FIXED_DT
 		shot["life"] = float(shot["life"]) - FIXED_DT
 		if mode == Mode.BATTLE and shot["pos"].distance_to(boss_pos) < 52.0:
-			boss_hp = maxf(0.0, boss_hp - 3.0)
+			boss_hp = maxf(0.0, boss_hp - (8.0 if tragedy_buff_t > 0.0 else 3.0))
 			boss_hit_flash = 8
 			boss_ring_flash = 10
 			_fx_boss_hit(shot["pos"])
@@ -1980,6 +2010,8 @@ func _draw_battle() -> void:
 	_draw_fx_rings()
 	_draw_player_at(player_pos - Vector2(camera_x, 0), WHITE)
 	_draw_particles_world()
+	if tragedy_buff_t > 0.0:
+		tragedy_buff_t = maxf(0.0, tragedy_buff_t - FIXED_DT)
 	if ball_hint_t > 0.0 and mode == Mode.WALK:
 		ball_hint_t = maxf(0.0, ball_hint_t - FIXED_DT)
 		var ha := minf(1.0, ball_hint_t / 1.0)
@@ -2125,9 +2157,10 @@ func _draw_projectiles() -> void:
 	for shot in shots:
 		var p: Vector2 = shot["pos"] - Vector2(camera_x, 0)
 		var d: Vector2 = shot["vel"].normalized()
-		draw_line(p - d * 22.0, p + d * 9.0, Color(RED, 0.3), 8.0)
+		var shot_w := 16.0 if tragedy_buff_t > 0.0 else 8.0
+		draw_line(p - d * 30.0, p + d * 12.0, Color(RED, 0.3), shot_w)
 		draw_line(p - d * 12.0, p + d * 12.0, WHITE, 3.0)
-		draw_circle(p, 5, RED)
+		draw_circle(p, 11.0 if tragedy_buff_t > 0.0 else 5.0, RED)
 	
 	# Enemy bullets: 优先使用生成美术（贴图），无图时退回程序绘制
 	for bullet in bullets:
@@ -2144,23 +2177,23 @@ func _draw_projectiles() -> void:
 				bsize = 56.0 if kind != "lance" else 78.0
 			"hazard", "homing", "homing_laser":
 				btex_key = "bullet_orb"
-				bsize = 30.0 if kind == "hazard" else 34.0
+				bsize = 40.0 if kind == "hazard" else 44.0
 			"rain":
 				btex_key = "bullet_rain"
 				bsize = 42.0
 				rot = PI * 0.5
 			"flame":
 				btex_key = "bullet_flame"
-				bsize = 34.0
+				bsize = 46.0
 			"crescent":
 				btex_key = "bullet_crescent"
-				bsize = 86.0
+				bsize = 104.0
 			"yinyang":
 				btex_key = "bullet_yinyang"
-				bsize = 54.0
+				bsize = 68.0
 			"talisman":
 				btex_key = "bullet_talisman"
-				bsize = 32.0
+				bsize = 42.0
 			"beam":
 				btex_key = "bullet_beam"
 				bsize = 120.0
@@ -2168,6 +2201,9 @@ func _draw_projectiles() -> void:
 			"bigorb":
 				btex_key = "bullet_orb"
 				bsize = 84.0
+		# 玛丽苏（HAZARD 绿）用绿色贴图
+		if color == HAZARD and textures.has(btex_key + "_green"):
+			btex_key = btex_key + "_green"
 		if btex_key != "" and textures.has(btex_key):
 			var bt: Texture2D = textures.get(btex_key)
 			draw_set_transform(p, rot, Vector2(1, 1))
@@ -2423,11 +2459,15 @@ func _draw_hud() -> void:
 		draw_rect(kbadge, Color(0, 0, 0, 0.8))
 		draw_string(ThemeDB.fallback_font, kbadge.position + Vector2(5, 13), str(slot["key"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 13,
 			WHITE if can else GREY)
+		# 技能说明（格下方小字）
+		var desc: String = str({"skill_icon_red": "回2HP + 20秒强化剑气"}.get(slot["tex"], ""))
+		if desc != "":
+			draw_string(ThemeDB.fallback_font, rect.position + Vector2(0, rect.size.y + 26), desc, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.8, 0.8, 0.8))
 		# 技能名（格下方小字）
 		draw_string(ThemeDB.fallback_font, rect.position + Vector2(0, rect.size.y + 13), str(slot["name"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 12,
 			Color(1, 0.4, 0.4) if can else GREY)
-	draw_string(ThemeDB.fallback_font, Vector2(640, 675), "冲刺 %s" % ("READY" if player_dash_cd <= 0 else "%02d" % player_dash_cd), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, RED if player_dash_cd <= 0 else GREY)
-	draw_string(ThemeDB.fallback_font, Vector2(840, 675), "擦弹链 %d" % player_graze_chain, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, WHITE)
+	draw_string(ThemeDB.fallback_font, Vector2(880, 675), "冲刺 %s" % ("READY" if player_dash_cd <= 0 else "%02d" % player_dash_cd), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, RED if player_dash_cd <= 0 else GREY)
+	draw_string(ThemeDB.fallback_font, Vector2(1040, 675), "擦弹链 %d" % player_graze_chain, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, WHITE)
 	if banner_timer > 0 and banner != "":
 		draw_string(ThemeDB.fallback_font, Vector2(510, 340), banner, HORIZONTAL_ALIGNMENT_LEFT, -1, 34, WHITE)
 	if paused:
@@ -2722,9 +2762,9 @@ func _patterns_crimson() -> void:
 				_crimson_crescent_volley(3)
 		3:  # 四：火焰弹雨 + 新月剑气
 			_crimson_rush_attack(false)
-			if frame % 8 == 0:
+			if frame % 16 == 0:
 				var rx := 150.0 + randf() * 2100.0
-				_spawn_bullet(Vector2(rx, 40.0), Vector2(0, 300.0), RED, "flame", 4.0, 0.02)
+				_spawn_bullet(Vector2(rx, 40.0), Vector2(0, 260.0), RED, "flame", 4.0, 0.02)
 			if frame % 40 == 0:
 				_crimson_crescent_volley(2)
 		4:  # 五：高频追击斩 + 火焰弹幕 + 锁定突刺锋
@@ -2793,8 +2833,8 @@ func _patterns_marysue() -> void:
 	match boss_phase:
 		0:  # 一：符纸环（缓慢外扩，弱追踪）
 			if frame % 18 == 0:
-				for k in range(10):
-					var a := TAU * float(k) / 10.0 + elapsed * 0.6
+				for k in range(7):
+					var a := TAU * float(k) / 7.0 + elapsed * 0.6
 					_spawn_bullet(boss_pos, Vector2(cos(a), sin(a)) * 170.0, HAZARD, "talisman", 4.5, 0.03)
 		1:  # 二：阴阳玉旋转 + 符纸
 			if frame % 26 == 0:
@@ -2819,8 +2859,8 @@ func _patterns_marysue() -> void:
 					var a4 := TAU * float(k) / 4.0 + elapsed * 1.4
 					_spawn_bullet(boss_pos, Vector2(cos(a4), sin(a4)) * 200.0, HAZARD, "yinyang", 4.5, 0.35)
 		3:  # 四：符纸雨 + 阴阳玉环
-			if frame % 7 == 0:
-				_spawn_bullet(Vector2(120.0 + randf() * 2100.0, 40.0), Vector2(0, 260.0), HAZARD, "talisman", 4.0, 0.02)
+			if frame % 16 == 0:
+				_spawn_bullet(Vector2(120.0 + randf() * 2100.0, 40.0), Vector2(0, 240.0), HAZARD, "talisman", 4.0, 0.02)
 			if frame % 60 == 0:
 				for k in range(8):
 					var a5 := TAU * float(k) / 8.0
@@ -3127,7 +3167,10 @@ func _chapter_bgm(chapter: String) -> String:
 
 ## 战斗 BGM：延后到开场演出结束再响
 func _start_battle_bgm() -> void:
-	var path := "res://audio/crimson_bgm.ogg" if boss_id == "crimson" else "res://audio/marysue_bgm.ogg"
+	_start_battle_bgm_for(boss_id)
+
+func _start_battle_bgm_for(who: String) -> void:
+	var path := "res://audio/crimson_bgm.ogg" if who == "crimson" else "res://audio/marysue_bgm.ogg"
 	if not ResourceLoader.exists(path):
 		return
 	if battle_bgm_player == null:
@@ -3145,3 +3188,4 @@ func _start_battle_bgm() -> void:
 func _stop_battle_bgm() -> void:
 	if battle_bgm_player != null and battle_bgm_player.playing:
 		battle_bgm_player.stop()
+	battle_bgm_started = false
