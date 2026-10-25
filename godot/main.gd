@@ -1113,7 +1113,13 @@ func _draw_background() -> void:
 	draw_rect(Rect2(Vector2.ZERO, VIEW), BLACK)
 	var bg_tex: Texture2D = null if story_bg == "void" else (textures.get("mirror") if story_bg == "mirror" else textures.get("mirror_alt"))
 	if bg_tex:
-		draw_texture_rect(bg_tex, Rect2(-camera_x * 0.25, 0, VIEW.x * 1.45, VIEW.y), false, Color(1, 1, 1, 0.42))
+		# Darken background during battle: alpha 0.42 → apply additional 0.38 tint for battle (total ~0.16)
+		var alpha := 0.42
+		var tint := Color(1, 1, 1, alpha)
+		if mode == Mode.BATTLE:
+			# Overlay dark tint: reduce brightness by 60% (multiply RGB by 0.4, keep base alpha)
+			tint = Color(0.4, 0.4, 0.4, alpha)
+		draw_texture_rect(bg_tex, Rect2(-camera_x * 0.25, 0, VIEW.x * 1.45, VIEW.y), false, tint)
 	for i in range(15):
 		var y := float(i) * 46.0
 		draw_line(Vector2(0, y), Vector2(VIEW.x, y), Color(1, 1, 1, 0.025), 1.0)
@@ -1310,8 +1316,11 @@ func _draw_boss() -> void:
 	var tex: Texture2D = textures.get(key)
 	if tex:
 		var tint := WHITE if boss_hit_flash == 0 or frame % 4 < 2 else Color(1, 1, 1, 0.4)
-		var scale := 0.30 if boss_id == "crimson" else 0.28
-		draw_texture_rect(tex, Rect2(center.x - tex.get_width() * scale * 0.5, center.y - tex.get_height() * scale * 0.5, tex.get_width() * scale, tex.get_height() * scale), false, tint)
+		# Scale boss to 0.62~0.72 viewport height (445~518px at 720p; target 420~460px displayed height)
+		var target_height := 440.0 if boss_id == "crimson" else 450.0
+		var scale := target_height / tex.get_height()
+		var anchor_y := center.y  # Keep vertical position anchor (floating reference)
+		draw_texture_rect(tex, Rect2(center.x - tex.get_width() * scale * 0.5, anchor_y - tex.get_height() * scale * 0.5, tex.get_width() * scale, tex.get_height() * scale), false, tint)
 	else:
 		draw_circle(center, 48, Color(GREY, 0.9))
 		draw_circle(center + Vector2(-16, -10), 7, RED if boss_id == "crimson" else HAZARD)
@@ -1386,11 +1395,12 @@ func _draw_particles_world() -> void:
 func _draw_hud() -> void:
 	var color := RED if boss_id == "crimson" else HAZARD
 	draw_string(ThemeDB.fallback_font, Vector2(32, 36), "MIRROR // BATTLE", HORIZONTAL_ALIGNMENT_LEFT, -1, 17, GREY)
-	draw_string(ThemeDB.fallback_font, Vector2(910, 36), "猩红魔姬·雷帝" if boss_id == "crimson" else "黑童话之母·玛丽苏", HORIZONTAL_ALIGNMENT_LEFT, -1, 21, color)
+	# Boss HUD: name above, health bar center, stage below
+	draw_string(ThemeDB.fallback_font, Vector2(890, 36), "猩红魔姬·雷帝" if boss_id == "crimson" else "黑童话之母·玛丽苏", HORIZONTAL_ALIGNMENT_LEFT, -1, 19, color)
 	draw_rect(Rect2(820, 52, 400, 16), Color(0.08, 0.08, 0.08, 1))
 	draw_rect(Rect2(820, 52, 400 * boss_hp / boss_max_hp, 16), color)
 	var stage_label := "STAGE %d / %d" % [boss_phase + 1, boss_phase_count] if boss_id == "crimson" else "STAGE %d" % (boss_phase + 1)
-	draw_string(ThemeDB.fallback_font, Vector2(820, 94), stage_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, GREY)
+	draw_string(ThemeDB.fallback_font, Vector2(890, 85), stage_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, GREY)
 	draw_string(ThemeDB.fallback_font, Vector2(40, 650), "HP", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, GREY)
 	for i in range(3):
 		var heart := Vector2(78 + i * 26, 644)
