@@ -2225,26 +2225,33 @@ func _draw_projectiles() -> void:
 				draw_circle(p + bdir * ll * 0.5, 5.0, Color(1, 1, 1, 0.9))
 				continue
 			"laser", "laser_down", "beam":
-				var lw := 34.0 if kind == "beam" else 16.0
-				var llen := 150.0 if kind == "beam" else 230.0
-				var la := p - bdir * llen * 0.5
-				var lb := p + bdir * llen * 0.5
+				# 参考图：粗壮激光——外辉光 + 主柱 + 白热核心 + 流动条纹 + 枪口光斑
+				var lw := 46.0 if kind == "beam" else 26.0
+				var llen := 760.0 if kind == "beam" else 420.0
+				var la := p - bdir * llen * 0.25
+				var lb := p + bdir * llen * 0.75
 				if kind == "beam":
-					# 激光柱：从天到地的竖直光柱
-					la = Vector2(p.x, 40.0)
+					la = Vector2(p.x, 20.0)
 					lb = Vector2(p.x, GROUND_Y)
 					bdir = Vector2(0, 1)
 					llen = lb.y - la.y
+				# 外辉光（4 层）
 				for g in range(4):
-					draw_line(la, lb, Color(color, 0.06 + 0.05 * float(g)), lw * (2.5 - float(g) * 0.42))
-				draw_line(la, lb, Color(color, 0.88), lw)
-				# 流光条纹（沿弹道流动）
-				for k2 in range(3):
-					var off := fmod(elapsed * 240.0 + float(k2) * 52.0, llen) - llen * 0.5
-					var q := p + bdir * off
-					draw_line(q - bdir * 15.0, q + bdir * 15.0, Color(1, 1, 1, 0.5), lw * 0.34)
-				draw_line(la, lb, Color(1, 1, 1, 0.95), lw * 0.32)
-				draw_circle(lb, lw * 0.6, Color(1, 1, 1, 0.7))
+					draw_line(la, lb, Color(color, 0.05 + 0.05 * float(g)), lw * (3.0 - float(g) * 0.5))
+				# 主柱（略带锥形感：内层更亮更窄）
+				draw_line(la, lb, Color(color, 0.85), lw)
+				draw_line(la, lb, Color(color, 0.95), lw * 0.62)
+				# 流动条纹
+				for k2 in range(4):
+					var off := fmod(elapsed * 300.0 + float(k2) * 60.0, llen) - llen * 0.25
+					var q := la + bdir * off
+					draw_line(q - bdir * 18.0, q + bdir * 18.0, Color(1, 1, 1, 0.45), lw * 0.30)
+				# 白热核心
+				draw_line(la, lb, Color(1, 1, 1, 0.98), lw * 0.34)
+				# 枪口光斑 + 末端爆点
+				draw_circle(la, lw * 0.85, Color(color, 0.35))
+				draw_circle(la, lw * 0.45, Color(1, 1, 1, 0.9))
+				draw_circle(lb, lw * 0.55, Color(1, 1, 1, 0.75))
 				draw_circle(lb, lw * 1.0, Color(color, 0.2))
 				continue
 			"hazard", "homing", "homing_laser", "flame", "bigorb":
