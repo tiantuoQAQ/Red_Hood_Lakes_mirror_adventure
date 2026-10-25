@@ -309,10 +309,9 @@ func _load_assets() -> void:
 	var paths := {
 		"rek_body_move": "res://art/battle/rek/body_move.png",
 		"rek_body_charge": "res://art/battle/rek/body_charge.png",
-		"rek_head": "res://art/battle/rek/head.png",
-		"rek_dash_01": "res://art/battle/rek/dash_01.png",
-		"rek_dash_02": "res://art/battle/rek/dash_02.png",
-		"rek_dash_03": "res://art/battle/rek/dash_03.png",
+		"rek_dash_01": "res://art/battle/rek/dash_full.png",
+		"rek_dash_02": "res://art/battle/rek/dash_full.png",
+		"rek_dash_03": "res://art/battle/rek/dash_full.png",
 		"mirror": "res://art/bg/mirror.jpg",
 		"bg_forest": "res://art/bg/bg_forest.png",
 		"bg_mirrorworld": "res://art/bg/bg_mirrorworld.png",

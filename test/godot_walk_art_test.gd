@@ -70,7 +70,8 @@ func _run() -> void:
 		_expect(rect.size.y > 80 and rect.size.x / rect.size.y < 0.43, "Norden retains the source silhouette proportions")
 	else:
 		_expect(false, "NPC rendering exposes the shared ground placement")
-	for id in ["rek_body_move", "rek_body_charge", "rek_head", "rek_dash_01", "rek_dash_02", "rek_dash_03"]:
+	# 新版小红帽使用完整立绘（自带头部），不再有独立 rek_head
+	for id in ["rek_body_move", "rek_body_charge", "rek_dash_01", "rek_dash_02", "rek_dash_03"]:
 		var texture: Texture2D = game.textures.get(id)
 		_expect(texture != null, "Runtime sprite loaded: " + id)
 		if texture:
