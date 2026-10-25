@@ -1568,10 +1568,8 @@ func _check_graze_and_hits() -> void:
 			_spawn_burst(center, WHITE, 18)
 			sfx_player.play("hurt")
 			if player_hp <= 0:
-				player_dying = true
-				player_hp = 3
-				player_pos = Vector2(350, GROUND_Y - 20)
-				bullets.clear()
+				player_hp = 0
+				_start_death()
 			return
 
 func _use_red_skill() -> void:
@@ -3039,12 +3037,8 @@ func _update_boss_extras() -> void:
 				w["dir"] = -1.0
 		var dx: float = absf(player_pos.x - float(w["x"]))
 		if dx < 70.0 and player_grounded and player_hurt_invuln <= 0 and player_dash_invuln <= 0 and not player_ball:
-			player_hp -= 1
-			player_hurt_invuln = 70
 			player_vel.x = signf(player_pos.x - float(w["x"])) * 420.0
-			sfx_player.play("hurt")
-			if player_hp <= 0:
-				player_hp = 0
+			_apply_player_damage()
 	# 锁定突刺锋
 	if lock_cooldown > 0:
 		lock_cooldown -= 1
@@ -3063,11 +3057,8 @@ func _update_boss_extras() -> void:
 	for sp in spikes:
 		sp["life"] = float(sp["life"]) - FIXED_DT
 		var d: float = Vector2(sp["pos"]).distance_to(Vector2(player_pos.x, GROUND_Y - 20.0))
-		if d < 46.0 and player_hurt_invuln <= 0 and player_dash_invuln <= 0 and not player_ball:
-			player_hp -= 1
-			player_hurt_invuln = 70
-			hurt_vignette = 18
-			sfx_player.play("hurt")
+		if d < 46.0:
+			_apply_player_damage()
 	spikes = spikes.filter(func(x): return float(x.get("life", 0.0)) > 0.0)
 	# 绿闪衰减
 	if green_flash_t > 0.0:
@@ -3478,6 +3469,8 @@ func _draw_signboard() -> void:
 
 ## 死亡流程：镜裂 → 碎镜 → 回到起点 → 幻觉台词
 func _start_death() -> void:
+	if death_timer > 0.0:
+		return
 	death_timer = 1.9
 	death_flash = 1.0
 	player_hp = 0
