@@ -186,7 +186,11 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
 		previous_input.clear()
 		input_state.clear()
-		paused = true
+		# Only battle has a pause/resume control. Do not freeze the title
+		# or dialogue when the player switches windows.
+		paused = mode == Mode.BATTLE
+	elif what == NOTIFICATION_APPLICATION_FOCUS_IN and mode != Mode.BATTLE:
+		paused = false
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:

@@ -52,6 +52,18 @@ func _run() -> void:
 	_expect(game.story_index == 4, "Enter advances to the next opening line")
 	var next_image := await _capture("02_next.png")
 	_expect(_has_visible_text(next_image), "Next opening line also remains visible")
+	game._notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
+	game._notification(Node.NOTIFICATION_APPLICATION_FOCUS_IN)
+	_expect(not game.paused, "Refocusing dialogue keeps Enter progression available")
+	game.mode = game.Mode.TITLE
+	game.paused = false
+	game._notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
+	game._notification(Node.NOTIFICATION_APPLICATION_FOCUS_IN)
+	_expect(not game.paused, "Refocusing the title keeps the start button available")
+	game.mode = game.Mode.BATTLE
+	game.paused = false
+	game._notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
+	_expect(game.paused, "Battle still pauses automatically when focus is lost")
 	print("GODOT_STARTUP_RESULT: %d failure(s)" % failures)
 	quit(1 if failures > 0 else 0)
 
