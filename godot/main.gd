@@ -2253,11 +2253,17 @@ func _draw_projectiles() -> void:
 				# 主柱（略带锥形感：内层更亮更窄）
 				draw_line(la, lb, Color(color, 0.85), lw)
 				draw_line(la, lb, Color(color, 0.95), lw * 0.62)
-				# 流动条纹
-				for k2 in range(4):
-					var off := fmod(elapsed * 300.0 + float(k2) * 60.0, llen) - llen * 0.25
+				# 流光：6 道明亮条纹 + 3 个移动光团（明显可见）
+				for k2 in range(6):
+					var off := fmod(elapsed * 420.0 + float(k2) * (llen / 6.0), llen) - llen * 0.25
 					var q := la + bdir * off
-					draw_line(q - bdir * 18.0, q + bdir * 18.0, Color(1, 1, 1, 0.45), lw * 0.30)
+					draw_line(q - bdir * 26.0, q + bdir * 26.0, Color(0.72, 1, 0.4, 0.55), lw * 0.42)
+					draw_line(q - bdir * 20.0, q + bdir * 20.0, Color(1, 1, 1, 0.85), lw * 0.22)
+				for k3 in range(3):
+					var off2 := fmod(elapsed * 300.0 + float(k3) * (llen / 3.0), llen) - llen * 0.2
+					var q2 := la + bdir * off2
+					draw_circle(q2, lw * 0.55, Color(0.72, 1, 0.4, 0.35))
+					draw_circle(q2, lw * 0.28, Color(1, 1, 1, 0.8))
 				# 波纹：沿光束正弦摆动的亮线（模拟能量流动）
 				var perp2 := Vector2(-bdir.y, bdir.x)
 				for wv in range(2):
