@@ -409,6 +409,8 @@ func _load_story() -> void:
 		story_data = parsed
 
 func _physics_process(_delta: float) -> void:
+	_decay_shake()
+
 	frame += 1
 	elapsed += FIXED_DT
 	input_state = _read_inputs()
@@ -1928,6 +1930,7 @@ func _get_portrait_texture(id: String) -> Texture2D:
 const CHAR_TITLES := {
 	"rek": {"name": "蕾克", "title": "小红帽", "color": Color(1, 0, 0), "tcolor": Color(1, 1, 1)},
 	"rek_crimson": {"name": "猩红魔姬·雷帝", "title": "自负的暴君", "color": Color(1, 0, 0), "tcolor": Color(1, 0, 0)},
+	"crimson": {"name": "猩红魔姬·雷帝", "title": "自负的暴君", "color": Color(1, 0, 0), "tcolor": Color(1, 0, 0)},
 	"norden": {"name": "诺登", "title": "计时者 白之兔", "color": Color(1, 0.31, 0.31), "tcolor": Color(1, 1, 1)},
 	"marysue": {"name": "玛丽苏", "title": "扭曲的黑童话作家", "color": Color(0.51, 1, 0), "tcolor": Color(0.51, 1, 0)},
 	"mabel": {"name": "梅贝尔", "title": "来自虚空的虚无少女", "color": Color(0, 0.73, 1), "tcolor": Color(0, 0.73, 1)}
@@ -2082,8 +2085,8 @@ func _draw_mirror_gate(pos: Vector2) -> void:
 	draw_line(pos + Vector2(30, -135), pos + Vector2(-8, -70), Color(1, 1, 1, 0.6), 2.0)
 
 func _draw_battle() -> void:
-	# 六阶段镜像翻转：整层世界水平镜像
-	if mirror_flip:
+	var mirror_world := mirror_flip
+	if mirror_world:
 		draw_set_transform(Vector2(VIEW.x, 0), 0.0, Vector2(-1, 1))
 	_draw_world_grid()
 	_draw_boss_fx()
@@ -2098,8 +2101,6 @@ func _draw_battle() -> void:
 	_draw_fx_rings()
 	_draw_player_at(player_pos - Vector2(camera_x, 0), WHITE)
 	_draw_particles_world()
-	if mirror_flip:
-		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	if tragedy_buff_t > 0.0:
 		tragedy_buff_t = maxf(0.0, tragedy_buff_t - FIXED_DT)
 	if ball_hint_t > 0.0 and mode == Mode.WALK:
@@ -2113,6 +2114,8 @@ func _draw_battle() -> void:
 		draw_rect(Rect2(0, 0, 14, VIEW.y), Color(1, 0, 0, 0.45 * hv))
 		draw_rect(Rect2(VIEW.x - 14, 0, 14, VIEW.y), Color(1, 0, 0, 0.45 * hv))
 		hurt_vignette -= 1
+	if mirror_world:
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	_draw_battle_overlays()
 	_draw_death_overlay()
 	_draw_hud()
@@ -2968,14 +2971,18 @@ func _patterns_marysue() -> void:
 					var sp_a := float(k) * 0.62 + elapsed * 2.2
 					_spawn_bullet(boss_pos, Vector2(cos(sp_a), sin(sp_a)) * (120.0 + float(k) * 14.0), HAZARD, "yinyang", 5.5, 0.15)
 			
-			if frame % 60 == 0:
-				for k in range(8):
-					var a := TAU * float(k) / 8.0 + elapsed * 0.5
+			if frame % 40 == 0:
+				for k in range(10):
+					var a := TAU * float(k) / 10.0 + elapsed * 0.5
 					_spawn_bullet(boss_pos, Vector2(cos(a), sin(a)) * 150.0, HAZARD, "talisman", 5.0, 0.02)
-		1:  # 贰 · 反语：阴阳球缓慢旋转外扩
-			if frame % 65 == 0:
+			if frame % 75 == 0:
 				for k in range(6):
-					var a2 := -TAU * float(k) / 6.0 + elapsed * 0.9
+					var a_s := TAU * float(k) / 6.0 - elapsed * 0.8
+					_spawn_bullet(boss_pos, Vector2(cos(a_s), sin(a_s)) * 190.0, HAZARD, "yinyang", 5.0, 0.15)
+		1:  # 贰 · 反语：阴阳球缓慢旋转外扩
+			if frame % 45 == 0:
+				for k in range(8):
+					var a2 := -TAU * float(k) / 8.0 + elapsed * 0.9
 					_spawn_bullet(boss_pos, Vector2(cos(a2), sin(a2)) * 170.0, HAZARD, "yinyang", 5.5, 0.25)
 		2:  # 叁 · 镜廊：符纸雨 + 阴阳球 + 箱庭囚笼
 			if frame % 160 == 0:
@@ -3052,7 +3059,7 @@ func _spawn_two_whirls() -> void:
 		return
 	var base := clampf(player_pos.x, 300.0, 2100.0)
 	whirls = [{"x": base - 320.0, "phase": 0.0, "mode": "chase", "dir": 1.0},
-	           {"x": base + 320.0, "phase": 1.7, "mode": "sweep", "dir": 1.0}]
+			   {"x": base + 320.0, "phase": 1.7, "mode": "sweep", "dir": 1.0}]
 
 func _update_boss_extras() -> void:
 	# 旋风：转动 + 碰撞（贴地才伤害，带无敌帧判定）
@@ -3707,3 +3714,9 @@ func _draw_beam_warnings() -> void:
 		var k: float = clampf(float(w["t"]) / 0.7, 0.0, 1.0)
 		draw_line(Vector2(bx, 40), Vector2(bx, GROUND_Y), Color(0.51, 1, 0, 0.30 + 0.45 * (1.0 - k)), 3.0)
 		draw_circle(Vector2(bx, GROUND_Y - 12), 28.0 + 10.0 * (1.0 - k), Color(0.51, 1, 0, 0.22))
+
+
+## 全局屏震衰减（避免胜利/剧情模式下一直抖）
+func _decay_shake() -> void:
+	if screen_shake > 0.0:
+		screen_shake = maxf(0.0, screen_shake - 0.42)
