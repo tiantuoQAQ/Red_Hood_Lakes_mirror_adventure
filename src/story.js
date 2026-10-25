@@ -83,6 +83,7 @@ const STORY = {
       { t: 'say', who: 'marysue', expr: 'eyes_closed', show: true, text: '而且……你真觉得……' },
       { t: 'say', who: 'marysue', expr: 'eyes_open', show: true, text: '你能碰到我吗？' },
 
+      { t: 'sfx', name: 'click' },
       { t: 'say', who: '', text: '「啪嗒。」' },
       { t: 'say', who: 'rek', expr: 'shock', show: true, bump: true, screenshake: 12, shakeAmp: 7, text: '！？' },
       { t: 'wait', frames: 26 },

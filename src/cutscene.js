@@ -270,6 +270,11 @@ const Cutscene = (function () {
           S.framesLeft = 120;
         }
         break;
+      case 'sfx':
+        if (typeof Sfx !== 'undefined' && c.name && typeof Sfx[c.name] === 'function') {
+          Sfx[c.name]();
+        }
+        break;
       case 'music':
         // 战斗曲：进 Boss 战之前的对话里就开始放
         if (typeof Music !== 'undefined') {

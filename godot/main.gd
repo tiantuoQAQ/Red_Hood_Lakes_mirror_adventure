@@ -473,6 +473,9 @@ func _story_advance() -> void:
 					_set_portrait(str(command.get("who", "")), str(command.get("expr", "")))
 				story_timer = float(command.get("frames", 30)) / 60.0
 				return
+			"sfx":
+				sfx_player.play(str(command.get("name", "")))
+				return
 			"reveal":
 				var rw := str(command.get("who", ""))
 				var rkey := _portrait_base(rw)

@@ -22,6 +22,7 @@ func _ready() -> void:
 	_load_sfx("hurt", "res://audio/sfx/hurt.wav")
 	_load_sfx("skill", "res://audio/sfx/skill.wav")
 	_load_sfx("shards", "res://audio/sfx/shards.wav")
+	_load_sfx("click", "res://audio/sfx/click.wav")
 	_load_sfx("lock_beep", "res://audio/sfx/lock_beep.wav")
 	_load_sfx("spike", "res://audio/sfx/spike.wav")
 	_load_sfx("explode", "res://audio/sfx/explode.wav")
