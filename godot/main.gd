@@ -142,7 +142,8 @@ var boss_lunge_return := Vector2.ZERO
 # Boss special skill state
 var boss_skill_state := ""  # "telegraph", "firing", "cooldown"
 var boss_skill_timer := 0
-var boss_skill_subframe := 0  # Frame counter within current skill phase
+var boss_skill_subframe := 0
+var boss_rush_side := 1.0  # Frame counter within current skill phase
 var bullets: Array = []
 var shots: Array = []
 var warnings: Array = []
@@ -308,6 +309,11 @@ func _load_assets() -> void:
 		"bullet_orb": "res://art/fx/bullets/bullet_orb.png",
 		"bullet_laser": "res://art/fx/bullets/bullet_laser.png",
 		"bullet_rain": "res://art/fx/bullets/bullet_rain.png",
+		"bullet_flame": "res://art/fx/bullets/flame_bullet.png",
+		"bullet_crescent": "res://art/fx/bullets/crescent.png",
+		"bullet_yinyang": "res://art/fx/bullets/yinyang_orb.png",
+		"bullet_talisman": "res://art/fx/bullets/talisman.png",
+		"bullet_beam": "res://art/fx/bullets/beam_pillar.png",
 		"skill_icon_gun": "res://art/ui/skill_gunfire.png",
 		"skill_icon_hell": "res://art/ui/skill_hellfire.png"
 	}
@@ -1161,13 +1167,8 @@ func _update_boss() -> void:
 	
 	# Attack pattern timer (independent of movement)
 	# 修：带状态的招式（预警→发射）必须每帧推进，否则一招要等几十秒才出弹
-	if cutin_active or battle_intro_t > 0.0:
-		pass
-	elif boss_skill_state != "":
-		_spawn_boss_pattern()
-		boss_attack_timer = 40
-	elif boss_attack_timer <= 0:
-		boss_attack_timer = 78 if boss_id == "crimson" else 64
+	# 招式按帧驱动（新招式全部是 frame%N 形式），演出期间暂停
+	if not cutin_active and battle_intro_t <= 0.0:
 		_spawn_boss_pattern()
 	
 	_update_boss_extras()
@@ -1393,8 +1394,8 @@ func _marysue_inverted_finale() -> void:
 			boss_skill_state = ""
 			skill_warnings.clear()
 
-func _spawn_bullet(pos: Vector2, velocity: Vector2, color: Color, kind: String) -> void:
-	bullets.append({"pos": pos, "vel": velocity, "life": 5.0, "color": color, "kind": kind, "angle": velocity.angle(), "grazed": false})
+func _spawn_bullet(pos: Vector2, velocity: Vector2, color: Color, kind: String, life := 5.0, homing := 0.0) -> void:
+	bullets.append({"pos": pos, "vel": velocity, "life": life, "color": color, "kind": kind, "angle": velocity.angle(), "grazed": false, "homing": homing})
 
 func _update_shots() -> void:
 	for shot in shots:
@@ -2148,6 +2149,22 @@ func _draw_projectiles() -> void:
 				btex_key = "bullet_rain"
 				bsize = 42.0
 				rot = PI * 0.5
+			"flame":
+				btex_key = "bullet_flame"
+				bsize = 34.0
+			"crescent":
+				btex_key = "bullet_crescent"
+				bsize = 86.0
+			"yinyang":
+				btex_key = "bullet_yinyang"
+				bsize = 54.0
+			"talisman":
+				btex_key = "bullet_talisman"
+				bsize = 32.0
+			"beam":
+				btex_key = "bullet_beam"
+				bsize = 120.0
+				rot = 0.0
 			"bigorb":
 				btex_key = "bullet_orb"
 				bsize = 84.0
@@ -2685,78 +2702,37 @@ func _marysue_laser_beam() -> void:
 # ======================= 新 Boss 招式体系 =======================
 
 func _patterns_crimson() -> void:
-	var color := RED
+	# 参考用户截图：满屏火焰弹（弱追踪、会自动消散）、落地追击斩、新月剑气
 	match boss_phase:
-		0:  # 一阶段：天上直线剑气（非追踪）
-			if boss_skill_state == "":
-				boss_skill_state = "telegraph"
-				boss_skill_timer = 22
-				var dir := (player_pos - boss_pos).normalized()
-				skill_warnings.append({"kind": "line", "pos": boss_pos, "dir": dir, "life": 22.0 / 60.0, "color": RED})
-			elif boss_skill_state == "telegraph":
-				boss_skill_timer -= 1
-				if boss_skill_timer <= 0:
-					boss_skill_state = "firing"
-					boss_skill_timer = 20
-					var aim: Vector2 = skill_warnings[0]["dir"] if skill_warnings.size() > 0 else Vector2.LEFT
-					for k in range(3):
-						var off := (float(k) - 1.0) * 0.10
-						_spawn_bullet(boss_pos, Vector2(cos(aim.angle() + off), sin(aim.angle() + off)) * 620.0, color, "blade")
-			elif boss_skill_state == "firing":
-				boss_skill_timer -= 1
-				if boss_skill_timer <= 0:
-					boss_skill_state = ""
-					skill_warnings.clear()
-		1:  # 二阶段：落地突刺 + 少量追踪剑气
-			if boss_skill_state == "":
-				boss_skill_state = "telegraph"
-				boss_skill_timer = 28
-				boss_pos.y = 380.0
-				skill_warnings.append({"kind": "line", "pos": boss_pos, "dir": (player_pos - boss_pos).normalized(), "life": 28.0 / 60.0, "color": RED})
-			elif boss_skill_state == "telegraph":
-				boss_skill_timer -= 1
-				if boss_skill_timer <= 0:
-					boss_skill_state = "firing"
-					boss_skill_timer = 30
-					boss_pos.x = clampf(player_pos.x, 1250.0, 2180.0)
-					_spawn_bullet(boss_pos, Vector2(-1, 0) * 900.0, color, "lance")
-					for k in range(3):
-						var hb := (player_pos - boss_pos).normalized()
-						_spawn_bullet(boss_pos, hb * 300.0, color, "homing")
-			elif boss_skill_state == "firing":
-				boss_skill_timer -= 1
-				if boss_skill_timer <= 0:
-					boss_skill_state = ""
-					skill_warnings.clear()
-					boss_pos.y = 226.0
-		2:  # 三阶段：天上追踪剑气 + 两个旋风
-			_spawn_two_whirls()
-			if boss_skill_state == "":
-				boss_skill_state = "firing"
-				boss_skill_timer = 60
-				for k in range(3):
-					var hb2 := (player_pos - boss_pos).normalized()
-					_spawn_bullet(boss_pos, hb2 * 280.0, color, "homing")
-			elif boss_skill_state == "firing":
-				boss_skill_timer -= 1
-				if boss_skill_timer <= 0:
-					boss_skill_state = ""
-		3:  # 四阶段：剑雨 + 剑气
-			_spawn_two_whirls()
+		0:  # 一：火焰弹幕（弱追踪，3 秒后消散）
+			if frame % 10 == 0:
+				for k in range(2):
+					var a := (player_pos - boss_pos).angle() + randf_range(-0.55, 0.55)
+					_spawn_bullet(boss_pos + Vector2(randf_range(-16, 16), randf_range(-16, 16)),
+						Vector2(cos(a), sin(a)) * randf_range(170.0, 260.0), RED, "flame", 3.0, 0.05)
+			if frame % 90 == 0:
+				for k in range(10):
+					var a2 := TAU * float(k) / 10.0 + elapsed
+					_spawn_bullet(boss_pos, Vector2(cos(a2), sin(a2)) * 210.0, RED, "flame", 3.4, 0.03)
+		1:  # 二：落地追击斩 + 火焰弹
+			_crimson_rush_attack(true)
+		2:  # 三：落地追击斩 + 新月剑气
+			_crimson_rush_attack(false)
+			if boss_skill_state == "" and frame % 26 == 0:
+				_crimson_crescent_volley(3)
+		3:  # 四：火焰弹雨 + 新月剑气
+			_crimson_rush_attack(false)
+			if frame % 8 == 0:
+				var rx := 150.0 + randf() * 2100.0
+				_spawn_bullet(Vector2(rx, 40.0), Vector2(0, 300.0), RED, "flame", 4.0, 0.02)
+			if frame % 40 == 0:
+				_crimson_crescent_volley(2)
+		4:  # 五：高频追击斩 + 火焰弹幕 + 锁定突刺锋
+			_crimson_rush_attack(true)
 			if frame % 6 == 0:
-				for k in range(3):
-					var rx := 150.0 + randf() * 2200.0
-					_spawn_bullet(Vector2(rx, 30.0), Vector2(0, 420.0), color, "rain")
-			if frame % 30 == 0:
-				var dir3 := (player_pos - boss_pos).normalized()
-				_spawn_bullet(boss_pos, dir3 * 700.0, color, "blade")
-		4:  # 五阶段：高频突刺 + 剑气 + 每 2 秒锁定突刺锋
-			_spawn_two_whirls()
-			if frame % 14 == 0:
-				var dir4 := (player_pos - boss_pos).normalized()
-				_spawn_bullet(boss_pos, dir4 * 760.0, color, "blade")
-			if frame % 24 == 0:
-				_spawn_bullet(boss_pos, Vector2(randf_range(-1, 1), randf_range(-0.3, 0.6)).normalized() * 620.0, color, "lance")
+				for k in range(2):
+					var a5 := (player_pos - boss_pos).angle() + randf_range(-0.4, 0.4)
+					_spawn_bullet(boss_pos, Vector2(cos(a5), sin(a5)) * 240.0, RED, "flame", 2.8, 0.06)
 			if lock_state == "" and lock_cooldown <= 0:
 				lock_state = "aim"
 				lock_timer = 0.5
@@ -2764,50 +2740,121 @@ func _patterns_crimson() -> void:
 				lock_cooldown = 120
 				sfx_player.play("lock_beep")
 
+func _crimson_crescent_volley(count: int) -> void:
+	var dir := (player_pos - boss_pos).normalized()
+	for k in range(count):
+		var off := (float(k) - float(count - 1) * 0.5) * 0.16
+		var d := Vector2(cos(dir.angle() + off), sin(dir.angle() + off))
+		_spawn_bullet(boss_pos + d * 40.0, d * 520.0, RED, "crescent", 2.6, 0.0)
+	_spawn_fx_ring(boss_pos, Color(1, 0.3, 0.3, 0.8), 120.0, 0.3, 3.0)
+
+## 落地追击斩：先落到地面（带拖尾），再沿地面追击小红帽，落地后放新月剑气
+func _crimson_rush_attack(finish_crescent: bool) -> void:
+	if boss_skill_state == "":
+		boss_skill_state = "leap"
+		boss_skill_timer = 22
+		boss_rush_side = signf(player_pos.x - boss_pos.x)
+		_spawn_fx_ring(boss_pos, Color(1, 0, 0, 0.7), 90.0, 0.25, 3.0)
+	elif boss_skill_state == "leap":
+		boss_skill_timer -= 1
+		boss_pos.y = lerpf(boss_pos.y, 420.0, 0.22)
+		if boss_skill_timer <= 0:
+			boss_skill_state = "rush"
+			boss_skill_timer = 34
+			sfx_player.play("skill")
+	elif boss_skill_state == "rush":
+		boss_skill_timer -= 1
+		# 追着小红帽砍：向玩家方向加速冲
+		var target_x: float = player_pos.x - boss_rush_side * 60.0
+		boss_pos.x = move_toward(boss_pos.x, target_x, 15.0)
+		boss_pos.y = 420.0
+		# 冲刺拖尾（帅气）
+		for k in range(2):
+			_spawn_particle(Vector2(boss_pos.x - boss_rush_side * (20.0 + float(k) * 26.0), boss_pos.y - 30.0 + randf_range(-20, 20)),
+				Color(1, 0.15, 0.15, 0.85), 0.28, Vector2(-boss_rush_side * 260.0, randf_range(-30, 30)), 7.0)
+		if frame % 6 == 0:
+			var d := (player_pos - boss_pos).normalized()
+			_spawn_bullet(boss_pos + d * 30.0, d * 620.0, RED, "crescent", 2.2, 0.0)
+		if boss_skill_timer <= 0:
+			boss_skill_state = "land"
+			boss_skill_timer = 14
+			_spawn_fx_ring(Vector2(boss_pos.x, GROUND_Y - 10.0), Color(1, 0.35, 0.35, 0.9), 200.0, 0.35, 5.0)
+			_spawn_burst(Vector2(boss_pos.x, GROUND_Y - 10.0), Color(1, 0.6, 0.4), 14)
+			if finish_crescent:
+				_crimson_crescent_volley(5)
+	elif boss_skill_state == "land":
+		boss_skill_timer -= 1
+		if boss_skill_timer <= 0:
+			boss_skill_state = ""
+			boss_pos.y = 226.0
+
 func _patterns_marysue() -> void:
-	var color := HAZARD
+	# 参考用户截图：符纸环、阴阳玉、激光柱、粒子流光
 	match boss_phase:
-		0:  # 一阶段：小光球
-			if frame % 42 == 0:
-				for i in range(12):
-					var a := TAU * float(i) / 12.0 + elapsed
-					_spawn_bullet(boss_pos, Vector2(cos(a), sin(a)) * 140.0, color, "hazard")
-		1:  # 二阶段：缓慢移动的追踪激光
-			if frame % 50 == 0:
-				for i in range(3):
-					var d := (player_pos - boss_pos).normalized()
-					var off := (float(i) - 1.0) * 0.35
-					_spawn_bullet(boss_pos, Vector2(cos(d.angle() + off), sin(d.angle() + off)) * 130.0, color, "homing_laser")
-		2:  # 三阶段：光球雨 + 大光球（落地爆炸 + 冲击波）
-			if frame % 8 == 0:
-				_spawn_bullet(Vector2(120.0 + randf() * 2000.0, 40.0), Vector2(0, 260.0), color, "rain")
-			if frame % 150 == 0:
-				_spawn_bullet(Vector2(player_pos.x, 60.0), Vector2(0, 300.0), color, "bigorb")
-		3:  # 四阶段：地图随机各处激光，持续 2 秒
-			if frame % 70 == 0:
-				for i in range(4):
-					var lx := 120.0 + randf() * 2000.0
-					_spawn_bullet(Vector2(lx, 40.0), Vector2(0, 300.0), color, "laser_down")
-		4:  # 五阶段：带激光在地面冲刺 + 全屏绿闪（无伤害、遮挡视野）
+		0:  # 一：符纸环（缓慢外扩，弱追踪）
+			if frame % 18 == 0:
+				for k in range(10):
+					var a := TAU * float(k) / 10.0 + elapsed * 0.6
+					_spawn_bullet(boss_pos, Vector2(cos(a), sin(a)) * 170.0, HAZARD, "talisman", 4.5, 0.03)
+		1:  # 二：阴阳玉旋转 + 符纸
+			if frame % 26 == 0:
+				for k in range(6):
+					var a2 := -TAU * float(k) / 6.0 + elapsed * 1.1
+					_spawn_bullet(boss_pos, Vector2(cos(a2), sin(a2)) * 220.0, HAZARD, "yinyang", 5.0, 0.4)
+			if frame % 40 == 0:
+				for k in range(6):
+					var a3 := TAU * float(k) / 6.0 + elapsed
+					_spawn_bullet(boss_pos, Vector2(cos(a3), sin(a3)) * 260.0, HAZARD, "talisman", 4.0, 0.02)
+		2:  # 三：激光柱 + 阴阳玉
+			if frame % 90 == 0:
+				for k in range(3):
+					var bx := clampf(player_pos.x + randf_range(-300.0, 300.0), 120.0, WORLD_W - 160.0)
+					_spawn_bullet(Vector2(bx, GROUND_Y - 200.0), Vector2.ZERO, HAZARD, "beam", 1.4, 0.0)
+					_spawn_fx_ring(Vector2(bx, GROUND_Y - 200.0), Color(0.51, 1, 0, 0.8), 150.0, 0.5, 4.0)
+					for k2 in range(8):
+						_spawn_particle(Vector2(bx, GROUND_Y - 240.0 + randf_range(-20, 20)),
+							Color(0.51, 1, 0, 0.9), 0.6, Vector2(randf_range(-30, 30), randf_range(-120, -40)), 5.0)
+			if frame % 30 == 0:
+				for k in range(4):
+					var a4 := TAU * float(k) / 4.0 + elapsed * 1.4
+					_spawn_bullet(boss_pos, Vector2(cos(a4), sin(a4)) * 200.0, HAZARD, "yinyang", 4.5, 0.35)
+		3:  # 四：符纸雨 + 阴阳玉环
+			if frame % 7 == 0:
+				_spawn_bullet(Vector2(120.0 + randf() * 2100.0, 40.0), Vector2(0, 260.0), HAZARD, "talisman", 4.0, 0.02)
+			if frame % 60 == 0:
+				for k in range(8):
+					var a5 := TAU * float(k) / 8.0
+					_spawn_bullet(boss_pos, Vector2(cos(a5), sin(a5)) * 180.0, HAZARD, "yinyang", 5.0, 0.45)
+		4:  # 五：地面冲刺 + 全屏绿闪 + 粒子
 			green_flash_t = 1.2
 			if boss_skill_state == "":
 				boss_skill_state = "firing"
 				boss_skill_timer = 40
 				boss_pos.y = 420.0
 				boss_pos.x = clampf(player_pos.x + randf_range(-200.0, 200.0), 1250.0, 2180.0)
-				_spawn_bullet(boss_pos, Vector2(-1, 0) * 800.0, color, "laser")
+				_spawn_bullet(boss_pos, Vector2(-1, 0) * 800.0, HAZARD, "beam", 1.0, 0.0)
+				for k in range(10):
+					_spawn_particle(boss_pos, Color(0.51, 1, 0, 0.9), 0.5, Vector2(randf_range(-200, 200), randf_range(-120, 60)), 6.0)
 			elif boss_skill_state == "firing":
 				boss_skill_timer -= 1
 				if boss_skill_timer <= 0:
 					boss_skill_state = ""
 					boss_pos.y = 226.0
-		5:  # 六阶段：镜像翻转
+		5:  # 六：镜像翻转 + 弹幕炼狱（符纸 + 阴阳玉 + 激光柱）
 			if not mirror_flip:
 				mirror_flip = true
+			if frame % 12 == 0:
+				for k in range(8):
+					var a6 := TAU * float(k) / 8.0 + elapsed * 1.7
+					_spawn_bullet(boss_pos, Vector2(cos(a6), sin(a6)) * 190.0, HAZARD, "talisman", 4.0, 0.03)
 			if frame % 40 == 0:
-				for i in range(8):
-					var a5 := TAU * float(i) / 8.0 + elapsed * 1.3
-					_spawn_bullet(boss_pos, Vector2(cos(a5), sin(a5)) * 210.0, color, "hazard")
+				for k in range(8):
+					var a7 := -TAU * float(k) / 8.0 + elapsed
+					_spawn_bullet(boss_pos, Vector2(cos(a7), sin(a7)) * 140.0, HAZARD, "yinyang", 5.0, 0.4)
+			if frame % 70 == 0:
+				for k in range(4):
+					var bx2 := 150.0 + randf() * 2000.0
+					_spawn_bullet(Vector2(bx2, GROUND_Y - 200.0), Vector2.ZERO, HAZARD, "beam", 1.2, 0.0)
 
 func _spawn_two_whirls() -> void:
 	if whirls.size() >= 2:
