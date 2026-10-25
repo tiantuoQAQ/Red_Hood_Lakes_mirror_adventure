@@ -1587,6 +1587,9 @@ func _use_red_skill() -> void:
 		return
 	if player_energy < 2:
 		return
+	player_energy -= 2.0          # 消耗 2 MP（用户要求）
+	player_hp = mini(PLAYER_MAX_HP, player_hp + 2)   # 回复 2 HP
+	tragedy_buff_t = 20.0         # 20 秒强化剑气
 	sfx_player.play("skill")
 	if skill_red_tragedy:
 		bullets.clear()
@@ -2099,6 +2102,8 @@ func _draw_battle() -> void:
 	_draw_beam_warnings()
 	_draw_battle_bounds_fx()
 	_draw_fx_rings()
+	if mirror_world:
+		draw_set_transform(Vector2(VIEW.x, 0), 0.0, Vector2(-1, 1))
 	_draw_player_at(player_pos - Vector2(camera_x, 0), WHITE)
 	_draw_particles_world()
 	if tragedy_buff_t > 0.0:
@@ -2886,11 +2891,16 @@ func _patterns_crimson() -> void:
 					_spawn_bullet(boss_pos, Vector2(cos(a2), sin(a2)) * 210.0, RED, "flame", 3.4, 0.03)
 		1:  # 二：落地追击斩 + 火焰弹
 			_crimson_rush_attack(true)
-		2:  # 三：落地追击斩 + 新月剑气
+		2:  # 三：落地追击斩 + 新月剑气 + 双旋风
+			_spawn_two_whirls()
 			_crimson_rush_attack(false)
 			if boss_skill_state == "" and frame % 52 == 0:
 				_crimson_crescent_volley(1)
-		3:  # 四：地刺追击 + 火焰弹雨 + 新月剑气
+		3:  # 四：地刺追击 + 火焰弹雨 + 新月剑气 + 双旋风 + 追踪火球
+			if frame % 100 == 0:
+				for k in range(3):
+					_spawn_bullet(boss_pos, Vector2(randf_range(-1, 1), randf_range(-0.4, 0.4)).normalized() * 190.0, RED, "flame", 5.0, 0.5)
+			_spawn_two_whirls()
 			if frame % 90 == 0:
 				for k in range(2):
 					var sx0 := player_pos.x + (float(k) - 0.5) * 220.0
@@ -2902,7 +2912,12 @@ func _patterns_crimson() -> void:
 				_spawn_bullet(Vector2(rx, 40.0), Vector2(0, 260.0), RED, "flame", 4.0, 0.02)
 			if frame % 80 == 0:
 				_crimson_crescent_volley(2)
-		4:  # 五：高频追击斩 + 火焰弹幕 + 锁定突刺锋
+		4:  # 五：高频追击斩 + 火焰弹幕 + 锁定突刺锋 + 双旋风 + 落雷
+			if frame % 120 == 0:
+				for k in range(2):
+					var lxr := clampf(player_pos.x + (float(k) - 0.5) * 280.0, _battle_left() + 80.0, _battle_right() - 80.0)
+					_beam_warning_crimson(lxr)
+			_spawn_two_whirls()
 			_crimson_rush_attack(true)
 			if frame % 12 == 0:
 				for k in range(2):
@@ -3076,7 +3091,8 @@ func _update_boss_extras() -> void:
 			if float(w["x"]) > WORLD_W - 200.0:
 				w["dir"] = -1.0
 		var dx: float = absf(player_pos.x - float(w["x"]))
-		if dx < 70.0 and player_grounded and player_hurt_invuln <= 0 and player_dash_invuln <= 0 and not player_ball:
+		if dx < 62.0 and player_grounded and player_hurt_invuln <= 0 and player_dash_invuln <= 0 and not player_ball:
+			# 中心核心伤害（冲刺有无敌帧，可以穿过去）
 			player_vel.x = signf(player_pos.x - float(w["x"])) * 420.0
 			_apply_player_damage()
 	# 锁定突刺锋
@@ -3705,7 +3721,10 @@ func _update_beam_warnings() -> void:
 	for w in beam_warning_list:
 		w["t"] = float(w["t"]) - FIXED_DT
 		if float(w["t"]) <= 0.0:
-			_spawn_beam(float(w["x"]), 0.9)
+			if bool(w.get("crimson", false)):
+				_spawn_beam_crimson(float(w["x"]), 0.9)
+			else:
+				_spawn_beam(float(w["x"]), 0.9)
 	beam_warning_list = beam_warning_list.filter(func(w): return float(w["t"]) > 0.0)
 
 func _draw_beam_warnings() -> void:
@@ -3720,3 +3739,13 @@ func _draw_beam_warnings() -> void:
 func _decay_shake() -> void:
 	if screen_shake > 0.0:
 		screen_shake = maxf(0.0, screen_shake - 0.42)
+
+
+## 雷帝落雷预警（红色）
+func _beam_warning_crimson(x: float) -> void:
+	beam_warning_list.append({"x": x, "t": 0.7, "crimson": true})
+
+## 红色落雷（复用 beam 贴图与判定）
+func _spawn_beam_crimson(x: float, seconds: float) -> void:
+	_spawn_bullet(Vector2(x, (40.0 + GROUND_Y) * 0.5), Vector2.ZERO, RED, "beam", seconds, 0.0)
+	_spawn_fx_ring(Vector2(x, GROUND_Y - 30.0), Color(1, 0.25, 0.15, 0.85), 130.0, 0.35, 3.0)
