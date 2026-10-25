@@ -1480,6 +1480,16 @@ func _update_bullets() -> void:
 		var prev_pos: Vector2 = bullet.get("prev_pos", bullet["pos"])
 		bullet["prev_pos"] = bullet["pos"]
 		bullet["pos"] += bullet["vel"] * FIXED_DT
+		# 激光/光柱沿线粒子（绿色火花）
+		var bk := str(bullet.get("kind", ""))
+		if (bk == "laser" or bk == "beam" or bk == "laser_down") and randf() < 0.55:
+			var bpos: Vector2 = bullet["pos"]
+			var px := bpos.x + randf_range(-16.0, 16.0)
+			var py := bpos.y + randf_range(-90.0, 90.0)
+			if bk == "beam":
+				py = randf_range(60.0, GROUND_Y - 10.0)
+			_spawn_particle(Vector2(px, py), Color(0.51, 1.0, 0.0, 0.9), randf_range(0.25, 0.55),
+				Vector2(randf_range(-70, 70), randf_range(-170, -40)), randf_range(2.0, 4.5))
 		bullet["life"] = float(bullet["life"]) - FIXED_DT
 		if bullet["kind"] == "homing" and bullet["life"] > 2.0:
 			var desired: Vector2 = (player_pos - bullet["pos"]).normalized() * bullet["vel"].length()
@@ -2246,6 +2256,23 @@ func _draw_projectiles() -> void:
 					var off := fmod(elapsed * 300.0 + float(k2) * 60.0, llen) - llen * 0.25
 					var q := la + bdir * off
 					draw_line(q - bdir * 18.0, q + bdir * 18.0, Color(1, 1, 1, 0.45), lw * 0.30)
+				# 波纹：沿光束正弦摆动的亮线（模拟能量流动）
+				var perp2 := Vector2(-bdir.y, bdir.x)
+				for wv in range(2):
+					var pts := PackedVector2Array()
+					var steps := 22
+					for si in range(steps + 1):
+						var t2 := float(si) / float(steps)
+						var base := la.lerp(lb, t2)
+						var amp := lw * (0.55 + 0.35 * float(wv))
+						var ph := elapsed * (9.0 + float(wv) * 3.0) + t2 * 26.0 + float(wv) * 1.7
+						pts.append(base + perp2 * sin(ph) * amp * 0.22)
+					draw_polyline(pts, Color(1, 1, 1, 0.35 - 0.12 * float(wv)), 2.2)
+				# 尾光带：比主柱更宽的柔和光带（缓慢流动）
+				var band_off := fmod(elapsed * 160.0, 240.0)
+				var band_c := la.lerp(lb, 0.5)
+				draw_line(la, lb, Color(color, 0.12), lw * 4.2)
+				draw_line(band_c - bdir * band_off * 0.5, band_c + bdir * band_off * 0.5, Color(1, 1, 1, 0.10), lw * 1.8)
 				# 白热核心
 				draw_line(la, lb, Color(1, 1, 1, 0.98), lw * 0.34)
 				# 枪口光斑 + 末端爆点
