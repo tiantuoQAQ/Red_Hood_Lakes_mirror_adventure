@@ -65,6 +65,7 @@ var story_card := ["", ""]
 var story_title := ""
 var story_title_sub := ""
 var story_intro := ""
+var intro_hold := 0.0      # 竖幅在下一句仍停留的秒数
 var portrait_fade := 0.0      # 对话结束后立绘淡出（1 → 0）
 var last_left := ""
 var last_right := ""
@@ -152,6 +153,7 @@ const ENERGY_MAX := 4.0
 const ENERGY_PER_GRAZE := 0.28   # 擦弹回复能量
 const ENERGY_PER_HIT := 0.06     # 子弹命中回复能量
 var energy_flash := 0            # 能量满/消耗时的闪动
+var hurt_vignette := 0
 var fx_rings: Array = []         # 冲击环 {pos, r, max, life, color, width}
 var player_dash_frames := 0
 var player_dash_buffer := 0
@@ -1305,6 +1307,8 @@ func _update_bullets() -> void:
 		warning["life"] = float(warning["life"]) - FIXED_DT
 	warnings = warnings.filter(func(w): return float(w.get("life", 0.0)) > 0.0)
 	for bullet in bullets:
+		var prev_pos: Vector2 = bullet.get("prev_pos", bullet["pos"])
+		bullet["prev_pos"] = bullet["pos"]
 		bullet["pos"] += bullet["vel"] * FIXED_DT
 		bullet["life"] = float(bullet["life"]) - FIXED_DT
 		if bullet["kind"] == "homing" and bullet["life"] > 2.0:
@@ -1580,6 +1584,10 @@ func _draw_story() -> void:
 	# A scene can stay black during narration (the prologue reads a letter).
 	# Fade the scenery and portraits before drawing text and continue prompts.
 	# All fade layers (partial and full blackout) are drawn here, before dialogue.
+	if intro_hold > 0.0:
+		intro_hold = maxf(0.0, intro_hold - FIXED_DT)
+		if intro_hold <= 0.0:
+			story_intro = ""
 	if story_fade > 0:
 		draw_rect(Rect2(Vector2.ZERO, VIEW), Color(0, 0, 0, story_fade))
 	if story_cmd.get("t", "") == "card":
@@ -1824,6 +1832,13 @@ func _draw_battle() -> void:
 	_draw_fx_rings()
 	_draw_player_at(player_pos - Vector2(camera_x, 0), WHITE)
 	_draw_particles_world()
+	if hurt_vignette > 0:
+		var hv := float(hurt_vignette) / 18.0
+		draw_rect(Rect2(0, 0, VIEW.x, 14), Color(1, 0, 0, 0.45 * hv))
+		draw_rect(Rect2(0, VIEW.y - 14, VIEW.x, 14), Color(1, 0, 0, 0.45 * hv))
+		draw_rect(Rect2(0, 0, 14, VIEW.y), Color(1, 0, 0, 0.45 * hv))
+		draw_rect(Rect2(VIEW.x - 14, 0, 14, VIEW.y), Color(1, 0, 0, 0.45 * hv))
+		hurt_vignette -= 1
 	_draw_battle_overlays()
 	_draw_hud()
 
@@ -2176,18 +2191,32 @@ func _draw_hud() -> void:
 	var sx0 := 620.0
 	for si in range(slots.size()):
 		var slot: Dictionary = slots[si]
-		var rect := Rect2(sx0 + float(si) * 62.0, 640, 52, 52)
+		var rect := Rect2(sx0 + float(si) * 68.0, 632, 60, 60)
 		var can := player_energy >= float(slot["cost"])
-		draw_rect(rect, Color(0.05, 0.05, 0.06, 0.85))
-		draw_rect(rect, Color(1, 1, 1, 0.55 if can else 0.18), false, 2.0)
+		var pulse := 0.5 + 0.5 * sin(elapsed * 4.0 + float(si))
+		# 外框：可用时白边+红晕，不可用时暗灰
+		draw_rect(rect, Color(0.04, 0.04, 0.05, 0.9))
+		if can:
+			draw_rect(Rect2(rect.position - Vector2(2, 2), rect.size + Vector2(4, 4)), Color(1, 0, 0, 0.25 + 0.15 * pulse), false, 3.0)
+		draw_rect(rect, Color(1, 1, 1, 0.55 if can else 0.16), false, 2.0)
 		var itex: Texture2D = textures.get(slot["tex"])
 		if itex:
-			draw_texture_rect(itex, Rect2(rect.position + Vector2(4, 4), Vector2(44, 44)), false,
-				Color(1, 1, 1, 1.0 if can else 0.32))
-		# 能量消耗（左下角）
-		draw_string(ThemeDB.fallback_font, rect.position + Vector2(4, 48), str(slot["cost"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1, 0.25, 0.25) if can else GREY)
-		# 按键（右上角）
-		draw_string(ThemeDB.fallback_font, rect.position + Vector2(30, 14), str(slot["key"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, WHITE if can else GREY)
+			var pad := 6.0
+			draw_texture_rect(itex, Rect2(rect.position + Vector2(pad, pad), rect.size - Vector2(pad * 2, pad * 2)), false,
+				Color(1, 1, 1, 1.0 if can else 0.28))
+		# 能量消耗徽章（左下）
+		var cbadge := Rect2(rect.position + Vector2(2, rect.size.y - 18), Vector2(20, 16))
+		draw_rect(cbadge, Color(0, 0, 0, 0.8))
+		draw_string(ThemeDB.fallback_font, cbadge.position + Vector2(4, 13), str(slot["cost"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 13,
+			Color(1, 0.25, 0.25) if can else GREY)
+		# 按键徽章（右上）
+		var kbadge := Rect2(rect.position + Vector2(rect.size.x - 20, 2), Vector2(18, 16))
+		draw_rect(kbadge, Color(0, 0, 0, 0.8))
+		draw_string(ThemeDB.fallback_font, kbadge.position + Vector2(5, 13), str(slot["key"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 13,
+			WHITE if can else GREY)
+		# 技能名（格下方小字）
+		draw_string(ThemeDB.fallback_font, rect.position + Vector2(0, rect.size.y + 13), str(slot["name"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 12,
+			Color(1, 0.4, 0.4) if can else GREY)
 	draw_string(ThemeDB.fallback_font, Vector2(640, 675), "冲刺 %s" % ("READY" if player_dash_cd <= 0 else "%02d" % player_dash_cd), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, RED if player_dash_cd <= 0 else GREY)
 	draw_string(ThemeDB.fallback_font, Vector2(840, 675), "擦弹链 %d" % player_graze_chain, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, WHITE)
 	if banner_timer > 0 and banner != "":
@@ -2627,6 +2656,7 @@ func _update_boss_extras() -> void:
 		if d < 46.0 and player_hurt_invuln <= 0 and player_dash_invuln <= 0 and not player_ball:
 			player_hp -= 1
 			player_hurt_invuln = 70
+			hurt_vignette = 18
 			sfx_player.play("hurt")
 	spikes = spikes.filter(func(x): return float(x.get("life", 0.0)) > 0.0)
 	# 绿闪衰减
@@ -2634,6 +2664,17 @@ func _update_boss_extras() -> void:
 		green_flash_t = maxf(0.0, green_flash_t - FIXED_DT)
 
 func _draw_boss_extras() -> void:
+	# 刀光弹/激光拖尾
+	for b in bullets:
+		var kind := str(b.get("kind", ""))
+		if kind != "blade" and kind != "lance" and kind != "laser":
+			continue
+		var pv: Vector2 = Vector2(b.get("prev_pos", b["pos"])) - Vector2(camera_x, 0)
+		var pn: Vector2 = Vector2(b["pos"]) - Vector2(camera_x, 0)
+		if pv.distance_to(pn) < 60.0:
+			var col: Color = b["color"]
+			col.a = 0.28
+			draw_line(pv, pn, col, 6.0)
 	var cam := Vector2(camera_x, 0.0)
 	# 地面旋风
 	for w in whirls:
