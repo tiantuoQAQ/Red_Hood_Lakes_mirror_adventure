@@ -6,6 +6,10 @@ const PLAYER_SCALE := 0.34
 const PLAYER_FOOT := Vector2(550, 730)
 const PLAYER_NECK := Vector2(610, 320)
 const DASH_FRAMES := 20
+const BREATHE_FRAMES := 8
+const BREATHE_FPS := 8.0
+
+var npc_breathe_cache: Dictionary = {}  # { "norden": [tex0, tex1, ...], "mabel": [...] }
 
 func visible_bounds(texture: Texture2D) -> Rect2:
 	if texture == null:
@@ -51,3 +55,37 @@ func draw_player(canvas: CanvasItem, art: Dictionary, foot: Vector2, facing: flo
 			canvas.draw_texture_rect(head, Rect2(-PLAYER_NECK * PLAYER_SCALE, head.get_size() * PLAYER_SCALE), false, tint)
 	canvas.draw_set_transform(Vector2.ZERO, 0, Vector2.ONE)
 	return true
+
+## Load 8-frame breathing animation for NPC (norden or mabel).
+## Returns array of 8 textures or null if fallback to single idle.png needed.
+func load_npc_breathe(npc_id: String) -> Array:
+	if npc_breathe_cache.has(npc_id):
+		return npc_breathe_cache[npc_id]
+	var frames: Array = []
+	for i in range(BREATHE_FRAMES):
+		var path := "res://art/char/%s_idle_breathe/frame_%02d.png" % [npc_id, i]
+		if not FileAccess.file_exists(path):
+			npc_breathe_cache[npc_id] = []  # Mark as fallback
+			return []
+		var source := Image.load_from_file(path)
+		if source:
+			frames.append(ImageTexture.create_from_image(source))
+		else:
+			npc_breathe_cache[npc_id] = []
+			return []
+	npc_breathe_cache[npc_id] = frames
+	return frames
+
+## Draw NPC with breathing animation (8 frames @ 8fps) or fallback to single idle.png.
+## foot is the base position at y=574 (GROUND_Y). elapsed is total elapsed time.
+func draw_npc_breathe(canvas: CanvasItem, npc_id: String, foot: Vector2, height: float, elapsed: float, fallback_tex: Texture2D) -> void:
+	var frames := load_npc_breathe(npc_id)
+	if frames.is_empty():
+		# Fallback: use single idle.png
+		if fallback_tex:
+			draw_ground(canvas, fallback_tex, foot, height)
+		return
+	var frame_idx := int(elapsed * BREATHE_FPS) % BREATHE_FRAMES
+	var tex: Texture2D = frames[frame_idx]
+	if tex:
+		draw_ground(canvas, tex, foot, height)

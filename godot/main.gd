@@ -10,6 +10,7 @@ const WORLD_W := 2400.0
 const GROUND_Y := 574.0
 const ARENA_LEFT := 48.0
 const ARENA_RIGHT := WORLD_W - 48.0
+const ARENA_TOP := 48.0
 const RED := Color("#ff0000")
 const HAZARD := Color("#82ff00")
 const CYAN := Color("#00baff")
@@ -78,6 +79,13 @@ var boss_attack_timer := 0
 var boss_move_timer := 0
 var boss_hit_flash := 0
 var boss_skill_name := ""
+# Boss movement state machine
+enum BossState { IDLE, REPOSITION, TELEGRAPH, LUNGE }
+var boss_state := BossState.IDLE
+var boss_state_timer := 0
+var boss_reposition_target := Vector2.ZERO
+var boss_lunge_start := Vector2.ZERO
+var boss_lunge_return := Vector2.ZERO
 var bullets: Array = []
 var shots: Array = []
 var warnings: Array = []
@@ -550,6 +558,11 @@ func _start_battle(id: String, after: String) -> void:
 	boss_move_timer = 0
 	boss_hit_flash = 0
 	boss_skill_name = "猩红裁决" if id == "crimson" else "黑童话·终章"
+	boss_state = BossState.IDLE
+	boss_state_timer = 0
+	boss_reposition_target = boss_pos
+	boss_lunge_start = Vector2.ZERO
+	boss_lunge_return = Vector2.ZERO
 	bullets.clear()
 	warnings.clear()
 	shots.clear()
@@ -769,17 +782,91 @@ func _fire_shot() -> void:
 func _update_boss() -> void:
 	boss_hit_flash = maxi(0, boss_hit_flash - 1)
 	boss_attack_timer -= 1
-	boss_move_timer -= 1
-	if boss_move_timer <= 0:
-		boss_move_timer = 90 if boss_id == "crimson" else 72
-		var side := -1.0 if (frame / 90) % 2 == 0 else 1.0
-		boss_target = Vector2(clampf(player_pos.x + side * 420.0, 1250.0, 2180.0), 170.0 + fmod(float(frame * 13), 230.0))
-	if boss_pos.distance_to(boss_target) > 2.0:
-		boss_pos = boss_pos.move_toward(boss_target, (22.0 if boss_id == "crimson" else 28.0) * FIXED_DT * 60.0)
-	boss_pos.y += sin(float(frame) * 0.017 * 0.85) * 0.9
+	boss_state_timer -= 1
+	
+	# State machine: IDLE (float) → REPOSITION (move) → TELEGRAPH (charge) → LUNGE (dash+return)
+	match boss_state:
+		BossState.IDLE:
+			# Idle floating with vertical sin wave
+			boss_pos.y = 226.0 + sin(float(frame) * 0.017 * 0.85) * 22.0
+			
+			# Trigger reposition: more frequent in higher phases
+			var reposition_interval := 150 - boss_phase * 15  # 150/135/120/105/90... frames
+			if boss_state_timer <= 0:
+				boss_state_timer = reposition_interval
+				# Pick a horizontal position offset from player (not instant teleport)
+				var side := -1.0 if (frame / 90) % 2 == 0 else 1.0
+				var target_x := clampf(player_pos.x + side * 420.0, 1250.0, 2180.0)
+				var target_y := randf_range(170.0, 280.0)
+				boss_reposition_target = Vector2(target_x, target_y)
+				boss_state = BossState.REPOSITION
+				boss_state_timer = 90  # Max 90 frames to reach position
+		
+		BossState.REPOSITION:
+			# Smooth movement toward target (easing, not instant)
+			var speed := (22.0 if boss_id == "crimson" else 28.0) * FIXED_DT * 60.0
+			if boss_pos.distance_to(boss_reposition_target) > 2.0:
+				boss_pos = boss_pos.move_toward(boss_reposition_target, speed)
+			# Add subtle vertical bob during movement
+			boss_pos.y += sin(float(frame) * 0.017 * 0.85) * 0.5
+			
+			# Transition: reached target or timeout
+			if boss_pos.distance_to(boss_reposition_target) <= 2.0 or boss_state_timer <= 0:
+				# Higher phases: sometimes telegraph+lunge instead of returning to idle
+				var lunge_chance := 0.3 + boss_phase * 0.1  # 30%/40%/50%...
+				if randf() < lunge_chance and boss_phase >= 2:
+					boss_state = BossState.TELEGRAPH
+					boss_state_timer = 30  # 30 frames telegraph (0.5s at 60fps)
+					boss_lunge_start = boss_pos
+					# Lunge toward player's current position
+					var lunge_dir := (player_pos - boss_pos).normalized()
+					boss_lunge_return = boss_pos + lunge_dir * 320.0
+					boss_lunge_return.x = clampf(boss_lunge_return.x, ARENA_LEFT + 100.0, ARENA_RIGHT - 100.0)
+					boss_lunge_return.y = clampf(boss_lunge_return.y, ARENA_TOP + 80.0, GROUND_Y - 180.0)
+				else:
+					boss_state = BossState.IDLE
+					boss_state_timer = 60
+		
+		BossState.TELEGRAPH:
+			# Charge-up: hover in place, slight pulsing
+			var pulse := 1.0 + sin(float(boss_state_timer) * 0.4) * 0.08
+			boss_pos.y += (pulse - 1.0) * 3.0
+			
+			if boss_state_timer <= 0:
+				boss_state = BossState.LUNGE
+				boss_state_timer = 24  # 24 frames lunge duration
+		
+		BossState.LUNGE:
+			# Fast dash toward lunge_return, then snap back to start
+			var progress := 1.0 - float(boss_state_timer) / 24.0
+			if progress < 0.65:
+				# Outward lunge (first 65% of duration)
+				var t := progress / 0.65
+				# Ease-out quad for snappy start
+				t = 1.0 - pow(1.0 - t, 2.0)
+				boss_pos = boss_lunge_start.lerp(boss_lunge_return, t)
+			else:
+				# Return phase (last 35%)
+				var t := (progress - 0.65) / 0.35
+				t = pow(t, 1.5)  # Ease-in for smooth return
+				boss_pos = boss_lunge_return.lerp(boss_lunge_start, t)
+			
+			# Spawn ring bullets at lunge peak
+			if boss_state_timer == 9:  # Mid-lunge
+				for i in range(14):
+					var a := TAU * float(i) / 14.0
+					_spawn_bullet(boss_pos, Vector2(cos(a), sin(a)) * 215.0, RED if boss_id == "crimson" else HAZARD, "hazard")
+				screen_shake = 6.0
+			
+			if boss_state_timer <= 0:
+				boss_state = BossState.IDLE
+				boss_state_timer = 45
+	
+	# Attack pattern timer (independent of movement)
 	if boss_attack_timer <= 0:
 		boss_attack_timer = 78 if boss_id == "crimson" else 64
 		_spawn_boss_pattern()
+	
 	if hellfire_timer > 0:
 		hellfire_timer -= 1
 		hellfire_tick -= 1
@@ -787,6 +874,7 @@ func _update_boss() -> void:
 			hellfire_tick = 20
 			boss_hp = maxf(0.0, boss_hp - 6.0)
 			_spawn_burst(boss_pos, RED, 8)
+	
 	if boss_hp <= 0.0:
 		if boss_phase + 1 < boss_phase_count:
 			boss_phase += 1
@@ -797,6 +885,9 @@ func _update_boss() -> void:
 			banner_timer = 85
 			screen_shake = 10.0
 			_spawn_mirror_shards(18, 1.0)
+			# Reset state on phase change
+			boss_state = BossState.IDLE
+			boss_state_timer = 60
 		else:
 			mode = Mode.VICTORY
 			banner = ""
@@ -1155,15 +1246,19 @@ func _draw_walk() -> void:
 		if kind == "throne" and textures.get("throne"):
 			var tex: Texture2D = textures["throne"]
 			character_art.draw_ground(self, tex, pos, 320.0)
+		elif kind == "norden" or kind == "mabel":
+			var fallback_tex: Texture2D = textures.get(kind)
+			var height := 340.0 if kind == "mabel" else 300.0
+			character_art.draw_npc_breathe(self, kind, pos, height, elapsed, fallback_tex)
 		elif kind == "mirror":
 			_draw_mirror_gate(pos)
 	if walk_target.size() > 0:
 		var kind := str(walk_target.get("kind", ""))
 		var p := Vector2(float(walk_target.get("x", 0.0)) - camera_x, GROUND_Y)
 		if kind == "norden" or kind == "mabel":
-			var tex: Texture2D = textures.get(kind)
-			if tex:
-				draw_texture_rect_region(tex, _npc_rect(kind, p), character_art.visible_bounds(tex), WHITE)
+			var fallback_tex: Texture2D = textures.get(kind)
+			var height := 340.0 if kind == "mabel" else 300.0
+			character_art.draw_npc_breathe(self, kind, p, height, elapsed, fallback_tex)
 			draw_string(ThemeDB.fallback_font, p + Vector2(-52, -330), str(walk_target.get("label", "按 W 交互")), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, WHITE)
 		elif kind == "mirror":
 			_draw_mirror_gate(p)
