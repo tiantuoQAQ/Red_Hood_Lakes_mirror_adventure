@@ -11,14 +11,14 @@ const GROUND_Y := 574.0
 const ARENA_LEFT := 48.0
 const ARENA_RIGHT := WORLD_W - 48.0
 const ARENA_TOP := 48.0
-# Player & Boss battle display heights (user spec 2026-10-25, wave 7)
-const PLAYER_HEIGHT := 100.0  # Player displayed at 100px in battle
-const BOSS_HEIGHT := 100.0    # Boss matches player height
-# NPC map display heights
-const NPC_NORDEN_HEIGHT := 120.0
-const NPC_MABEL_HEIGHT := 135.0
-# Ring animation: 594px source → 230px display (2.3 × character height = 2.3 × 100)
-const RING_DISPLAY_DIAMETER := 230.0
+# Player & Boss battle display heights (user spec 2026-10-25, wave 11)
+const PLAYER_HEIGHT := 70.0   # Player displayed at 70px in battle
+const BOSS_HEIGHT := 70.0     # Boss matches player height
+# NPC map display heights (scaled proportionally: 70/100 ratio)
+const NPC_NORDEN_HEIGHT := 85.0  # Was 120, now 120 × 70/100 ≈ 85
+const NPC_MABEL_HEIGHT := 95.0   # Was 135, now 135 × 70/100 ≈ 95
+# Ring animation: new circular rune (3.1 × character height = 3.1 × 70)
+const RING_DISPLAY_DIAMETER := 217.0
 const RED := Color("#ff0000")
 const HAZARD := Color("#82ff00")
 const CYAN := Color("#00baff")
@@ -86,6 +86,7 @@ var boss_phase_count := 5
 var boss_attack_timer := 0
 var boss_move_timer := 0
 var boss_hit_flash := 0
+var boss_ring_flash := 0  # Ring alpha flash state: 0 = steady 0.85, >0 = flashing
 var boss_skill_name := ""
 # Boss movement state machine
 enum BossState { IDLE, REPOSITION, TELEGRAPH, LUNGE }
@@ -207,14 +208,13 @@ func _load_assets() -> void:
 		if tex is Texture2D:
 			textures[key] = tex
 	
-	# Load ring animation frames (40 frames for each boss)
+	# Load new circular rune magic arrays (single frame each)
 	for ring_dir in ["scarlet", "marysue"]:
-		for i in range(40):
-			var ring_path := "res://art/battle/%s/ring/frame_%02d.png" % [ring_dir, i]
-			var ring_key := "ring_%s_%02d" % [ring_dir, i]
-			var ring_tex := _load_texture(ring_path)
-			if ring_tex:
-				textures[ring_key] = ring_tex
+		var ring_path := "res://art/battle/%s/ring2/circle.png" % ring_dir
+		var ring_key := "ring_circle_%s" % ring_dir
+		var ring_tex := _load_texture(ring_path)
+		if ring_tex:
+			textures[ring_key] = ring_tex
 
 func _load_texture(path: String) -> Texture2D:
 	if ResourceLoader.exists(path):
@@ -617,6 +617,7 @@ func _start_battle(id: String, after: String) -> void:
 	boss_attack_timer = 45 if id == "crimson" else 30
 	boss_move_timer = 0
 	boss_hit_flash = 0
+	boss_ring_flash = 0
 	boss_skill_name = "猩红裁决" if id == "crimson" else "黑童话·终章"
 	boss_state = BossState.IDLE
 	boss_state_timer = 0
@@ -856,6 +857,7 @@ func _fire_shot() -> void:
 
 func _update_boss() -> void:
 	boss_hit_flash = maxi(0, boss_hit_flash - 1)
+	boss_ring_flash = maxi(0, boss_ring_flash - 1)
 	boss_attack_timer -= 1
 	boss_state_timer -= 1
 	
@@ -975,6 +977,7 @@ func _update_boss() -> void:
 			banner = "PHASE %d" % (boss_phase + 1)
 			banner_timer = 85
 			screen_shake = 10.0
+			boss_ring_flash = 10  # Phase transition ring flash
 			_spawn_mirror_shards(18, 1.0)
 			# Reset state on phase change
 			boss_state = BossState.IDLE
@@ -1205,6 +1208,7 @@ func _update_shots() -> void:
 		if mode == Mode.BATTLE and shot["pos"].distance_to(boss_pos) < 52.0:
 			boss_hp = maxf(0.0, boss_hp - 3.0)
 			boss_hit_flash = 8
+			boss_ring_flash = 10  # Hit reaction ring flash
 			hitstop = 4
 			screen_shake = maxf(screen_shake, 2.5)
 			_spawn_burst(shot["pos"], RED, 5)
@@ -1647,22 +1651,35 @@ func _draw_battle() -> void:
 func _draw_boss_fx() -> void:
 	var center := boss_pos - Vector2(camera_x, 0)
 	var color := RED if boss_id == "crimson" else HAZARD
-	# Legacy program arcs: alpha reduced to near invisible
-	for ring in range(3):
-		var radius := 112.0 + ring * 22.0 + sin(elapsed * 2.0 + ring) * 4.0
-		draw_arc(center, radius, elapsed * (0.55 + ring * 0.13), elapsed * (0.55 + ring * 0.13) + PI * 1.45, 48, Color(color, 0.05), 2.0)
-		draw_arc(center, radius, elapsed * (0.55 + ring * 0.13) + PI, elapsed * (0.55 + ring * 0.13) + PI * 1.68, 48, Color(color, 0.03), 2.0)
 	
-	# Draw ring animation: 40 frames @ 20fps (cycle frame/3 % 40)
+	# Draw new circular rune magic array (behind boss)
+	# 950×950 source → 217px display (3.1 × 70px character height)
 	var ring_dir := "scarlet" if boss_id == "crimson" else "marysue"
-	var ring_frame := (frame / 3) % 40
-	var ring_key := "ring_%s_%02d" % [ring_dir, ring_frame]
+	var ring_key := "ring_circle_%s" % ring_dir
 	var ring_tex: Texture2D = textures.get(ring_key)
 	if ring_tex:
-		# Ring: 594px source → 391px display (2.3 × character height = 2.3 × 170)
-		var ring_scale := RING_DISPLAY_DIAMETER / 594.0
-		var ring_size := Vector2(594.0, 594.0) * ring_scale
-		draw_texture_rect(ring_tex, Rect2(center - ring_size * 0.5, ring_size), false)
+		# Rotation: +0.55 rad/s ≈ 31.5°/s
+		var rotation := elapsed * 0.55
+		# Breathing scale: 1 ± 0.02, period 2.4 rad/s
+		var breathe := 1.0 + sin(elapsed * 2.4) * 0.02
+		# Flash alpha: 0.85 → 1.0 → 0.85 (10 frames, triggered by boss_ring_flash)
+		var alpha := 0.85
+		if boss_ring_flash > 0:
+			# Flash curve: ramp up first 5 frames (0.85→1.0), ramp down last 5 frames (1.0→0.85)
+			var flash_progress := 1.0 - float(boss_ring_flash) / 10.0
+			if flash_progress < 0.5:
+				# First half: 0.85 → 1.0
+				alpha = lerpf(0.85, 1.0, flash_progress * 2.0)
+			else:
+				# Second half: 1.0 → 0.85
+				alpha = lerpf(1.0, 0.85, (flash_progress - 0.5) * 2.0)
+		
+		var ring_scale := (RING_DISPLAY_DIAMETER / 950.0) * breathe
+		var ring_size := Vector2(950.0, 950.0) * ring_scale
+		# Draw behind boss (this function is called before _draw_boss)
+		draw_set_transform(center, rotation, Vector2.ONE)
+		draw_texture_rect(ring_tex, Rect2(-ring_size * 0.5, ring_size), false, Color(1, 1, 1, alpha))
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 func _draw_boss() -> void:
 	var center := boss_pos - Vector2(camera_x, 0)
