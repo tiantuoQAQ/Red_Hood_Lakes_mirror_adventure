@@ -917,13 +917,17 @@ func _draw_title() -> void:
 func _draw_story() -> void:
 	if story_cg:
 		draw_texture_rect(story_cg, Rect2(0, 70, VIEW.x, 580), false, Color(1, 1, 1, 0.84))
+	if story_cmd.get("t", "") != "card":
+		_draw_portrait(story_left, Vector2(340, 520), 0.62 if story_who == story_left else 0.38, story_who == story_left, false)
+		_draw_portrait(story_right, Vector2(940, 520), 0.62 if story_who == story_right else 0.38, story_who == story_right, true)
+	# A scene can stay black during narration (the prologue reads a letter).
+	# Fade the scenery and portraits before drawing text and continue prompts.
+	if story_fade > 0:
+		draw_rect(Rect2(Vector2.ZERO, VIEW), Color(0, 0, 0, story_fade))
 	if story_cmd.get("t", "") == "card":
 		draw_rect(Rect2(Vector2.ZERO, VIEW), Color(0, 0, 0, 0.72))
 		draw_string(ThemeDB.fallback_font, Vector2(390, 310), str(story_card[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 42, WHITE)
 		draw_string(ThemeDB.fallback_font, Vector2(390, 365), str(story_card[1]), HORIZONTAL_ALIGNMENT_LEFT, -1, 22, GREY)
-	else:
-		_draw_portrait(story_left, Vector2(340, 520), 0.62 if story_who == story_left else 0.38, story_who == story_left, false)
-		_draw_portrait(story_right, Vector2(940, 520), 0.62 if story_who == story_right else 0.38, story_who == story_right, true)
 	if story_intro != "":
 		_draw_intro(story_intro)
 	if story_title != "":
@@ -941,8 +945,6 @@ func _draw_story() -> void:
 		draw_string(ThemeDB.fallback_font, Vector2(1000, 652), "ENTER / SPACE 继续    TAB 跳过", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, GREY)
 	if story_flash > 0:
 		draw_rect(Rect2(Vector2.ZERO, VIEW), Color(1, 1, 1, story_flash))
-	if story_fade > 0:
-		draw_rect(Rect2(Vector2.ZERO, VIEW), Color(0, 0, 0, story_fade))
 
 func _draw_portrait(id: String, center: Vector2, scale: float, active: bool, flipped: bool) -> void:
 	if id == "":
