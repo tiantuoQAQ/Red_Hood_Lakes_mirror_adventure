@@ -123,6 +123,7 @@ const STORY = {
   ambush: {
 
     cmds: [
+      { t: 'say', who: 'marysue', expr: 'shadow', show: true, text: '……' },
 
       { t: 'say', who: 'marysue', expr: 'shadow', show: true, text: '库嘻嘻……' },
 
@@ -155,7 +156,7 @@ const STORY = {
 
       { t: 'say', who: 'marysue', expr: 'eyes_closed', show: true, text: '而且……你真觉得……' },
 
-      { t: 'say', who: 'marysue', expr: 'eyes_open', show: true, text: '你能碰到我吗？' },
+      { t: 'say', who: 'marysue', expr: 'eyes_open', show: true, text: '就凭你一个人，就能击败我？' },
 
 
 
@@ -185,6 +186,8 @@ const STORY = {
       { t: 'wait', frames: 150, locked: true },
 
       { t: 'fade', to: 'clear', frames: 60, locked: true },
+
+      { t: 'say', who: 'rek', expr: 'wary', show: true, text: '……' },
 
       { t: 'say', who: 'rek', expr: 'wary', show: true, text: '……这是哪里？' },
 
@@ -362,8 +365,6 @@ const STORY = {
 
     cmds: [
 
-      { t: 'music', name: 'crimson' },
-
       { t: 'say', who: 'rek_crimson', expr: 'seated_closed', show: true, text: '……' },
 
       { t: 'say', who: 'rek', expr: 'shock', show: true, text: '！？' },
@@ -400,6 +401,7 @@ const STORY = {
 
       { t: 'say', who: 'rek_crimson', expr: 'stand', show: true, text: '玛丽苏大人命吾在此，将你击溃。' },
 
+      { t: 'music', name: 'crimson' },
 
 
       { t: 'say', who: 'rek', expr: 'wary', show: true, text: '……失败样本。' },

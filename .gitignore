@@ -28,3 +28,7 @@ config.local.js
 
 # ÁÙÊ±Ä¿Â¼£¨½ØÍ¼/ä¯ÀÀÆ÷ profile£©
 tmp/
+
+# Godot editor cache and import metadata (local paths, not for repo)
+.godot/
+*.import
