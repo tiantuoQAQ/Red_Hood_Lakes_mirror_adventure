@@ -86,6 +86,7 @@ var boss_phase := 0
 var boss_phase_count := 5
 var boss_attack_timer := 0
 var boss_move_timer := 0
+var boss_anim: Dictionary = {}   # 魔姬动作帧: idle/move/thrust/slash
 var boss_hit_flash := 0
 var boss_ring_flash := 0  # Ring alpha flash state: 0 = steady 0.85, >0 = flashing
 var boss_skill_name := ""
@@ -219,6 +220,17 @@ func _load_assets() -> void:
 		var ring_tex := _load_texture(ring_path)
 		if ring_tex:
 			textures[ring_key] = ring_tex
+
+	# 猩红魔姬动作序列（来自即梦视频，每套 16 帧）
+	boss_anim.clear()
+	for anim_name in ["idle", "move", "thrust", "slash"]:
+		var frames: Array = []
+		for fi in range(16):
+			var ftex := _load_texture("res://art/battle/scarlet/anim/%s/frame_%02d.png" % [anim_name, fi])
+			if ftex:
+				frames.append(ftex)
+		if frames.size() > 0:
+			boss_anim[anim_name] = frames
 
 func _load_texture(path: String) -> Texture2D:
 	if ResourceLoader.exists(path):
@@ -1715,12 +1727,30 @@ func _draw_boss() -> void:
 	# Select boss pose based on state
 	var key := _boss_pose_key()
 	var tex: Texture2D = textures.get(key)
+	# 猩红魔姬：优先播动作序列（待机/移动/突刺/斩击）
+	if boss_id == "crimson" and boss_anim.size() > 0:
+		var anim_name := "idle"
+		match boss_state:
+			BossState.LUNGE:
+				anim_name = "thrust"
+			BossState.TELEGRAPH:
+				anim_name = "move"
+			BossState.REPOSITION:
+				anim_name = "move"
+			_:
+				anim_name = "idle"
+		if boss_skill_state == "firing" and boss_anim.has("slash"):
+			anim_name = "slash"
+		var seq: Array = boss_anim.get(anim_name, [])
+		if seq.size() > 0:
+			tex = seq[int(frame / 4) % seq.size()]
 	if tex:
 		var tint := WHITE if boss_hit_flash == 0 or frame % 4 < 2 else Color(1, 1, 1, 0.4)
-		# Boss displayed height = 170px (matches player, user spec 2026-10-25)
-		var scale := BOSS_HEIGHT / tex.get_height()
-		# Anchor at body center (center is the floating reference point)
-		draw_texture_rect(tex, Rect2(center.x - tex.get_width() * scale * 0.5, center.y - tex.get_height() * scale * 0.5, tex.get_width() * scale, tex.get_height() * scale), false, tint)
+		# 按「可见内容高度」换算，动作帧/关键帧四周的透明边不会把角色缩成小点
+		var vb: Rect2 = character_art.visible_bounds(tex)
+		var scale := BOSS_HEIGHT / maxf(1.0, vb.size.y)
+		var draw_pos := center - (vb.get_center() * scale)
+		draw_texture_rect(tex, Rect2(draw_pos, tex.get_size() * scale), false, tint)
 	else:
 		draw_circle(center, 48, Color(GREY, 0.9))
 		draw_circle(center + Vector2(-16, -10), 7, RED if boss_id == "crimson" else HAZARD)
