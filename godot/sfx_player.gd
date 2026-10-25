@@ -5,6 +5,11 @@ extends Node
 
 const SFX_VOLUME_DB := -8.0  # Unified volume: -8dB
 const POOL_SIZE := 4  # Max concurrent playback per SFX
+# 个别音效单独调音量（dB），不在表里就用默认 SFX_VOLUME_DB
+const VOLUME_OVERRIDES := {
+	"dash": -1.0,
+	"graze": -5.0,
+}
 
 var streams: Dictionary = {}  # { "graze": AudioStream, ... }
 var pools: Dictionary = {}    # { "graze": [AudioStreamPlayer, ...], ... }
@@ -32,7 +37,7 @@ func _load_sfx(id: String, path: String) -> void:
 		for i in range(POOL_SIZE):
 			var player := AudioStreamPlayer.new()
 			player.stream = stream
-			player.volume_db = SFX_VOLUME_DB
+			player.volume_db = float(VOLUME_OVERRIDES.get(id, SFX_VOLUME_DB))
 			player.bus = "Master"
 			add_child(player)
 			pools[id].append(player)

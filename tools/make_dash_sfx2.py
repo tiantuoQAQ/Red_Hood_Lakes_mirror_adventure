@@ -51,5 +51,5 @@ fade = np.ones(n)
 tail = int(SR * 0.06)
 fade[-tail:] = np.linspace(1, 0, tail) ** 1.8
 x *= fade
-save('dash.wav', x, 0.5)
+save('dash.wav', x, 0.95)
 print('done')
