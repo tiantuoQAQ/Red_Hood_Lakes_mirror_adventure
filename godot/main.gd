@@ -168,6 +168,15 @@ func _load_assets() -> void:
 		var tex = _load_texture(paths[key])
 		if tex is Texture2D:
 			textures[key] = tex
+	
+	# Load ring animation frames (40 frames for each boss)
+	for ring_dir in ["scarlet", "marysue"]:
+		for i in range(40):
+			var ring_path := "res://art/battle/%s/ring/frame_%02d.png" % [ring_dir, i]
+			var ring_key := "ring_%s_%02d" % [ring_dir, i]
+			var ring_tex := _load_texture(ring_path)
+			if ring_tex:
+				textures[ring_key] = ring_tex
 
 func _load_texture(path: String) -> Texture2D:
 	if ResourceLoader.exists(path):
@@ -784,11 +793,23 @@ func _update_boss() -> void:
 	boss_attack_timer -= 1
 	boss_state_timer -= 1
 	
-	# State machine: IDLE (float) → REPOSITION (move) → TELEGRAPH (charge) → LUNGE (dash+return)
+	# State machine: IDLE (float+drift) → REPOSITION (smooth move) → TELEGRAPH (charge hover) → LUNGE (dash+return)
 	match boss_state:
 		BossState.IDLE:
-			# Idle floating with vertical sin wave
-			boss_pos.y = 226.0 + sin(float(frame) * 0.017 * 0.85) * 22.0
+			# Enhanced idle: vertical sin wave + slow horizontal drift
+			var base_y := 226.0
+			boss_pos.y = base_y + sin(float(frame) * 0.017 * 0.85) * 22.0
+			# Slow horizontal drift (sine wave, ~80 pixel range, ~4s period)
+			var drift_x := sin(float(frame) * 0.017 * 0.5) * 40.0
+			boss_pos.x += drift_x * 0.016  # Accumulate drift slowly
+			# Clamp to arena bounds
+			boss_pos.x = clampf(boss_pos.x, 1250.0, 2180.0)
+			
+			# Phase 2+: add orbiting drift (sin x + cos y overlapping)
+			if boss_phase >= 2:
+				var orbit_phase := float(frame) * 0.017 * 0.65
+				boss_pos.x += cos(orbit_phase) * 0.8
+				boss_pos.y += sin(orbit_phase * 1.3) * 0.6
 			
 			# Trigger reposition: more frequent in higher phases
 			var reposition_interval := 150 - boss_phase * 15  # 150/135/120/105/90... frames
@@ -799,55 +820,59 @@ func _update_boss() -> void:
 				var target_x := clampf(player_pos.x + side * 420.0, 1250.0, 2180.0)
 				var target_y := randf_range(170.0, 280.0)
 				boss_reposition_target = Vector2(target_x, target_y)
+				boss_lunge_start = boss_pos  # Record start position for interpolation
 				boss_state = BossState.REPOSITION
-				boss_state_timer = 90  # Max 90 frames to reach position
+				boss_state_timer = 55  # 55 frames smooth repositioning (eased, ~0.9s)
 		
 		BossState.REPOSITION:
-			# Smooth movement toward target (easing, not instant)
-			var speed := (22.0 if boss_id == "crimson" else 28.0) * FIXED_DT * 60.0
-			if boss_pos.distance_to(boss_reposition_target) > 2.0:
-				boss_pos = boss_pos.move_toward(boss_reposition_target, speed)
+			# Smooth eased movement toward target (ease-in-out for natural feel)
+			var total_frames := 55.0
+			var progress := 1.0 - float(boss_state_timer) / total_frames
+			# Ease-in-out cubic
+			var t := 4.0 * progress * progress * progress if progress < 0.5 else 1.0 - pow(-2.0 * progress + 2.0, 3.0) / 2.0
+			var start_pos := boss_lunge_start  # Reuse as movement start
+			boss_pos = start_pos.lerp(boss_reposition_target, t)
 			# Add subtle vertical bob during movement
-			boss_pos.y += sin(float(frame) * 0.017 * 0.85) * 0.5
+			boss_pos.y += sin(float(frame) * 0.017 * 0.85) * 1.2
 			
 			# Transition: reached target or timeout
-			if boss_pos.distance_to(boss_reposition_target) <= 2.0 or boss_state_timer <= 0:
+			if boss_state_timer <= 0:
 				# Higher phases: sometimes telegraph+lunge instead of returning to idle
 				var lunge_chance := 0.3 + boss_phase * 0.1  # 30%/40%/50%...
 				if randf() < lunge_chance and boss_phase >= 2:
 					boss_state = BossState.TELEGRAPH
-					boss_state_timer = 30  # 30 frames telegraph (0.5s at 60fps)
+					boss_state_timer = 30  # 30 frames telegraph (player reaction window)
 					boss_lunge_start = boss_pos
 					# Lunge toward player's current position
 					var lunge_dir := (player_pos - boss_pos).normalized()
 					boss_lunge_return = boss_pos + lunge_dir * 320.0
-					boss_lunge_return.x = clampf(boss_lunge_return.x, ARENA_LEFT + 100.0, ARENA_RIGHT - 100.0)
+					boss_lunge_return.x = clampf(boss_lunge_return.x, 1250.0, 2180.0)
 					boss_lunge_return.y = clampf(boss_lunge_return.y, ARENA_TOP + 80.0, GROUND_Y - 180.0)
 				else:
 					boss_state = BossState.IDLE
 					boss_state_timer = 60
 		
 		BossState.TELEGRAPH:
-			# Charge-up: hover in place, slight pulsing
+			# Charge-up: hover in place, slight pulsing (visual warning)
 			var pulse := 1.0 + sin(float(boss_state_timer) * 0.4) * 0.08
 			boss_pos.y += (pulse - 1.0) * 3.0
 			
 			if boss_state_timer <= 0:
 				boss_state = BossState.LUNGE
-				boss_state_timer = 24  # 24 frames lunge duration
+				boss_state_timer = 22  # 22 frames lunge duration (18~24 target range)
 		
 		BossState.LUNGE:
-			# Fast dash toward lunge_return, then snap back to start
-			var progress := 1.0 - float(boss_state_timer) / 24.0
-			if progress < 0.65:
-				# Outward lunge (first 65% of duration)
-				var t := progress / 0.65
+			# Fast dash toward lunge_return, then smooth return to start
+			var progress := 1.0 - float(boss_state_timer) / 22.0
+			if progress < 0.6:
+				# Outward lunge (first 60% of duration)
+				var t := progress / 0.6
 				# Ease-out quad for snappy start
 				t = 1.0 - pow(1.0 - t, 2.0)
 				boss_pos = boss_lunge_start.lerp(boss_lunge_return, t)
 			else:
-				# Return phase (last 35%)
-				var t := (progress - 0.65) / 0.35
+				# Return phase (last 40%)
+				var t := (progress - 0.6) / 0.4
 				t = pow(t, 1.5)  # Ease-in for smooth return
 				boss_pos = boss_lunge_return.lerp(boss_lunge_start, t)
 			
@@ -888,6 +913,8 @@ func _update_boss() -> void:
 			# Reset state on phase change
 			boss_state = BossState.IDLE
 			boss_state_timer = 60
+			# Reset position for clean phase start
+			boss_lunge_start = boss_pos
 		else:
 			mode = Mode.VICTORY
 			banner = ""
@@ -1301,30 +1328,70 @@ func _draw_battle() -> void:
 func _draw_boss_fx() -> void:
 	var center := boss_pos - Vector2(camera_x, 0)
 	var color := RED if boss_id == "crimson" else HAZARD
+	# Legacy program arcs: alpha reduced to near invisible
 	for ring in range(3):
 		var radius := 112.0 + ring * 22.0 + sin(elapsed * 2.0 + ring) * 4.0
-		draw_arc(center, radius, elapsed * (0.55 + ring * 0.13), elapsed * (0.55 + ring * 0.13) + PI * 1.45, 48, Color(color, 0.24 - ring * 0.04), 2.0)
-		draw_arc(center, radius, elapsed * (0.55 + ring * 0.13) + PI, elapsed * (0.55 + ring * 0.13) + PI * 1.68, 48, Color(color, 0.15 - ring * 0.02), 2.0)
+		draw_arc(center, radius, elapsed * (0.55 + ring * 0.13), elapsed * (0.55 + ring * 0.13) + PI * 1.45, 48, Color(color, 0.05), 2.0)
+		draw_arc(center, radius, elapsed * (0.55 + ring * 0.13) + PI, elapsed * (0.55 + ring * 0.13) + PI * 1.68, 48, Color(color, 0.03), 2.0)
+	
+	# Draw ring animation: 40 frames @ 20fps (cycle frame/3 % 40)
+	var ring_dir := "scarlet" if boss_id == "crimson" else "marysue"
+	var ring_frame := (frame / 3) % 40
+	var ring_key := "ring_%s_%02d" % [ring_dir, ring_frame]
+	var ring_tex: Texture2D = textures.get(ring_key)
+	if ring_tex:
+		# Ring is 594px square, drawn at 594px diameter, centered on boss body center
+		var ring_size := Vector2(594.0, 594.0)
+		draw_texture_rect(ring_tex, Rect2(center - ring_size * 0.5, ring_size), false)
 
 func _draw_boss() -> void:
 	var center := boss_pos - Vector2(camera_x, 0)
-	var key := ""
-	if boss_id == "crimson":
-		key = "crimson_%02d" % ((frame / 9 + boss_phase) % 4 + 1)
-	else:
-		key = "marysue_%02d" % ((frame / 18) % 3 + 1)
+	# Select boss pose based on state
+	var key := _boss_pose_key()
 	var tex: Texture2D = textures.get(key)
 	if tex:
 		var tint := WHITE if boss_hit_flash == 0 or frame % 4 < 2 else Color(1, 1, 1, 0.4)
-		# Scale boss to 0.62~0.72 viewport height (445~518px at 720p; target 420~460px displayed height)
-		var target_height := 440.0 if boss_id == "crimson" else 450.0
+		# Boss displayed height must match player's 261px (0.34 * 768)
+		var target_height := 261.0
 		var scale := target_height / tex.get_height()
-		var anchor_y := center.y  # Keep vertical position anchor (floating reference)
-		draw_texture_rect(tex, Rect2(center.x - tex.get_width() * scale * 0.5, anchor_y - tex.get_height() * scale * 0.5, tex.get_width() * scale, tex.get_height() * scale), false, tint)
+		# Anchor at body center (center is the floating reference point)
+		draw_texture_rect(tex, Rect2(center.x - tex.get_width() * scale * 0.5, center.y - tex.get_height() * scale * 0.5, tex.get_width() * scale, tex.get_height() * scale), false, tint)
 	else:
 		draw_circle(center, 48, Color(GREY, 0.9))
 		draw_circle(center + Vector2(-16, -10), 7, RED if boss_id == "crimson" else HAZARD)
 		draw_circle(center + Vector2(16, -10), 7, RED if boss_id == "crimson" else HAZARD)
+
+func _boss_pose_key() -> String:
+	# Select boss art frame based on state (not continuous frame-based cycling)
+	if boss_id == "crimson":
+		match boss_state:
+			BossState.IDLE:
+				return "crimson_02"  # Red eyes idle
+			BossState.REPOSITION:
+				return "crimson_02"  # Red eyes idle during movement
+			BossState.TELEGRAPH:
+				return "crimson_02"  # Red eyes for charge-up
+			BossState.LUNGE:
+				# Dive or thrust during lunge
+				var progress := 1.0 - float(boss_state_timer) / 24.0
+				if progress < 0.3:
+					return "crimson_01"  # Dive start
+				elif progress < 0.7:
+					return "crimson_04"  # Thrust mid
+				else:
+					return "crimson_03"  # Slash instant
+	else:  # marysue
+		match boss_state:
+			BossState.IDLE:
+				# Cycle idle @ 12fps when in idle
+				return "marysue_%02d" % ((frame / 5) % 3 + 1)
+			BossState.REPOSITION:
+				return "marysue_01"  # Idle during movement
+			BossState.TELEGRAPH:
+				return "marysue_02"  # Charge-up
+			BossState.LUNGE:
+				return "marysue_03"  # Burst
+	return "crimson_02"  # Fallback
 
 func _draw_projectiles() -> void:
 	for warning in warnings:
