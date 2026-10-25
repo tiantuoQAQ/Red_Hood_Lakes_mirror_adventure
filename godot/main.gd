@@ -670,6 +670,9 @@ func _start_walk(command: Dictionary, long_map: bool = false) -> void:
 	if long_map:
 		if walk_target.has("x"):
 			walk_target["x"] = float(walk_target["x"]) + WALK_SHIFT
+		# 镜子/交互物必须在玩家前方，否则玩家会以为"没东西可交互"（用户反馈）
+		if str(walk_target.get("kind", "")) == "mirror" and float(walk_target.get("x", 0.0)) < player_pos.x + 400.0:
+			walk_target["x"] = player_pos.x + 700.0
 		for prop in walk_props:
 			if prop is Dictionary and prop.has("x"):
 				prop["x"] = float(prop["x"]) + WALK_SHIFT
