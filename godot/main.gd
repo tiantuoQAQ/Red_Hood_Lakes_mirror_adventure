@@ -474,6 +474,7 @@ func _read_inputs() -> Dictionary:
 		"dash": Input.is_key_pressed(KEY_SHIFT) or Input.is_key_pressed(KEY_K) or Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT),
 		"shoot": Input.is_key_pressed(KEY_J) or Input.is_key_pressed(KEY_Z) or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT),
 		"skill": Input.is_key_pressed(KEY_E),
+		"cheat_skill": Input.is_key_pressed(KEY_L),
 		"gunfire": Input.is_key_pressed(KEY_C),
 		"hellfire": Input.is_key_pressed(KEY_V),
 		"confirm": Input.is_key_pressed(KEY_ENTER) or Input.is_key_pressed(KEY_SPACE) or Input.is_key_pressed(KEY_W) or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT),
@@ -970,6 +971,8 @@ func _update_battle() -> void:
 		_use_gunfire()
 	if _just("hellfire"):
 		_use_hellfire()
+	if _just("cheat_skill"):
+		_use_cheat_tragedy()
 	if banner_timer > 0:
 		banner_timer -= 1
 	if screen_shake > 0.0:
@@ -2568,7 +2571,7 @@ func _draw_hud() -> void:
 		draw_string(ThemeDB.fallback_font, kbadge.position + Vector2(5, 13), str(slot["key"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 13,
 			WHITE if can else GREY)
 		# 技能说明（格下方小字）
-		var desc: String = str({"skill_icon_red": "回2HP + 20秒强化剑气"}.get(slot["tex"], ""))
+		var desc: String = str({"skill_icon_red": "清弹+伤害+回2HP", "skill_icon_gun": "鼠标处范围伤害", "skill_icon_hell": "全屏伤害"}.get(slot["tex"], ""))
 		if desc != "":
 			draw_string(ThemeDB.fallback_font, rect.position + Vector2(0, rect.size.y + 26), desc, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.8, 0.8, 0.8))
 		# 技能名（格下方小字）
@@ -3478,7 +3481,7 @@ func _draw_tutorial() -> void:
 		["SPACE", "跳跃", "空中 W + 冲刺", "化为光球（无敌，可穿越弹幕）"],
 		["J / Z / 鼠标左键", "射击", "P / ESC", "暂停 / 继续"],
 		["C", "枪火击溃（2 MP）", "V", "业火（2 MP）"],
-		["L", "红之惨剧（击败魔姬后解锁，2 MP）", "", ""],
+		["E", "红之惨剧（击败魔姬后解锁，2 MP）", "L", "演示键：免费红之惨剧"],
 	]
 	var y := 200.0
 	for row in lines:
@@ -3490,9 +3493,9 @@ func _draw_tutorial() -> void:
 		y += 44.0
 
 	draw_string(ThemeDB.fallback_font, Vector2(120, 470), "技能效果：", HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color(1, 1, 1, a))
-	draw_string(ThemeDB.fallback_font, Vector2(150, 502), "· 枪火击溃：一次性大范围冲击，清掉近身弹幕", HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color(0.9, 0.9, 0.9, a))
-	draw_string(ThemeDB.fallback_font, Vector2(150, 530), "· 业火：持续灼烧 Boss，造成多段伤害", HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color(0.9, 0.9, 0.9, a))
-	draw_string(ThemeDB.fallback_font, Vector2(150, 558), "· 红之惨剧：回复 2 HP，并强化剑气 20 秒", HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color(0.9, 0.9, 0.9, a))
+	draw_string(ThemeDB.fallback_font, Vector2(150, 502), "· 红之惨剧（E）：全图清除弹幕，并对 Boss 造成大伤害，回复 2 HP + 强化剑气 20 秒", HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color(0.9, 0.9, 0.9, a))
+	draw_string(ThemeDB.fallback_font, Vector2(150, 530), "· 枪火击溃（C）：在鼠标位置造成范围伤害", HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color(0.9, 0.9, 0.9, a))
+	draw_string(ThemeDB.fallback_font, Vector2(150, 558), "· 业火（V）：全屏伤害，无需瞄准", HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color(0.9, 0.9, 0.9, a))
 	draw_string(ThemeDB.fallback_font, Vector2(150, 594), "MP 回复：命中敌人 + 擦弹（贴近弹幕但不被击中）", HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color(1, 0.8, 0.4, a))
 	draw_string(ThemeDB.fallback_font, Vector2(930, 624), "ENTER 继续", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.75, 0.75, 0.75, a))
 
@@ -3749,3 +3752,20 @@ func _beam_warning_crimson(x: float) -> void:
 func _spawn_beam_crimson(x: float, seconds: float) -> void:
 	_spawn_bullet(Vector2(x, (40.0 + GROUND_Y) * 0.5), Vector2.ZERO, RED, "beam", seconds, 0.0)
 	_spawn_fx_ring(Vector2(x, GROUND_Y - 30.0), Color(1, 0.25, 0.15, 0.85), 130.0, 0.35, 3.0)
+
+
+## 作弊键 L：免费红之惨剧（演示/跳关用，不消耗 MP、无需解锁）
+func _use_cheat_tragedy() -> void:
+	bullets.clear()
+	spikes.clear()
+	beam_warning_list.clear()
+	boss_hp = maxf(0.0, boss_hp - 120.0)
+	player_hp = mini(PLAYER_MAX_HP, player_hp + 2)
+	tragedy_buff_t = 20.0
+	player_hurt_invuln = 120
+	banner = "红之惨剧（演示）"
+	banner_timer = 90
+	screen_shake = 12.0
+	_spawn_mirror_shards(30, 1.3)
+	_spawn_fx_ring(boss_pos, Color(1, 0.2, 0.2, 0.9), 420.0, 0.5, 6.0)
+	sfx_player.play("skill")
