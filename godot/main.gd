@@ -407,6 +407,8 @@ func _physics_process(_delta: float) -> void:
 			music_player.volume_db = -80.0 if music_player.volume_db > -40.0 else -4.0
 	if _just("pause") and mode == Mode.BATTLE:
 		paused = not paused
+	if paused and (_just("confirm") or _just("shoot")):
+		paused = false
 	if _just("restart") and mode != Mode.TITLE:
 		mode = Mode.TITLE
 		paused = false
@@ -460,7 +462,7 @@ func _read_inputs() -> Dictionary:
 		"hellfire": Input.is_key_pressed(KEY_V),
 		"confirm": Input.is_key_pressed(KEY_ENTER) or Input.is_key_pressed(KEY_SPACE) or Input.is_key_pressed(KEY_W) or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT),
 		"skip": Input.is_key_pressed(KEY_TAB),
-		"pause": Input.is_key_pressed(KEY_P),
+		"pause": Input.is_key_pressed(KEY_P) or Input.is_key_pressed(KEY_ESCAPE),
 		"restart": Input.is_key_pressed(KEY_R),
 		"mute": Input.is_key_pressed(KEY_M)
 	}
@@ -2501,8 +2503,27 @@ func _draw_hud() -> void:
 	if banner_timer > 0 and banner != "":
 		draw_string(ThemeDB.fallback_font, Vector2(510, 340), banner, HORIZONTAL_ALIGNMENT_LEFT, -1, 34, WHITE)
 	if paused:
-		draw_rect(Rect2(Vector2.ZERO, VIEW), Color(0, 0, 0, 0.55))
-		draw_string(ThemeDB.fallback_font, Vector2(570, 360), "PAUSED", HORIZONTAL_ALIGNMENT_LEFT, -1, 36, WHITE)
+		draw_rect(Rect2(Vector2.ZERO, VIEW), Color(0, 0, 0, 0.62))
+		draw_string(ThemeDB.fallback_font, Vector2(556, 250), "PAUSED", HORIZONTAL_ALIGNMENT_LEFT, -1, 40, WHITE)
+		# 继续游戏（点击或按 Enter）
+		var resume_rect := Rect2(500, 300, 280, 56)
+		var hover_resume := resume_rect.has_point(get_local_mouse_position())
+		draw_rect(resume_rect, Color(0.08, 0.08, 0.10, 0.95))
+		draw_rect(resume_rect, Color(1, 1, 1, 0.85 if hover_resume else 0.5), false, 2.0)
+		draw_string(ThemeDB.fallback_font, Vector2(548, 336), "继续游戏  (ENTER / 鼠标左键)", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, WHITE)
+		# 回标题
+		var title_rect := Rect2(500, 372, 280, 48)
+		var hover_title := title_rect.has_point(get_local_mouse_position())
+		draw_rect(title_rect, Color(0.08, 0.08, 0.10, 0.95))
+		draw_rect(title_rect, Color(1, 0.3, 0.3, 0.85 if hover_title else 0.45), false, 2.0)
+		draw_string(ThemeDB.fallback_font, Vector2(556, 402), "回到标题  (R)", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(1, 0.6, 0.6))
+		if hover_resume and _mouse_clicked():
+			paused = false
+		elif hover_title and _mouse_clicked():
+			mode = Mode.TITLE
+			paused = false
+			_stop_music()
+			_stop_battle_bgm()
 
 func _draw_victory() -> void:
 	draw_rect(Rect2(Vector2.ZERO, VIEW), Color(0, 0, 0, 0.46))
@@ -3299,3 +3320,13 @@ func _unhandled_input(event: InputEvent) -> void:
 			win2.mode = Window.MODE_WINDOWED
 			win2.size = Vector2i(1600, 900)
 			get_viewport().set_input_as_handled()
+
+
+## 本帧是否有点击（鼠标左键按下沿）
+var _mouse_was_down := false
+
+func _mouse_clicked() -> bool:
+	var down := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+	var clicked := down and not _mouse_was_down
+	_mouse_was_down = down
+	return clicked
