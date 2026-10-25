@@ -3497,13 +3497,9 @@ func _boss_move_particles() -> void:
 
 ## 让窗口放大时画面等比放大（1280×720 逻辑分辨率）
 func _setup_window_stretch() -> void:
-	var win := get_window()
-	if win == null:
-		return
-	win.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
-	win.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
-	win.content_scale_size = Vector2i(1280, 720)
-	win.min_size = Vector2i(960, 540)
+	# 窗口缩放完全交给 project.godot 的 stretch 设置，运行时不再修改，
+	# 避免与 DPI / 窗口尺寸互相干扰导致画面被放大裁切
+	pass
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
