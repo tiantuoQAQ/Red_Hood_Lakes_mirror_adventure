@@ -60,6 +60,9 @@ var story_card := ["", ""]
 var story_title := ""
 var story_title_sub := ""
 var story_intro := ""
+var portrait_fade := 0.0      # 对话结束后立绘淡出（1 → 0）
+var last_left := ""
+var last_right := ""
 var story_bg := "night"
 var story_fade := 0.0
 var story_fade_target := 0.0
@@ -564,6 +567,8 @@ func _finish_walk() -> void:
 		mode = Mode.TITLE
 
 func _start_walk(command: Dictionary, long_map: bool = false) -> void:
+	if last_left != "" or last_right != "":
+		portrait_fade = 1.0
 	# Mirror shards transition (from any mode → walk)
 	if mode != Mode.WALK:
 		_spawn_mirror_shards(20, 0.8)
@@ -611,6 +616,8 @@ func _start_walk(command: Dictionary, long_map: bool = false) -> void:
 	camera_x = 0.0
 
 func _update_walk() -> void:
+	if portrait_fade > 0.0:
+		portrait_fade = maxf(0.0, portrait_fade - 1.0 / 18.0)
 	_update_player()
 	_update_shots()
 	_update_npc_glow()
@@ -1567,14 +1574,14 @@ func _draw_trap_cg() -> void:
 		draw_line(direction * 130.0, Vector2.from_angle(angle + TAU / 3.0) * 130.0, Color(RED, 0.18), 1.0)
 	draw_set_transform(Vector2.ZERO, 0, Vector2.ONE)
 
-func _draw_portrait(id: String, center: Vector2, scale: float, active: bool, flipped: bool) -> void:
+func _draw_portrait(id: String, center: Vector2, scale: float, active: bool, flipped: bool, alpha_mul: float = 1.0) -> void:
 	if id == "":
 		return
 	var tex: Texture2D = _get_portrait_texture(id)
 	if not tex:
 		return
 	var size := Vector2(tex.get_width(), tex.get_height()) * scale
-	var tint := Color(1, 1, 1, 1.0 if active else 0.78)
+	var tint := Color(1, 1, 1, (1.0 if active else 0.78) * alpha_mul)
 	if flipped:
 		draw_set_transform(center, 0.0, Vector2(-1, 1))
 		draw_texture_rect(tex, Rect2(-size.x * 0.5, -size.y, size.x, size.y), false, tint)
@@ -1691,8 +1698,8 @@ func _draw_walk() -> void:
 		var kind := str(prop.get("kind", ""))
 		var pos := Vector2(float(prop.get("x", 0.0)) - camera_x, GROUND_Y)
 		if kind == "throne" and textures.get("throne"):
-			var tex: Texture2D = textures["throne"]
-			character_art.draw_ground(self, tex, pos, 320.0)
+			# 用户反馈王座贴图难看：改成"镜面之门"，与主题一致，王座不再出现在地图里
+			_draw_mirror_gate(pos)
 		elif kind == "norden" or kind == "mabel":
 			var fallback_tex: Texture2D = textures.get(kind)
 			var height := NPC_MABEL_HEIGHT if kind == "mabel" else NPC_NORDEN_HEIGHT
@@ -1715,6 +1722,10 @@ func _draw_walk() -> void:
 	_draw_dash_trail()
 	_draw_player_at(player_pos - Vector2(camera_x, 0), WHITE)
 	_draw_particles_world()
+	# 对话结束后立绘淡出（用户要求：否则会瞬间消失）
+	if portrait_fade > 0.0:
+		_draw_portrait(last_left, Vector2(340, 580), 0.62, false, false, portrait_fade)
+		_draw_portrait(last_right, Vector2(940, 580), 0.62, false, true, portrait_fade)
 	draw_string(ThemeDB.fallback_font, Vector2(40, 48), "A / D 移动    SPACE 跳跃    SHIFT / K / 右键 冲刺    W 靠近并交互", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, WHITE)
 
 func _npc_rect(id: String, foot: Vector2) -> Rect2:
