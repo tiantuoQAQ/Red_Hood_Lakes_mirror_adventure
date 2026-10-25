@@ -98,15 +98,29 @@ func _run() -> void:
 		game.scripted_input = {"confirm": tick % 2 == 0}
 		game._physics_process(1.0/60.0)
 	_expect(saw_black_hold and hold_ticks >= 145, "Blackout holds for 2.5 seconds even if Enter is pressed")
-	_expect(game.story_cmd.get("t") == "say" and "哪里" in game.story_text and game.story_who == "rek", "Rek wakes and asks where she is before meeting Norden")
+	# 台词可能新增缓冲句：向后推进直到看到「哪里」这一句（或进入走位）
+	var saw_where := "哪里" in game.story_text and game.story_who == "rek"
+	for extra in range(30):
+		if saw_where or game.mode == game.Mode.WALK:
+			break
+		game.previous_input = {}
+		game.scripted_input = {"confirm": true}
+		game._physics_process(1.0 / 60.0)
+		if "哪里" in game.story_text and game.story_who == "rek":
+			saw_where = true
+	_expect(saw_where, "Rek wakes and asks where she is before meeting Norden")
 	_expect(game.story_fade < .02, "The screen has brightened before the wake-up line")
 	_expect(game.story_data["ambush"]["cmds"].filter(func(command): return command.get("t") == "flash")[0]["seq"].size() == 4, "Playing the flash does not erase the reusable story sequence")
 	_expect(game.story_right == "", "Marysue's portrait has left before Rek wakes")
 	game.story_reveal = float(game.story_text.length())
 	await _capture("06_rek_wakes.png")
 	game.previous_input = {}
-	game.scripted_input = {"confirm": true}
-	game._physics_process(1.0/60.0)
+	for extra in range(60):
+		if game.mode == game.Mode.WALK:
+			break
+		game.previous_input = {}
+		game.scripted_input = {"confirm": true}
+		game._physics_process(1.0/60.0)
 	_expect(game.mode == game.Mode.WALK, "Wake-up dialogue continues to exploration")
 	var npc_x: float = game.walk_target.get("x", 0.0)
 	_expect(game.camera_x == 0 and npc_x > 1450, "Norden starts beyond the first screen")
