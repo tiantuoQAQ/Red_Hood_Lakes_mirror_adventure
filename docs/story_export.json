@@ -106,26 +106,13 @@
       },
       {
         "t": "walk",
-        "untilX": 2600,
-        "props": [
-          {
-            "kind": "shadow",
-            "x": 2800
-          }
-        ],
+        "untilX": 1040,
         "next": "ambush"
       }
     ]
   },
   "ambush": {
     "cmds": [
-      {
-        "t": "say",
-        "who": "marysue",
-        "expr": "shadow",
-        "show": true,
-        "text": "……"
-      },
       {
         "t": "say",
         "who": "marysue",
@@ -173,7 +160,11 @@
         "style": "red",
         "shake": true,
         "show": true,
-        "text": "……你到底是什么东西。"
+        "text": "玛丽苏……"
+      },
+      {
+        "t": "reveal",
+        "who": "marysue"
       },
       {
         "t": "say",
@@ -192,34 +183,14 @@
       {
         "t": "say",
         "who": "marysue",
-        "expr": "shadow",
         "show": true,
         "text": "哎呀呀，人家好怕啊～"
       },
       {
         "t": "say",
         "who": "marysue",
-        "expr": "shadow",
         "show": true,
         "text": "人家可是……从来没有把你当成敌人哦。"
-      },
-      {
-        "t": "say",
-        "who": "marysue",
-        "expr": "shadow",
-        "show": true,
-        "text": "不过，告诉你也无妨。"
-      },
-      {
-        "t": "reveal",
-        "who": "marysue"
-      },
-      {
-        "t": "say",
-        "who": "marysue",
-        "expr": "tease",
-        "show": true,
-        "text": "人家叫玛丽苏，是写故事的人。"
       },
       {
         "t": "say",
@@ -364,13 +335,7 @@
         "t": "say",
         "who": "norden",
         "show": true,
-        "text": "我是为了格林大人，才来寻您。"
-      },
-      {
-        "t": "say",
-        "who": "norden",
-        "show": true,
-        "text": "……虽然，那位大人还不认识我。"
+        "text": "我是站在格林大人这一边的。"
       },
       {
         "t": "say",
@@ -394,7 +359,7 @@
         "t": "say",
         "who": "norden",
         "show": true,
-        "text": "我救您，也只是为了格林大人。"
+        "text": "我所做的一切，都是为了格林大人。"
       },
       {
         "t": "say",
